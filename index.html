@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 0.1</title>
+<title>Resonance: Worlds Within | Prototype 0.2</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -18,7 +18,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 #mode {display:flex;gap:5px;pointer-events:auto}#mode button{font-size:12px;padding:10px 9px}
 #status {position:absolute;top:calc(env(safe-area-inset-top,0px) + 89px);left:15px;right:15px;pointer-events:none;display:flex;justify-content:center}#status span{max-width:340px;text-align:center;color:#b1cbdd;background:rgba(8,19,31,.64);padding:6px 11px;border-radius:999px;font-size:11px}
 #controls {position:absolute;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:540px;margin:auto;background:rgba(9,21,36,.93);border:1px solid var(--edge);border-radius:18px;box-shadow:0 12px 45px rgba(0,0,0,.35);pointer-events:auto;backdrop-filter:blur(15px);overflow:hidden}
-#controlHeading{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;gap:8px}#controlHeading strong{font-size:13px;letter-spacing:.04em}#controlHeading small{font-size:10px;color:var(--muted)}#controlHeading button{padding:5px 9px;font-size:12px}
+#controlHeading{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;gap:8px}#controlHeading strong{font-size:13px;letter-spacing:.04em}#controlHeading small{font-size:10px;color:var(--muted)}#controlHeading button{padding:8px 9px;font-size:12px}#controlTools{display:flex;align-items:center;gap:6px;flex-shrink:0}#audio{background:rgba(44,90,111,.86);border-color:#528eae;color:#e7f8ff}#audio.active{background:#285e6e}#viewControls{position:absolute;top:calc(env(safe-area-inset-top,0px) + 146px);right:12px;display:flex;flex-direction:column;gap:7px;pointer-events:auto}#viewControls.hidden{display:none}#viewControls button{width:42px;height:42px;padding:0;font-size:22px;background:rgba(12,29,46,.84);border-color:rgba(137,185,208,.34);border-radius:14px}#viewControls button:last-child{font-size:19px}
 #controlBody{padding:0 13px 13px;}#controls.collapsed #controlBody{display:none}
 .osc{display:grid;grid-template-columns:22px 54px 1fr 57px;align-items:center;gap:9px;margin:9px 0}.osc label{font-size:12px;color:#bed2df} .osc output{font-size:12px;text-align:right;color:#d4eefa;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:#7dcee3;height:22px;touch-action:pan-y}.osc input[type=checkbox]{width:17px;height:17px;accent-color:#86cbe7;margin:0}
 #extras{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}#extras button{flex:1;font-size:12px;padding:9px 5px}#actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}#actions button{flex:1;font-size:11px;padding:9px 5px}
@@ -33,19 +33,19 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 0.1</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 0.2</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
     <div id="mode"><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div>
-  <div id="move"><button id="back">◀ Back</button><button id="forward">Forward ▶</button></div>
+  <div id="viewControls"><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div><div id="move"><button id="back">◀ Back</button><button id="forward">Forward ▶</button></div>
   <div id="toast"></div>
-  <section id="controls">
-    <div id="controlHeading"><div><strong>RESONANCE ENGINE</strong><br><small>Continuous field sources</small></div><button id="collapse" class="secondary">Hide ▾</button></div>
+  <section id="controls" class="collapsed">
+    <div id="controlHeading"><div><strong>RESONANCE ENGINE</strong><br><small>Continuous field sources</small></div><div id="controlTools"><button id="audio" aria-label="Enable or disable audible sound">🔈 Sound off</button><button id="collapse" class="secondary" aria-label="Expand or collapse frequency controls">Controls ▴</button></div></div>
     <div id="controlBody">
       <div id="oscillators"></div>
       <div id="extras"><button id="knock">Knock</button><button id="chime">Chime</button><button id="pulse">Pulse</button></div>
-      <div id="actions"><button id="audio">Sound: Off</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
-      <p id="help">Drag to rotate or look around. Immersion: move with the arrows. The patterns control bridge fragments; this is an experimental field, not a full acoustic solver. Sound is off until enabled.</p>
+      <div id="actions"><button id="testSound">Test chime</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
+      <p id="help">Observer: drag the sphere to rotate, pinch or use +/- to zoom. Tap Sound off to hear oscillators and an immediate chime. Open Controls to tune the field. Immersion: drag to look and use arrows to travel. This is a mathematical field experiment, not a full acoustic solver.</p>
     </div>
   </section>
 </div>
@@ -98,7 +98,7 @@ const shell=new THREE.Mesh(new THREE.SphereGeometry(2.6,48,32),new THREE.MeshPhy
 const rim=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(2.63,2)),new THREE.LineBasicMaterial({color:0x5fabc4,transparent:true,opacity:.15}));shellGroup.add(rim);
 const orbitRing=new THREE.Mesh(new THREE.TorusGeometry(2.85,.012,6,160),new THREE.MeshBasicMaterial({color:0x71bad4,transparent:true,opacity:.58}));orbitRing.rotation.x=1.18;orbitRing.rotation.y=.4;shellGroup.add(orbitRing);
 const starGeo=new THREE.BufferGeometry();let positions=[];for(let i=0;i<360;i++){const a=Math.random()*Math.PI*2,b=Math.acos(2*Math.random()-1),r=18+Math.random()*52;positions.push(Math.sin(b)*Math.cos(a)*r,Math.cos(b)*r,Math.sin(b)*Math.sin(a)*r)}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9abdd8,size:.055,sizeAttenuation:true})));
-const state={mode:'observer',osc:[{freq:110,on:true,phase:0},{freq:170,on:true,phase:1.5},{freq:250,on:false,phase:3}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.45,playerX:-5.5,playerZ:0,tilt:false};
+const state={mode:'observer',osc:[{freq:110,on:true,phase:0},{freq:170,on:true,phase:1.5},{freq:250,on:false,phase:3}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:15.5};
 const oscRoot=$('oscillators');
 for(let i=0;i<3;i++){
 const row=document.createElement('div');row.className='osc';row.innerHTML=`<input type="checkbox" id="check${i}" ${state.osc[i].on?'checked':''} aria-label="Oscillator ${i+1} enabled"><label for="slider${i}">Wave ${i+1}</label><input id="slider${i}" type="range" min="60" max="420" step="1" value="${state.osc[i].freq}" aria-label="Oscillator ${i+1} frequency"><output id="output${i}">${state.osc[i].freq} Hz</output>`;oscRoot.append(row);
@@ -123,15 +123,45 @@ function renderField(time=0){
     t.mesh.material.emissiveIntensity=.2+support*.85;
     t.mesh.material.color.setHSL(.52+Math.abs(v)*.10,.62,.29+support*.24);
   }
-  $('fieldStatus').textContent=`${stableCount} stable fragments · Tune and observe the crossing`;
+  $('fieldStatus').textContent=`${stableCount} stable fragments · Drag to rotate · Pinch to zoom`;
 }
-let audioCtx=null,voices=[],soundOn=false;
+let audioCtx=null,voices=[],soundOn=false,masterGain=null;
 async function toggleSound(){
-  if(!audioCtx){audioCtx=new (window.AudioContext||window.webkitAudioContext)();for(let i=0;i<3;i++){const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type='sine';osc.frequency.value=state.osc[i].freq;gain.gain.value=0;osc.connect(gain).connect(audioCtx.destination);osc.start();voices.push({osc,gain})}}
-  if(audioCtx.state==='suspended')await audioCtx.resume();soundOn=!soundOn;syncAudio();$('audio').textContent=`Sound: ${soundOn?'On':'Off'}`;$('audio').classList.toggle('active',soundOn);
+  try {
+    if(!audioCtx){
+      audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+      masterGain=audioCtx.createGain();masterGain.gain.value=.52;masterGain.connect(audioCtx.destination);
+      for(let i=0;i<3;i++){
+        const fundamental=audioCtx.createOscillator(),harmonic=audioCtx.createOscillator();
+        const fLevel=audioCtx.createGain(),hLevel=audioCtx.createGain(),level=audioCtx.createGain();
+        fundamental.type='sine';harmonic.type='sine';
+        fundamental.frequency.value=state.osc[i].freq;harmonic.frequency.value=state.osc[i].freq*3;
+        fLevel.gain.value=.55;hLevel.gain.value=.45;level.gain.value=0;
+        fundamental.connect(fLevel).connect(level);
+        harmonic.connect(hLevel).connect(level);
+        level.connect(masterGain);fundamental.start();harmonic.start();
+        voices.push({fundamental,harmonic,level});
+      }
+    }
+    if(audioCtx.state==='suspended')await audioCtx.resume();
+    soundOn=!soundOn;syncAudio();
+    $('audio').textContent=soundOn?'🔊 Sound on':'🔈 Sound off';
+    $('audio').classList.toggle('active',soundOn);
+    if(soundOn){playImpulse('chime');toast('Audio enabled · Hear the chime?')}
+    else toast('Sound muted');
+  }catch(e){toast('Audio could not start: '+(e.message||'Try Safari'))}
 }
-function syncAudio(){if(!audioCtx)return;for(let i=0;i<voices.length;i++){voices[i].osc.frequency.setTargetAtTime(state.osc[i].freq,audioCtx.currentTime,.025);voices[i].gain.gain.setTargetAtTime(soundOn&&state.osc[i].on?.013:0,audioCtx.currentTime,.025)}}
+function syncAudio(){
+  if(!audioCtx)return;
+  for(let i=0;i<voices.length;i++){
+    const v=voices[i],freq=state.osc[i].freq,t=audioCtx.currentTime;
+    v.fundamental.frequency.setTargetAtTime(freq,t,.025);
+    v.harmonic.frequency.setTargetAtTime(freq*3,t,.025);
+    v.level.gain.setTargetAtTime(soundOn&&state.osc[i].on?.065:0,t,.035);
+  }
+}
 $('audio').addEventListener('click',toggleSound);
+$('testSound').addEventListener('click',async()=>{if(!soundOn)await toggleSound();else playImpulse('chime')});
 function playImpulse(kind){
  const cfg={knock:{hz:110,length:.18,speed:5,strength:1},chime:{hz:660,length:1.6,speed:3,strength:.65},pulse:{hz:65,length:.48,speed:8,strength:1.45}}[kind];
  const t=clock.getElapsedTime();state.pulses.push({t,x:0,z:0,...cfg});
@@ -139,24 +169,57 @@ function playImpulse(kind){
  toast(`${kind[0].toUpperCase()+kind.slice(1)} disturbance`);
 }
 for(const kind of ['knock','chime','pulse'])$(kind).addEventListener('click',()=>playImpulse(kind));
-function changeMode(mode){state.mode=mode;$('observer').classList.toggle('active',mode==='observer');$('immerse').classList.toggle('active',mode==='immersion');$('move').classList.toggle('show',mode==='immersion');shellGroup.visible=mode==='observer';world.scale.setScalar(mode==='observer'?.23:1);world.position.set(0,0,0);toast(mode==='observer'?'Global field view':'Entering the chamber')}
+function changeMode(mode){state.mode=mode;$('observer').classList.toggle('active',mode==='observer');$('immerse').classList.toggle('active',mode==='immersion');$('move').classList.toggle('show',mode==='immersion');shellGroup.visible=mode==='observer';$('viewControls').classList.toggle('hidden',mode!=='observer');world.scale.setScalar(mode==='observer'?.23:1);world.position.set(0,0,0);toast(mode==='observer'?'Global field view':'Entering the chamber')}
 $('observer').addEventListener('click',()=>changeMode('observer'));
 $('immerse').addEventListener('click',()=>changeMode('immersion'));
-$('collapse').addEventListener('click',()=>{$('controls').classList.toggle('collapsed');$('collapse').textContent=$('controls').classList.contains('collapsed')?'Show ▴':'Hide ▾'});
+$('collapse').addEventListener('click',()=>{$('controls').classList.toggle('collapsed');$('collapse').textContent=$('controls').classList.contains('collapsed')?'Controls ▴':'Hide ▾'});
 $('forward').addEventListener('click',()=>{state.playerX=Math.min(7,state.playerX+.6);toast(`Position ${state.playerX.toFixed(1)}`)});
 $('back').addEventListener('click',()=>{state.playerX=Math.max(-7,state.playerX-.6);toast(`Position ${state.playerX.toFixed(1)}`)});
-const ptr={active:false,x:0,y:0};
-canvas.addEventListener('pointerdown',e=>{ptr.active=true;ptr.x=e.clientX;ptr.y=e.clientY;canvas.setPointerCapture(e.pointerId)});
-canvas.addEventListener('pointermove',e=>{if(!ptr.active)return;const dx=e.clientX-ptr.x,dy=e.clientY-ptr.y;ptr.x=e.clientX;ptr.y=e.clientY;if(state.mode==='observer'){state.orbitX+=dx*.006;state.orbitY=Math.max(-.8,Math.min(.85,state.orbitY+dy*.006))}else{state.yaw-=dx*.005;state.pitch=Math.max(-1.1,Math.min(1.1,state.pitch-dy*.005))}});
-canvas.addEventListener('pointerup',()=>ptr.active=false);canvas.addEventListener('pointercancel',()=>ptr.active=false);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function zoom(factor){state.observerDistance=clamp(state.observerDistance*factor,9.5,25)}
+$('zoomIn').addEventListener('click',()=>zoom(.84));
+$('zoomOut').addEventListener('click',()=>zoom(1.19));
+$('resetView').addEventListener('click',()=>{
+ state.orbitX=.35;state.orbitY=.28;state.observerDistance=15.5;toast('View reset');
+});
+const pointers=new Map();let pinchDistance=0;
+canvas.addEventListener('pointerdown',e=>{
+ e.preventDefault();pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ try{canvas.setPointerCapture(e.pointerId)}catch{}
+ if(pointers.size===2){const a=[...pointers.values()];pinchDistance=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}
+});
+canvas.addEventListener('pointermove',e=>{
+ const old=pointers.get(e.pointerId);if(!old)return;
+ const dx=e.clientX-old.x,dy=e.clientY-old.y;
+ pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pointers.size>=2){
+   if(state.mode==='observer'){
+    const a=[...pointers.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
+    if(pinchDistance>10&&d>10)zoom(pinchDistance/d);pinchDistance=d;
+   }
+   return;
+ }
+ if(state.mode==='observer'){
+   state.orbitX-=dx*.007;
+   state.orbitY=clamp(state.orbitY+dy*.006,-1.1,1.1);
+ }else{
+   state.yaw-=dx*.005;
+   state.pitch=clamp(state.pitch-dy*.005,-1.1,1.1);
+ }
+});
+function releasePointer(e){pointers.delete(e.pointerId);if(pointers.size<2)pinchDistance=0}
+canvas.addEventListener('pointerup',releasePointer);
+canvas.addEventListener('pointercancel',releasePointer);
+canvas.addEventListener('lostpointercapture',releasePointer);
+canvas.addEventListener('wheel',e=>{if(state.mode==='observer'){e.preventDefault();zoom(e.deltaY>0?1.08:.92)}},{passive:false});
 $('tilt').addEventListener('click',async()=>{try{if(typeof DeviceOrientationEvent==='undefined')throw new Error('Motion unavailable');if(typeof DeviceOrientationEvent.requestPermission==='function'){const result=await DeviceOrientationEvent.requestPermission();if(result!=='granted')throw new Error('Permission declined')}state.tilt=true;$('tilt').textContent='Tilt: On';$('tilt').classList.add('active');toast('Tilt enabled')}catch(e){toast(e.message||'Motion unavailable')}});
-window.addEventListener('deviceorientation',e=>{if(!state.tilt)return;const roll=Number(e.gamma||0),pitch=Number(e.beta||0);if(state.mode==='observer'){state.orbitX+=Math.max(-.012,Math.min(.012,roll*.00025));state.orbitY=Math.max(-.7,Math.min(.8,pitch*.005))}else{state.pitch=Math.max(-.5,Math.min(.5,-pitch*.007))}});
+window.addEventListener('deviceorientation',e=>{if(!state.tilt)return;const roll=Number(e.gamma||0),pitch=Number(e.beta||0);if(state.mode==='observer'){state.orbitX=roll*.016;state.orbitY=Math.max(-.7,Math.min(.8,pitch*.005))}else{state.pitch=Math.max(-.5,Math.min(.5,-pitch*.007))}});
 $('save').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');notes.push({saved:new Date().toISOString(),osc:state.osc.map(o=>({...o}))});localStorage.setItem('resonanceDiscoveries',JSON.stringify(notes.slice(-20)));toast(`Discovery saved (${Math.min(notes.length,20)})`)});
 $('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;for(let i=0;i<3;i++){$(`check${i}`).checked=state.osc[i].on;$(`slider${i}`).value=state.osc[i].freq;$(`output${i}`).textContent=state.osc[i].freq+' Hz'}syncAudio();renderField();toast('Latest discovery restored')});
 let toastTimer=0;function toast(txt){$('toast').textContent=txt;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),1750)}
 const clock=new THREE.Clock();let frame=0;
 function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();
-  if(state.mode==='observer'){const yaw=state.orbitX,pitch=state.orbitY;camera.position.set(9*Math.sin(yaw)*Math.cos(pitch),9*Math.sin(pitch),9*Math.cos(yaw)*Math.cos(pitch));camera.lookAt(0,0,0);shellGroup.rotation.y=t*.035;world.rotation.y=Math.sin(t*.1)*.08;}
+  if(state.mode==='observer'){const yaw=state.orbitX,pitch=state.orbitY;camera.position.set(state.observerDistance*Math.sin(yaw)*Math.cos(pitch),state.observerDistance*Math.sin(pitch),state.observerDistance*Math.cos(yaw)*Math.cos(pitch));camera.lookAt(0,0,0);shellGroup.rotation.y=0;world.rotation.y=0;}
   else{world.rotation.y=0;const px=state.playerX;camera.position.set(px,1.85,4.2);const direction=new THREE.Vector3(Math.cos(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),Math.sin(state.yaw)*Math.cos(state.pitch));camera.lookAt(camera.position.clone().add(direction));}
   core.rotation.y=t*.3;portal.rotation.z=t*.06;for(let i=0;i<rings.length;i++){rings[i].material.opacity=.13+.08*Math.sin(t*.8+i);}
   state.pulses=state.pulses.filter(p=>t-p.t<3);
