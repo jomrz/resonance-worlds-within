@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 0.8</title>
+<title>Resonance: Worlds Within | Prototype 0.9</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -23,6 +23,13 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 .osc{display:grid;grid-template-columns:22px 54px 1fr 57px;align-items:center;gap:9px;margin:9px 0}.osc label{font-size:12px;color:#bed2df} .osc output{font-size:12px;text-align:right;color:#d4eefa;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:#7dcee3;height:22px;touch-action:pan-y}.osc input[type=checkbox]{width:17px;height:17px;accent-color:#86cbe7;margin:0}
 #extras{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}#extras button{flex:1;font-size:12px;padding:9px 5px}#actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}#actions button{flex:1;font-size:11px;padding:9px 5px}
 #help{font-size:10px;color:#9db4c7;line-height:1.5;margin:10px 0 0}
+#controls.immersed{display:none}
+#immersionTools{position:absolute;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));display:none;gap:5px;align-items:center;max-width:540px;margin:auto;padding:8px;background:rgba(9,21,36,.89);border:1px solid var(--edge);border-radius:17px;pointer-events:auto;backdrop-filter:blur(12px)}
+#immersionTools.show{display:flex}
+#immersionTools button{min-width:0;flex:1;padding:11px 4px;font-size:12px}
+#immersionTools .localAction{background:rgba(37,71,86,.85);border-color:rgba(137,186,202,.45)}
+#immersiveAudio{flex:.85!important;font-size:11px!important;white-space:nowrap}
+#immersiveAudio.active{background:rgba(38,102,118,.9);border-color:#7ed5e7}
 #move{position:absolute;left:12px;right:12px;bottom:calc(85px + env(safe-area-inset-bottom,0px));display:none;pointer-events:none;align-items:flex-end;justify-content:space-between;gap:12px;user-select:none;-webkit-user-select:none}#move.show{display:flex}.stickColumn{display:flex;flex-direction:column;align-items:center;gap:6px}.stickLabel{font-size:10px;font-weight:700;letter-spacing:.18em;color:#abd2e8;text-shadow:0 1px 4px #09101b}.joystick{position:relative;width:108px;height:108px;border-radius:56px;background:rgba(14,39,57,.67);border:1px solid rgba(153,208,231,.46);touch-action:none;display:grid;place-items:center;overscroll-behavior:none;pointer-events:auto}.joystick::after{content:'+';color:rgba(145,206,231,.42);font-size:34px;line-height:1}.stick{position:absolute;width:43px;height:43px;border-radius:50%;border:2px solid #95d5ed;background:rgba(62,139,168,.78);box-shadow:0 0 15px rgba(88,164,202,.28);pointer-events:none;z-index:1;transform:translate(0px,0px)}#lookStick{border-color:#ebc58d;background:rgba(173,112,55,.7)}
 #toast{position:absolute;top:calc(env(safe-area-inset-top,0px) + 125px);left:50%;transform:translateX(-50%);background:rgba(17,39,56,.9);border:1px solid var(--edge);border-radius:12px;padding:9px 13px;min-width:180px;text-align:center;color:#d4edfb;font-size:12px;opacity:0;transition:opacity .2s}#toast.show{opacity:1}#discovery{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:25px;pointer-events:auto;background:rgba(3,11,22,.72);backdrop-filter:blur(6px)}#discovery.hidden{display:none}#discoveryBox{width:min(100%,390px);background:#10263a;border:1px solid #7aa3b8;border-radius:22px;padding:22px;box-shadow:0 16px 75px #0009;text-align:center}#discoveryBox .spark{font-size:30px;color:#efc78b;margin-bottom:10px}#discoveryBox h2{font-size:21px;margin:5px 0 10px}#discoveryBox p{font-size:13px;line-height:1.6;color:#c4d8e8}#discoveryBox button{margin:5px;padding:11px 14px}#discoveryBox .primary{background:#296482;border-color:#6ac2e4}#objective{position:absolute;top:calc(env(safe-area-inset-top,0px) + 119px);left:15px;right:15px;pointer-events:none;text-align:center;font-size:11px;line-height:1.45;color:#dce3ec;text-shadow:0 2px 5px #07131b}
 @media(min-width:700px){#controls{right:18px;left:auto;width:385px;bottom:18px}#move{bottom:55px}}
@@ -33,7 +40,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 0.8</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 0.9</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
     <div id="mode"><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER 01 · Form a resonant crossing and reach the gold gate</div>
@@ -43,10 +50,16 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
     <div id="controlHeading"><div><strong>RESONANCE ENGINE</strong><br><small>Continuous field sources</small></div><div id="controlTools"><button id="audio" aria-label="Enable or disable audible sound">🔈 Sound off</button><button id="soundTest" aria-label="Test audible sound">♪ Test</button><button id="collapse" class="secondary" aria-label="Expand or collapse frequency controls">Controls ▴</button></div></div>
     <div id="controlBody">
       <div id="oscillators"></div>
-      <div id="extras"><button id="knock">Knock</button><button id="chime">Chime</button><button id="pulse">Pulse</button></div>
-      <div id="actions"><button id="testSound">Test chime</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
-      <p id="help">CHAMBER 01: Tune the oscillators to form a continuous bridge, then enter Immersion and cross to the gold gate. Left stick moves; right stick looks around. Stable resonance fragments become solid ground. You can solve the same crossing with different frequencies. This is a stylized field experiment, not an exact acoustic simulation.</p>
+      
+      <div id="actions"><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
+      <p id="help">Observer: tune continuous frequencies to shape the global standing field and find a crossing. Immersion: move inside that same field and use physical thumps, chimes and pulses at your location to disturb nearby structures.</p>
     </div>
+  </section>
+  <section id="immersionTools" aria-label="Local sound instruments">
+    <button class="localAction" id="knock">◉ Thump</button>
+    <button class="localAction" id="chime">♫ Chime</button>
+    <button class="localAction" id="pulse">◎ Pulse</button>
+    <button id="immersiveAudio" aria-label="Sound on or off">🔈 Sound</button>
   </section>
 </div>
 <script type="module">
@@ -115,7 +128,7 @@ function sampleField(x,z,time=0){
   let value=0,weight=0;
   const src=[[-5.5,-2.5],[5.2,2.2],[-.4,5.5]];
   for(let i=0;i<3;i++)if(state.osc[i].on){const o=state.osc[i],p=src[i],dist=Math.hypot(x-p[0],z-p[1]);const k=.45+o.freq/115;value+=Math.cos(k*dist+o.phase)*.85;weight+=.85;}
-  for(const p of state.pulses){const age=time-p.t,dist=Math.hypot(x-p.x,z-p.z);if(age<3&&age>=0){const front=age*p.speed;value+=p.strength*Math.exp(-Math.pow((dist-front)*1.4,2)) * Math.sin(dist*4.5-age*8)*(1-age/3);}}
+  for(const p of state.pulses){const age=time-p.t,dist=Math.hypot(x-p.x,z-p.z);if(age<3&&age>=0){const front=age*p.speed;value+=p.strength*Math.exp(-Math.pow((dist-front)*1.4,2)) * Math.sin(dist*4.5-age*8)*(1-age/3)*Math.max(0,1-dist/p.reach);}}
   return weight?value/Math.max(weight,.85):0;
 }
 function renderField(time=0){
@@ -130,9 +143,14 @@ function renderField(time=0){
     t.mesh.material.color.setHSL(.52+Math.abs(v)*.10,.65,stable?.29+support*.25:.16);
   }
   state.passageOpen=hasConnectedPassage();
-  $('fieldStatus').textContent=state.passageOpen
-    ?`PASSAGE CONNECTED · ${stableCount}/${tiles.length} fragments · Cross to the gate`
-    :`PASSAGE INCOMPLETE · ${stableCount}/${tiles.length} fragments · Tune frequencies`;
+  if(state.mode==='observer'){
+    $('fieldStatus').textContent=state.passageOpen
+      ?`PASSAGE CONNECTED · ${stableCount}/${tiles.length} fragments · Enter the chamber`
+      :`PASSAGE INCOMPLETE · ${stableCount}/${tiles.length} fragments · Tune frequencies`;
+  }else{
+    const local=Math.abs(sampleField(state.playerX,state.playerZ,time));
+    $('fieldStatus').textContent=local>.65?'NEARBY FIELD · Strong vibration':local>.28?'NEARBY FIELD · Subtle vibration':'NEARBY FIELD · Quiet, try a thump, chime or pulse';
+  }
   portal.material.emissiveIntensity=state.passageOpen?1.5:.16;
 }
 // A route exists only when adjacent stable cells connect the two anchored islands.
@@ -204,6 +222,8 @@ async function toggleSound(){
     soundOn=!soundOn;syncAudio();
     $('audio').textContent=soundOn?'🔊 Sound on':'🔈 Sound off';
     $('audio').classList.toggle('active',soundOn);
+    $('immersiveAudio').textContent=soundOn?'🔊 On':'🔈 Sound';
+    $('immersiveAudio').classList.toggle('active',soundOn);
     if(soundOn){playTestTone();toast('Audio enabled · Hear the test tone?')}
     else toast('Sound muted');
   }catch(e){toast('Audio could not start: '+(e.message||'Try Safari'))}
@@ -218,6 +238,7 @@ function syncAudio(){
   }
 }
 $('audio').addEventListener('click',toggleSound);
+$('immersiveAudio').addEventListener('click',toggleSound);
 function playTestTone(){
  if(!audioCtx||audioCtx.state!=='running'){toast('Audio not active · Tap Sound off first');return;}
  const t=audioCtx.currentTime+.005;
@@ -242,15 +263,51 @@ document.addEventListener('visibilitychange',()=>{
   audioCtx.resume().catch(()=>{});
  }
 });
-$('testSound').addEventListener('click',async()=>{if(!soundOn)await toggleSound();else playImpulse('chime')});
+
+// Inside, impulses originate near the player and travel through the same world field.
 function playImpulse(kind){
- const cfg={knock:{hz:110,length:.18,speed:5,strength:1},chime:{hz:660,length:1.6,speed:3,strength:.65},pulse:{hz:65,length:.48,speed:8,strength:1.45}}[kind];
- const t=clock.getElapsedTime();state.pulses.push({t,x:0,z:0,...cfg});
- if(soundOn&&audioCtx){const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=kind==='knock'?'triangle':'sine';osc.frequency.setValueAtTime(cfg.hz,audioCtx.currentTime);gain.gain.setValueAtTime(.001,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(kind==='chime'?.05:.065,audioCtx.currentTime+.02);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+cfg.length);osc.connect(gain).connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+cfg.length+.01)}
- toast(`${kind[0].toUpperCase()+kind.slice(1)} disturbance`);
+ if(state.mode!=='immersion')return;
+ const cfg={
+  knock:{hz:185,length:.20,speed:3.1,strength:1.15,reach:3.2,color:0xe0bd87,label:'Thump'},
+  chime:{hz:698,length:1.45,speed:2.4,strength:.70,reach:6.5,color:0xf1cc84,label:'Chime'},
+  pulse:{hz:275,length:.54,speed:7.5,strength:1.4,reach:14,color:0x81dbf1,label:'Pulse'}
+ }[kind];
+ const source=kind==='pulse'?{x:state.playerX,z:state.playerZ}:{
+  x:state.playerX+Math.cos(state.yaw)*1.15,
+  z:state.playerZ+Math.sin(state.yaw)*1.15
+ };
+ const t=clock.getElapsedTime();
+ const visual=new THREE.Mesh(new THREE.TorusGeometry(1,.025,6,64),
+  new THREE.MeshBasicMaterial({color:cfg.color,transparent:true,opacity:.65,depthWrite:false}));
+ visual.rotation.x=Math.PI/2;visual.position.set(source.x,.16,source.z);world.add(visual);
+ state.pulses.push({...cfg,t,x:source.x,z:source.z,visual});
+ if(soundOn&&audioCtx){
+   if(audioCtx.state!=='running')audioCtx.resume().catch(()=>{});
+   const at=audioCtx.currentTime,o=audioCtx.createOscillator(),harmonic=audioCtx.createOscillator(),gain=audioCtx.createGain();
+   o.type=kind==='knock'?'triangle':'sine';harmonic.type='triangle';
+   o.frequency.setValueAtTime(cfg.hz,at);harmonic.frequency.setValueAtTime(cfg.hz*2,at);
+   gain.gain.setValueAtTime(.0001,at);
+   gain.gain.exponentialRampToValueAtTime(.12,at+.016);
+   gain.gain.exponentialRampToValueAtTime(.0001,at+cfg.length);
+   o.connect(gain);harmonic.connect(gain);gain.connect(masterGain);
+   o.start(at);harmonic.start(at);o.stop(at+cfg.length+.02);harmonic.stop(at+cfg.length+.02);
+ }
+ toast(cfg.label+' · Local wave emitted');
 }
 for(const kind of ['knock','chime','pulse'])$(kind).addEventListener('click',()=>playImpulse(kind));
-function changeMode(mode){stopJoystick(null);stopLookJoystick(null);state.mode=mode;$('observer').classList.toggle('active',mode==='observer');$('immerse').classList.toggle('active',mode==='immersion');$('move').classList.toggle('show',mode==='immersion');shellGroup.visible=mode==='observer';$('viewControls').classList.toggle('hidden',mode!=='observer');world.scale.setScalar(mode==='observer'?.23:1);world.position.set(0,0,0);toast(mode==='observer'?'Global field view':'Entering the chamber')}
+function changeMode(mode){
+ stopJoystick(null);stopLookJoystick(null);
+ state.mode=mode;
+ $('observer').classList.toggle('active',mode==='observer');
+ $('immerse').classList.toggle('active',mode==='immersion');
+ $('move').classList.toggle('show',mode==='immersion');
+ $('controls').classList.toggle('immersed',mode==='immersion');
+ $('immersionTools').classList.toggle('show',mode==='immersion');
+ shellGroup.visible=mode==='observer';
+ $('viewControls').classList.toggle('hidden',mode!=='observer');
+ world.scale.setScalar(mode==='observer'?.23:1);world.position.set(0,0,0);
+ toast(mode==='observer'?'Observer: global resonance':'Immersion: local physical sound');
+}
 $('observer').addEventListener('click',()=>changeMode('observer'));
 $('immerse').addEventListener('click',()=>changeMode('immersion'));
 $('collapse').addEventListener('click',()=>{$('controls').classList.toggle('collapsed');$('collapse').textContent=$('controls').classList.contains('collapsed')?'Controls ▴':'Hide ▾'});
@@ -281,7 +338,7 @@ function updateLookStick(e){
  const range=37,distance=Math.hypot(x,y),strength=Math.min(1,distance/range);
  const px=distance?x/distance*range*strength:0,py=distance?y/distance*range*strength:0;
  lookStick.style.transform=`translate(${px}px,${py}px)`;
- state.lookX=px/range;state.lookY=-py/range;
+ state.lookX=px/range;state.lookY=py/range; // vertical look reversed
 }
 function stopLookJoystick(e){
  if(lookPointer!==null&&(e==null||e.pointerId===lookPointer)){
@@ -364,7 +421,7 @@ canvas.addEventListener('pointermove',e=>{
    }
  }else{
    state.yaw-=dx*.005;
-   state.pitch=clamp(state.pitch-dy*.005,-1.1,1.1);
+   state.pitch=clamp(state.pitch+dy*.005,-1.1,1.1);
  }
 });
 function releasePointer(e){pointers.delete(e.pointerId);if(pointers.size<2){pinchDistance=0;gestureCentroid=null}}
@@ -455,6 +512,13 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
     camera.lookAt(camera.position.clone().add(direction));
   }
   core.rotation.y=t*.3;portal.rotation.z=t*.06;for(let i=0;i<rings.length;i++){rings[i].material.opacity=.13+.08*Math.sin(t*.8+i);}
+  for(const p of state.pulses){
+    if(!p.visual)continue;
+    const age=Math.max(0,t-p.t),radius=Math.min(p.reach,.25+age*p.speed);
+    p.visual.scale.setScalar(radius);
+    p.visual.material.opacity=.65*Math.max(0,1-age/3)*Math.max(0,1-radius/(p.reach*1.1));
+    if(age>=3){world.remove(p.visual);p.visual.geometry.dispose();p.visual.material.dispose();}
+  }
   state.pulses=state.pulses.filter(p=>t-p.t<3);
   if(frame++%3===0)renderField(t);
   renderer.render(scene,camera);
