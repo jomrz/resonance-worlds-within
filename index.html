@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 0.9</title>
+<title>Resonance: Worlds Within | Prototype 1.0</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -30,7 +30,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 #immersionTools .localAction{background:rgba(37,71,86,.85);border-color:rgba(137,186,202,.45)}
 #immersiveAudio{flex:.85!important;font-size:11px!important;white-space:nowrap}
 #immersiveAudio.active{background:rgba(38,102,118,.9);border-color:#7ed5e7}
-#move{position:absolute;left:12px;right:12px;bottom:calc(85px + env(safe-area-inset-bottom,0px));display:none;pointer-events:none;align-items:flex-end;justify-content:space-between;gap:12px;user-select:none;-webkit-user-select:none}#move.show{display:flex}.stickColumn{display:flex;flex-direction:column;align-items:center;gap:6px}.stickLabel{font-size:10px;font-weight:700;letter-spacing:.18em;color:#abd2e8;text-shadow:0 1px 4px #09101b}.joystick{position:relative;width:108px;height:108px;border-radius:56px;background:rgba(14,39,57,.67);border:1px solid rgba(153,208,231,.46);touch-action:none;display:grid;place-items:center;overscroll-behavior:none;pointer-events:auto}.joystick::after{content:'+';color:rgba(145,206,231,.42);font-size:34px;line-height:1}.stick{position:absolute;width:43px;height:43px;border-radius:50%;border:2px solid #95d5ed;background:rgba(62,139,168,.78);box-shadow:0 0 15px rgba(88,164,202,.28);pointer-events:none;z-index:1;transform:translate(0px,0px)}#lookStick{border-color:#ebc58d;background:rgba(173,112,55,.7)}
+#move{position:absolute;left:12px;right:12px;bottom:calc(85px + env(safe-area-inset-bottom,0px));display:none;pointer-events:none;align-items:flex-end;justify-content:space-between;gap:12px;user-select:none;-webkit-user-select:none}#move.show{display:flex}.stickColumn{display:flex;flex-direction:column;align-items:center;gap:6px}.stickLabel{font-size:10px;font-weight:700;letter-spacing:.18em;color:#abd2e8;text-shadow:0 1px 4px #09101b}.joystick{position:relative;width:108px;height:108px;border-radius:56px;background:rgba(14,39,57,.67);border:1px solid rgba(153,208,231,.46);touch-action:none;display:grid;place-items:center;overscroll-behavior:none;pointer-events:auto}.joystick::after{content:'+';color:rgba(145,206,231,.42);font-size:34px;line-height:1}.stick{position:absolute;width:43px;height:43px;border-radius:50%;border:2px solid #95d5ed;background:rgba(62,139,168,.78);box-shadow:0 0 15px rgba(88,164,202,.28);pointer-events:none;z-index:1;transform:translate(0px,0px)}#lookStick{border-color:#ebc58d;background:rgba(173,112,55,.7)}#invertLook{font-size:10px;padding:5px 10px;border-radius:999px;background:rgba(28,54,68,.86);border-color:#668796;color:#cbe8f1;pointer-events:auto}#invertLook.active{background:rgba(117,77,37,.86);border-color:#e9b877}
 #toast{position:absolute;top:calc(env(safe-area-inset-top,0px) + 125px);left:50%;transform:translateX(-50%);background:rgba(17,39,56,.9);border:1px solid var(--edge);border-radius:12px;padding:9px 13px;min-width:180px;text-align:center;color:#d4edfb;font-size:12px;opacity:0;transition:opacity .2s}#toast.show{opacity:1}#discovery{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:25px;pointer-events:auto;background:rgba(3,11,22,.72);backdrop-filter:blur(6px)}#discovery.hidden{display:none}#discoveryBox{width:min(100%,390px);background:#10263a;border:1px solid #7aa3b8;border-radius:22px;padding:22px;box-shadow:0 16px 75px #0009;text-align:center}#discoveryBox .spark{font-size:30px;color:#efc78b;margin-bottom:10px}#discoveryBox h2{font-size:21px;margin:5px 0 10px}#discoveryBox p{font-size:13px;line-height:1.6;color:#c4d8e8}#discoveryBox button{margin:5px;padding:11px 14px}#discoveryBox .primary{background:#296482;border-color:#6ac2e4}#objective{position:absolute;top:calc(env(safe-area-inset-top,0px) + 119px);left:15px;right:15px;pointer-events:none;text-align:center;font-size:11px;line-height:1.45;color:#dce3ec;text-shadow:0 2px 5px #07131b}
 @media(min-width:700px){#controls{right:18px;left:auto;width:385px;bottom:18px}#move{bottom:55px}}
 @media(max-height:690px){#controlBody{max-height:45vh;overflow:auto}#move{bottom:calc(72px + env(safe-area-inset-bottom,0px))}.joystick{width:95px;height:95px}}
@@ -40,11 +40,11 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 0.9</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.0</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
     <div id="mode"><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div>
   </div>
-  <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER 01 · Form a resonant crossing and reach the gold gate</div>
-  <div id="viewControls"><button id="panToggle" aria-label="Switch between rotating and panning the world" aria-pressed="false">Pan</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div><div id="move"><div class="stickColumn"><div class="joystick" id="joystick" aria-label="Move joystick"><div class="stick" id="stick"></div></div><span class="stickLabel">MOVE</span></div><div class="stickColumn"><div class="joystick" id="lookJoystick" aria-label="Look joystick"><div class="stick" id="lookStick"></div></div><span class="stickLabel">LOOK</span></div></div>
+  <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">OBSERVER · Timeless standing-field atlas</div>
+  <div id="viewControls"><button id="panToggle" aria-label="Switch between rotating and panning the world" aria-pressed="false">Pan</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div><div id="move"><div class="stickColumn"><div class="joystick" id="joystick" aria-label="Move joystick"><div class="stick" id="stick"></div></div><span class="stickLabel">MOVE</span></div><div class="stickColumn"><div class="joystick" id="lookJoystick" aria-label="Look joystick"><div class="stick" id="lookStick"></div></div><span class="stickLabel">LOOK</span><button id="invertLook" aria-pressed="false" aria-label="Reverse vertical look direction">Y: Normal</button></div></div>
   <div id="toast"></div><div id="discovery" class="hidden" role="dialog" aria-modal="true" aria-labelledby="discoveryTitle"><div id="discoveryBox"><div class="spark">✦</div><h2 id="discoveryTitle">Passage discovered</h2><p id="discoveryText">You crossed using a resonance configuration. Your discovery has been recorded.</p><button id="anotherRoute" class="primary">Try another solution</button><button id="keepExploring">Keep exploring</button></div></div>
   <section id="controls" class="collapsed">
     <div id="controlHeading"><div><strong>RESONANCE ENGINE</strong><br><small>Continuous field sources</small></div><div id="controlTools"><button id="audio" aria-label="Enable or disable audible sound">🔈 Sound off</button><button id="soundTest" aria-label="Test audible sound">♪ Test</button><button id="collapse" class="secondary" aria-label="Expand or collapse frequency controls">Controls ▴</button></div></div>
@@ -118,6 +118,19 @@ const orbitRing=new THREE.Mesh(new THREE.TorusGeometry(2.85,.012,6,160),new THRE
 const starGeo=new THREE.BufferGeometry();let positions=[];for(let i=0;i<360;i++){const a=Math.random()*Math.PI*2,b=Math.acos(2*Math.random()-1),r=18+Math.random()*52;positions.push(Math.sin(b)*Math.cos(a)*r,Math.cos(b)*r,Math.sin(b)*Math.sin(a)*r)}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9abdd8,size:.055,sizeAttenuation:true})));
 const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0},{freq:95,on:true,phase:1.5},{freq:250,on:false,phase:3}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:15.5,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,lastGrounded:0,lastBlockMessage:-10};
 const observerPan=new THREE.Vector2(0,0); // Camera-space pan; globe pivot stays at origin.
+let invertLookY=false;
+try{invertLookY=localStorage.getItem('resonanceInvertY')==='1'}catch(e){}
+function syncLookSetting(){
+ $('invertLook').textContent=invertLookY?'Y: Flight':'Y: Normal';
+ $('invertLook').classList.toggle('active',invertLookY);
+ $('invertLook').setAttribute('aria-pressed',String(invertLookY));
+}
+syncLookSetting();
+$('invertLook').addEventListener('click',()=>{
+ invertLookY=!invertLookY;syncLookSetting();
+ try{localStorage.setItem('resonanceInvertY',invertLookY?'1':'0')}catch(e){}
+ toast(invertLookY?'Flight: down looks up':'Normal: up looks up');
+});
 const oscRoot=$('oscillators');
 for(let i=0;i<3;i++){
 const row=document.createElement('div');row.className='osc';row.innerHTML=`<input type="checkbox" id="check${i}" ${state.osc[i].on?'checked':''} aria-label="Oscillator ${i+1} enabled"><label for="slider${i}">Wave ${i+1}</label><input id="slider${i}" type="range" min="60" max="420" step="1" value="${state.osc[i].freq}" aria-label="Oscillator ${i+1} frequency"><output id="output${i}">${state.osc[i].freq} Hz</output>`;oscRoot.append(row);
@@ -128,7 +141,7 @@ function sampleField(x,z,time=0){
   let value=0,weight=0;
   const src=[[-5.5,-2.5],[5.2,2.2],[-.4,5.5]];
   for(let i=0;i<3;i++)if(state.osc[i].on){const o=state.osc[i],p=src[i],dist=Math.hypot(x-p[0],z-p[1]);const k=.45+o.freq/115;value+=Math.cos(k*dist+o.phase)*.85;weight+=.85;}
-  for(const p of state.pulses){const age=time-p.t,dist=Math.hypot(x-p.x,z-p.z);if(age<3&&age>=0){const front=age*p.speed;value+=p.strength*Math.exp(-Math.pow((dist-front)*1.4,2)) * Math.sin(dist*4.5-age*8)*(1-age/3)*Math.max(0,1-dist/p.reach);}}
+  if(state.mode==='immersion')for(const p of state.pulses){const age=time-p.t,dist=Math.hypot(x-p.x,z-p.z);if(age<3&&age>=0){const front=age*p.speed;value+=p.strength*Math.exp(-Math.pow((dist-front)*1.4,2)) * Math.sin(dist*4.5-age*8)*(1-age/3)*Math.max(0,1-dist/p.reach);}}
   return weight?value/Math.max(weight,.85):0;
 }
 function renderField(time=0){
@@ -276,7 +289,7 @@ function playImpulse(kind){
   x:state.playerX+Math.cos(state.yaw)*1.15,
   z:state.playerZ+Math.sin(state.yaw)*1.15
  };
- const t=clock.getElapsedTime();
+ const t=immersionTime;
  const visual=new THREE.Mesh(new THREE.TorusGeometry(1,.025,6,64),
   new THREE.MeshBasicMaterial({color:cfg.color,transparent:true,opacity:.65,depthWrite:false}));
  visual.rotation.x=Math.PI/2;visual.position.set(source.x,.16,source.z);world.add(visual);
@@ -298,6 +311,10 @@ for(const kind of ['knock','chime','pulse'])$(kind).addEventListener('click',()=
 function changeMode(mode){
  stopJoystick(null);stopLookJoystick(null);
  state.mode=mode;
+ $('objective').textContent=mode==='observer'
+   ?'OBSERVER · Timeless standing-field atlas'
+   :'IMMERSION · Time flows · Waves travel · Reach the gate';
+ for(const p of state.pulses)if(p.visual)p.visual.visible=mode==='immersion';
  $('observer').classList.toggle('active',mode==='observer');
  $('immerse').classList.toggle('active',mode==='immersion');
  $('move').classList.toggle('show',mode==='immersion');
@@ -338,7 +355,7 @@ function updateLookStick(e){
  const range=37,distance=Math.hypot(x,y),strength=Math.min(1,distance/range);
  const px=distance?x/distance*range*strength:0,py=distance?y/distance*range*strength:0;
  lookStick.style.transform=`translate(${px}px,${py}px)`;
- state.lookX=px/range;state.lookY=py/range; // vertical look reversed
+ state.lookX=px/range;state.lookY=-py/range; // Up on stick means look up
 }
 function stopLookJoystick(e){
  if(lookPointer!==null&&(e==null||e.pointerId===lookPointer)){
@@ -420,8 +437,8 @@ canvas.addEventListener('pointermove',e=>{
      globeRotation.premultiply(yaw).premultiply(pitch).normalize();
    }
  }else{
-   state.yaw-=dx*.005;
-   state.pitch=clamp(state.pitch+dy*.005,-1.1,1.1);
+   state.yaw+=dx*.005;
+   state.pitch=clamp(state.pitch+(invertLookY?1:-1)*dy*.005,-1.1,1.1);
  }
 });
 function releasePointer(e){pointers.delete(e.pointerId);if(pointers.size<2){pinchDistance=0;gestureCentroid=null}}
@@ -468,13 +485,14 @@ window.addEventListener('deviceorientation',e=>{
 $('save').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');notes.push({saved:new Date().toISOString(),osc:state.osc.map(o=>({...o}))});localStorage.setItem('resonanceDiscoveries',JSON.stringify(notes.slice(-20)));toast(`Discovery saved (${Math.min(notes.length,20)})`)});
 $('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;for(let i=0;i<3;i++){$(`check${i}`).checked=state.osc[i].on;$(`slider${i}`).value=state.osc[i].freq;$(`output${i}`).textContent=state.osc[i].freq+' Hz'}syncAudio();renderField();toast('Latest discovery restored')});
 let toastTimer=0;function toast(txt){$('toast').textContent=txt;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),1750)}
-const clock=new THREE.Clock();let frame=0;
+const clock=new THREE.Clock();let frame=0,immersionTime=0;
 let previousFrame=0;
 function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();
  const dt=Math.min(.06,Math.max(0,t-previousFrame));previousFrame=t;
+ if(state.mode==='immersion')immersionTime+=dt;
  if(state.mode==='immersion'){
-   state.yaw-=state.lookX*2.15*dt;
-   state.pitch=clamp(state.pitch+state.lookY*1.55*dt,-1.05,1.05);
+   state.yaw+=state.lookX*2.15*dt;
+   state.pitch=clamp(state.pitch+(invertLookY?-1:1)*state.lookY*1.55*dt,-1.05,1.05);
    if(state.moveX||state.moveY){
      const speed=2.65,len=Math.max(1,Math.hypot(state.moveX,state.moveY));
      const forward=state.moveY/len,side=state.moveX/len;
@@ -511,16 +529,18 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
     const direction=new THREE.Vector3(Math.cos(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),Math.sin(state.yaw)*Math.cos(state.pitch));
     camera.lookAt(camera.position.clone().add(direction));
   }
-  core.rotation.y=t*.3;portal.rotation.z=t*.06;for(let i=0;i<rings.length;i++){rings[i].material.opacity=.13+.08*Math.sin(t*.8+i);}
+  const perceivedTime=state.mode==='immersion'?immersionTime:0;
+  core.rotation.y=perceivedTime*.3;portal.rotation.z=perceivedTime*.06;
+  for(let i=0;i<rings.length;i++)rings[i].material.opacity=.13+.08*Math.sin(perceivedTime*.8+i);
   for(const p of state.pulses){
     if(!p.visual)continue;
-    const age=Math.max(0,t-p.t),radius=Math.min(p.reach,.25+age*p.speed);
+    const age=Math.max(0,immersionTime-p.t),radius=Math.min(p.reach,.25+age*p.speed);
     p.visual.scale.setScalar(radius);
     p.visual.material.opacity=.65*Math.max(0,1-age/3)*Math.max(0,1-radius/(p.reach*1.1));
     if(age>=3){world.remove(p.visual);p.visual.geometry.dispose();p.visual.material.dispose();}
   }
-  state.pulses=state.pulses.filter(p=>t-p.t<3);
-  if(frame++%3===0)renderField(t);
+  state.pulses=state.pulses.filter(p=>immersionTime-p.t<3);
+  if(frame++%3===0)renderField(state.mode==='immersion'?immersionTime:0);
   renderer.render(scene,camera);
 }
 function resize(){
