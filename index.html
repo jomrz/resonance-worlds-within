@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#09101b" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Resonance" />
+<title>Resonance: Worlds Within | Prototype 0.1</title>
+<style>
+:root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
+* {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
+#world {position:fixed;inset:0;touch-action:none;display:block}
+#hud {position:fixed;inset:0;pointer-events:none}
+#top {position:absolute;top:env(safe-area-inset-top,0px);left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:15px;gap:10px}
+#identity .kicker {font-size:10px;color:#90c6e7;letter-spacing:.21em;font-weight:650} #identity .name {font-size:21px;font-weight:750;letter-spacing:.02em;margin-top:3px} #identity .sub {font-size:11px;color:var(--muted);margin-top:4px}
+button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10px;background:rgba(21,38,59,.9);color:var(--ink);padding:10px 12px;cursor:pointer;touch-action:manipulation;font-size:13px}button:active{background:#31526d}button.active{background:rgba(55,106,133,.85);border-color:#6cb7db}button.secondary{background:rgba(11,25,43,.88)}
+#mode {display:flex;gap:5px;pointer-events:auto}#mode button{font-size:12px;padding:10px 9px}
+#status {position:absolute;top:calc(env(safe-area-inset-top,0px) + 89px);left:15px;right:15px;pointer-events:none;display:flex;justify-content:center}#status span{max-width:340px;text-align:center;color:#b1cbdd;background:rgba(8,19,31,.64);padding:6px 11px;border-radius:999px;font-size:11px}
+#controls {position:absolute;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:540px;margin:auto;background:rgba(9,21,36,.93);border:1px solid var(--edge);border-radius:18px;box-shadow:0 12px 45px rgba(0,0,0,.35);pointer-events:auto;backdrop-filter:blur(15px);overflow:hidden}
+#controlHeading{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;gap:8px}#controlHeading strong{font-size:13px;letter-spacing:.04em}#controlHeading small{font-size:10px;color:var(--muted)}#controlHeading button{padding:5px 9px;font-size:12px}
+#controlBody{padding:0 13px 13px;}#controls.collapsed #controlBody{display:none}
+.osc{display:grid;grid-template-columns:22px 54px 1fr 57px;align-items:center;gap:9px;margin:9px 0}.osc label{font-size:12px;color:#bed2df} .osc output{font-size:12px;text-align:right;color:#d4eefa;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:#7dcee3;height:22px;touch-action:pan-y}.osc input[type=checkbox]{width:17px;height:17px;accent-color:#86cbe7;margin:0}
+#extras{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}#extras button{flex:1;font-size:12px;padding:9px 5px}#actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}#actions button{flex:1;font-size:11px;padding:9px 5px}
+#help{font-size:10px;color:#9db4c7;line-height:1.5;margin:10px 0 0}
+#move{position:absolute;left:16px;bottom:calc(325px + env(safe-area-inset-bottom,0px));display:none;pointer-events:auto;gap:6px}#move button{min-width:55px;background:rgba(10,30,47,.76)}#move.show{display:flex}
+#toast{position:absolute;top:calc(env(safe-area-inset-top,0px) + 125px);left:50%;transform:translateX(-50%);background:rgba(17,39,56,.9);border:1px solid var(--edge);border-radius:12px;padding:9px 13px;min-width:180px;text-align:center;color:#d4edfb;font-size:12px;opacity:0;transition:opacity .2s}#toast.show{opacity:1}
+@media(min-width:700px){#controls{right:18px;left:auto;width:385px;bottom:18px}#move{bottom:55px}}
+@media(max-height:690px){#controlBody{max-height:45vh;overflow:auto}#move{bottom:240px}}
+</style>
+</head>
+<body>
+<canvas id="world"></canvas>
+<div id="hud">
+  <div id="top">
+    <div id="identity"><div class="kicker">PROTOTYPE 0.1</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
+    <div id="mode"><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div>
+  </div>
+  <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div>
+  <div id="move"><button id="back">◀ Back</button><button id="forward">Forward ▶</button></div>
+  <div id="toast"></div>
+  <section id="controls">
+    <div id="controlHeading"><div><strong>RESONANCE ENGINE</strong><br><small>Continuous field sources</small></div><button id="collapse" class="secondary">Hide ▾</button></div>
+    <div id="controlBody">
+      <div id="oscillators"></div>
+      <div id="extras"><button id="knock">Knock</button><button id="chime">Chime</button><button id="pulse">Pulse</button></div>
+      <div id="actions"><button id="audio">Sound: Off</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
+      <p id="help">Drag to rotate or look around. Immersion: move with the arrows. The patterns control bridge fragments; this is an experimental field, not a full acoustic solver. Sound is off until enabled.</p>
+    </div>
+  </section>
+</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+const $=id=>document.getElementById(id);
+const canvas=$('world');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));
+renderer.setSize(window.innerWidth,window.innerHeight,false);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+const scene=new THREE.Scene();scene.background=new THREE.Color('#09101b');scene.fog=new THREE.FogExp2('#09101b',.018);
+const camera=new THREE.PerspectiveCamera(56,window.innerWidth/window.innerHeight,.035,180);
+scene.add(new THREE.HemisphereLight(0x90bde1,0x132138,2.1));
+const sun=new THREE.DirectionalLight(0xa8dfff,2.3);sun.position.set(4,13,8);scene.add(sun);
+const amber=new THREE.PointLight(0xe9a96a,18,30);amber.position.set(5,6,-1);scene.add(amber);
+const crystalMat=new THREE.MeshPhysicalMaterial({color:0x7acbdc,metalness:.25,roughness:.27,transparent:true,opacity:.35,side:THREE.DoubleSide,depthWrite:false});
+const stoneMat=new THREE.MeshStandardMaterial({color:0x6b91a1,roughness:.72,metalness:.12});
+const goldMat=new THREE.MeshStandardMaterial({color:0xf3c47e,emissive:0x886027,emissiveIntensity:.45,roughness:.3});
+const world=new THREE.Group();scene.add(world);
+function makeBox(parent,w,h,d,x,y,z,material){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);parent.add(m);return m}
+function makeColumn(x,z,h){makeBox(world,.42,h,.42,x,h/2-.6,z,stoneMat);makeBox(world,.75,.27,.75,x,h-.6,z,stoneMat)}
+// The fixed landmarks are authored; the crossing is derived from an interfering spatial field.
+makeBox(world,4.5,.6,8,-5.55,-.45,0,stoneMat);
+makeBox(world,4.5,.6,8,5.55,-.45,0,stoneMat);
+makeBox(world,1.7,.1,6,-5.25,-.08,0,crystalMat);
+makeBox(world,1.7,.1,6,5.25,-.08,0,crystalMat);
+for(const x of [-7.3,-4,4,7.3])for(const z of [-3.5,3.5])makeColumn(x,z,3+(Math.abs(x)*.11));
+const portal=new THREE.Mesh(new THREE.TorusGeometry(1.4,.15,12,64),goldMat);portal.rotation.y=Math.PI/2;portal.position.set(7.2,1.6,0);world.add(portal);
+const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.65,1),new THREE.MeshStandardMaterial({color:0x7acdea,emissive:0x2d7794,emissiveIntensity:1,metalness:.2,roughness:.2}));core.position.set(-6.6,1.05,0);world.add(core);
+// Spatially sampled bridge tiles. A tile is supported wherever interference remains near a node.
+const NX=11,NZ=7,tiles=[];
+const tileGeom=new THREE.BoxGeometry(.69,.16,.69);
+for(let ix=0;ix<NX;ix++)for(let iz=0;iz<NZ;iz++){
+  const x=-3.45+ix*.69,z=-2.4+iz*.8;
+  const material=new THREE.MeshStandardMaterial({color:0x61cbe3,emissive:0x216987,transparent:true,opacity:.6,metalness:.4,roughness:.2});
+  const mesh=new THREE.Mesh(tileGeom,material);mesh.position.set(x,-.1,z);world.add(mesh);
+  tiles.push({ix,iz,x,z,mesh,stable:false});
+}
+// World contour rings visibly respond to the current field energy.
+const rings=[];
+for(let i=0;i<6;i++){
+  const r=new THREE.Mesh(new THREE.TorusGeometry(1.5+i*.55,.008,5,96),new THREE.MeshBasicMaterial({color:i%2?0x65bce1:0xc89dd8,transparent:true,opacity:.16}));
+  r.rotation.x=Math.PI/2;r.position.set(0,-1.4-i*.1,0);world.add(r);rings.push(r);
+}
+// Larger-on-the-inside illusion: outer shell shows the same world at miniature scale.
+const shellGroup=new THREE.Group();scene.add(shellGroup);
+const shell=new THREE.Mesh(new THREE.SphereGeometry(2.6,48,32),new THREE.MeshPhysicalMaterial({color:0x4b92bd,transparent:true,opacity:.12,metalness:.2,roughness:.08,depthWrite:false,side:THREE.DoubleSide}));shellGroup.add(shell);
+const rim=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(2.63,2)),new THREE.LineBasicMaterial({color:0x5fabc4,transparent:true,opacity:.15}));shellGroup.add(rim);
+const orbitRing=new THREE.Mesh(new THREE.TorusGeometry(2.85,.012,6,160),new THREE.MeshBasicMaterial({color:0x71bad4,transparent:true,opacity:.58}));orbitRing.rotation.x=1.18;orbitRing.rotation.y=.4;shellGroup.add(orbitRing);
+const starGeo=new THREE.BufferGeometry();let positions=[];for(let i=0;i<360;i++){const a=Math.random()*Math.PI*2,b=Math.acos(2*Math.random()-1),r=18+Math.random()*52;positions.push(Math.sin(b)*Math.cos(a)*r,Math.cos(b)*r,Math.sin(b)*Math.sin(a)*r)}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9abdd8,size:.055,sizeAttenuation:true})));
+const state={mode:'observer',osc:[{freq:110,on:true,phase:0},{freq:170,on:true,phase:1.5},{freq:250,on:false,phase:3}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.45,playerX:-5.5,playerZ:0,tilt:false};
+const oscRoot=$('oscillators');
+for(let i=0;i<3;i++){
+const row=document.createElement('div');row.className='osc';row.innerHTML=`<input type="checkbox" id="check${i}" ${state.osc[i].on?'checked':''} aria-label="Oscillator ${i+1} enabled"><label for="slider${i}">Wave ${i+1}</label><input id="slider${i}" type="range" min="60" max="420" step="1" value="${state.osc[i].freq}" aria-label="Oscillator ${i+1} frequency"><output id="output${i}">${state.osc[i].freq} Hz</output>`;oscRoot.append(row);
+$(`check${i}`).addEventListener('change',e=>{state.osc[i].on=e.target.checked;syncAudio();renderField()});
+$(`slider${i}`).addEventListener('input',e=>{state.osc[i].freq=Number(e.target.value);$(`output${i}`).textContent=state.osc[i].freq+' Hz';syncAudio();renderField()});
+}
+function sampleField(x,z,time=0){
+  let value=0,weight=0;
+  const src=[[-5.5,-2.5],[5.2,2.2],[-.4,5.5]];
+  for(let i=0;i<3;i++)if(state.osc[i].on){const o=state.osc[i],p=src[i],dist=Math.hypot(x-p[0],z-p[1]);const k=.45+o.freq/115;value+=Math.cos(k*dist+o.phase-time*.25)*.85;weight+=.85;}
+  for(const p of state.pulses){const age=time-p.t,dist=Math.hypot(x-p.x,z-p.z);if(age<3&&age>=0){const front=age*p.speed;value+=p.strength*Math.exp(-Math.pow((dist-front)*1.4,2)) * Math.sin(dist*4.5-age*8)*(1-age/3);}}
+  return weight?value/Math.max(weight,.85):0;
+}
+function renderField(time=0){
+  let stableCount=0;
+  for(const t of tiles){const v=sampleField(t.x,t.z,time);const stable=Math.abs(v)<.63;stableCount+=stable?1:0;t.stable=stable;
+    // Width, height and luminosity are continuous results of the computed field.
+    const support=Math.max(0,Math.min(1,(.85-Math.abs(v))/.45));
+    t.mesh.scale.set(.78+.18*support,Math.max(.06,support*2.4),.78+.18*support);
+    t.mesh.position.y=-.68+support*.57;
+    t.mesh.material.opacity=.11+support*.78;
+    t.mesh.material.emissiveIntensity=.2+support*.85;
+    t.mesh.material.color.setHSL(.52+Math.abs(v)*.10,.62,.29+support*.24);
+  }
+  $('fieldStatus').textContent=`${stableCount} stable fragments · Tune and observe the crossing`;
+}
+let audioCtx=null,voices=[],soundOn=false;
+async function toggleSound(){
+  if(!audioCtx){audioCtx=new (window.AudioContext||window.webkitAudioContext)();for(let i=0;i<3;i++){const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type='sine';osc.frequency.value=state.osc[i].freq;gain.gain.value=0;osc.connect(gain).connect(audioCtx.destination);osc.start();voices.push({osc,gain})}}
+  if(audioCtx.state==='suspended')await audioCtx.resume();soundOn=!soundOn;syncAudio();$('audio').textContent=`Sound: ${soundOn?'On':'Off'}`;$('audio').classList.toggle('active',soundOn);
+}
+function syncAudio(){if(!audioCtx)return;for(let i=0;i<voices.length;i++){voices[i].osc.frequency.setTargetAtTime(state.osc[i].freq,audioCtx.currentTime,.025);voices[i].gain.gain.setTargetAtTime(soundOn&&state.osc[i].on?.013:0,audioCtx.currentTime,.025)}}
+$('audio').addEventListener('click',toggleSound);
+function playImpulse(kind){
+ const cfg={knock:{hz:110,length:.18,speed:5,strength:1},chime:{hz:660,length:1.6,speed:3,strength:.65},pulse:{hz:65,length:.48,speed:8,strength:1.45}}[kind];
+ const t=clock.getElapsedTime();state.pulses.push({t,x:0,z:0,...cfg});
+ if(soundOn&&audioCtx){const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.type=kind==='knock'?'triangle':'sine';osc.frequency.setValueAtTime(cfg.hz,audioCtx.currentTime);gain.gain.setValueAtTime(.001,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(kind==='chime'?.05:.065,audioCtx.currentTime+.02);gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+cfg.length);osc.connect(gain).connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+cfg.length+.01)}
+ toast(`${kind[0].toUpperCase()+kind.slice(1)} disturbance`);
+}
+for(const kind of ['knock','chime','pulse'])$(kind).addEventListener('click',()=>playImpulse(kind));
+function changeMode(mode){state.mode=mode;$('observer').classList.toggle('active',mode==='observer');$('immerse').classList.toggle('active',mode==='immersion');$('move').classList.toggle('show',mode==='immersion');shellGroup.visible=mode==='observer';world.scale.setScalar(mode==='observer'?.23:1);world.position.set(0,0,0);toast(mode==='observer'?'Global field view':'Entering the chamber')}
+$('observer').addEventListener('click',()=>changeMode('observer'));
+$('immerse').addEventListener('click',()=>changeMode('immersion'));
+$('collapse').addEventListener('click',()=>{$('controls').classList.toggle('collapsed');$('collapse').textContent=$('controls').classList.contains('collapsed')?'Show ▴':'Hide ▾'});
+$('forward').addEventListener('click',()=>{state.playerX=Math.min(7,state.playerX+.6);toast(`Position ${state.playerX.toFixed(1)}`)});
+$('back').addEventListener('click',()=>{state.playerX=Math.max(-7,state.playerX-.6);toast(`Position ${state.playerX.toFixed(1)}`)});
+const ptr={active:false,x:0,y:0};
+canvas.addEventListener('pointerdown',e=>{ptr.active=true;ptr.x=e.clientX;ptr.y=e.clientY;canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointermove',e=>{if(!ptr.active)return;const dx=e.clientX-ptr.x,dy=e.clientY-ptr.y;ptr.x=e.clientX;ptr.y=e.clientY;if(state.mode==='observer'){state.orbitX+=dx*.006;state.orbitY=Math.max(-.8,Math.min(.85,state.orbitY+dy*.006))}else{state.yaw-=dx*.005;state.pitch=Math.max(-1.1,Math.min(1.1,state.pitch-dy*.005))}});
+canvas.addEventListener('pointerup',()=>ptr.active=false);canvas.addEventListener('pointercancel',()=>ptr.active=false);
+$('tilt').addEventListener('click',async()=>{try{if(typeof DeviceOrientationEvent==='undefined')throw new Error('Motion unavailable');if(typeof DeviceOrientationEvent.requestPermission==='function'){const result=await DeviceOrientationEvent.requestPermission();if(result!=='granted')throw new Error('Permission declined')}state.tilt=true;$('tilt').textContent='Tilt: On';$('tilt').classList.add('active');toast('Tilt enabled')}catch(e){toast(e.message||'Motion unavailable')}});
+window.addEventListener('deviceorientation',e=>{if(!state.tilt)return;const roll=Number(e.gamma||0),pitch=Number(e.beta||0);if(state.mode==='observer'){state.orbitX+=Math.max(-.012,Math.min(.012,roll*.00025));state.orbitY=Math.max(-.7,Math.min(.8,pitch*.005))}else{state.pitch=Math.max(-.5,Math.min(.5,-pitch*.007))}});
+$('save').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');notes.push({saved:new Date().toISOString(),osc:state.osc.map(o=>({...o}))});localStorage.setItem('resonanceDiscoveries',JSON.stringify(notes.slice(-20)));toast(`Discovery saved (${Math.min(notes.length,20)})`)});
+$('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;for(let i=0;i<3;i++){$(`check${i}`).checked=state.osc[i].on;$(`slider${i}`).value=state.osc[i].freq;$(`output${i}`).textContent=state.osc[i].freq+' Hz'}syncAudio();renderField();toast('Latest discovery restored')});
+let toastTimer=0;function toast(txt){$('toast').textContent=txt;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),1750)}
+const clock=new THREE.Clock();let frame=0;
+function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();
+  if(state.mode==='observer'){const yaw=state.orbitX,pitch=state.orbitY;camera.position.set(9*Math.sin(yaw)*Math.cos(pitch),9*Math.sin(pitch),9*Math.cos(yaw)*Math.cos(pitch));camera.lookAt(0,0,0);shellGroup.rotation.y=t*.035;world.rotation.y=Math.sin(t*.1)*.08;}
+  else{world.rotation.y=0;const px=state.playerX;camera.position.set(px,1.85,4.2);const direction=new THREE.Vector3(Math.cos(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),Math.sin(state.yaw)*Math.cos(state.pitch));camera.lookAt(camera.position.clone().add(direction));}
+  core.rotation.y=t*.3;portal.rotation.z=t*.06;for(let i=0;i<rings.length;i++){rings[i].material.opacity=.13+.08*Math.sin(t*.8+i);}
+  state.pulses=state.pulses.filter(p=>t-p.t<3);
+  if(frame++%3===0)renderField(t);
+  renderer.render(scene,camera);
+}
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false)}window.addEventListener('resize',resize);
+renderField();changeMode('observer');animate();
+</script>
+</body>
+</html>
