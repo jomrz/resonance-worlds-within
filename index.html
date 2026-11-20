@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 0.3</title>
+<title>Resonance: Worlds Within | Prototype 0.4</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
-#world {position:fixed;inset:0;touch-action:none;display:block}
+#world {position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
 #hud {position:fixed;inset:0;pointer-events:none}
 #top {position:absolute;top:env(safe-area-inset-top,0px);left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:15px;gap:10px}
 #identity .kicker {font-size:10px;color:#90c6e7;letter-spacing:.21em;font-weight:650} #identity .name {font-size:21px;font-weight:750;letter-spacing:.02em;margin-top:3px} #identity .sub {font-size:11px;color:var(--muted);margin-top:4px}
@@ -33,7 +33,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 0.3</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 0.4</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
     <div id="mode"><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div>
@@ -45,7 +45,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
       <div id="oscillators"></div>
       <div id="extras"><button id="knock">Knock</button><button id="chime">Chime</button><button id="pulse">Pulse</button></div>
       <div id="actions"><button id="testSound">Test chime</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
-      <p id="help">Observer: drag to orbit, tap Pan to move the scene with one finger, or drag two fingers to pan and pinch to zoom. Reset ⌖ recenters everything. Immersion: drag to look; two-finger drag moves through the room. The arrows move forward/back. This is a mathematical field experiment, not a full acoustic solver.</p>
+      <p id="help">Observer: drag to rotate about the sphere center, tap Pan for one-finger repositioning, or drag two fingers to pan and pinch to zoom. Reset ⌖ recenters everything. Immersion: drag to look; two-finger drag moves through the room. The arrows move forward/back. This is a mathematical field experiment, not a full acoustic solver.</p>
     </div>
   </section>
 </div>
@@ -55,11 +55,11 @@ const $=id=>document.getElementById(id);
 const canvas=$('world');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));
-renderer.setSize(window.innerWidth,window.innerHeight,false);
+renderer.setSize(canvas.clientWidth||window.innerWidth,canvas.clientHeight||window.innerHeight,false);
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 const scene=new THREE.Scene();scene.background=new THREE.Color('#09101b');scene.fog=new THREE.FogExp2('#09101b',.018);
-const camera=new THREE.PerspectiveCamera(56,window.innerWidth/window.innerHeight,.035,180);
+const camera=new THREE.PerspectiveCamera(56,(canvas.clientWidth||window.innerWidth)/(canvas.clientHeight||window.innerHeight),.035,180);
 scene.add(new THREE.HemisphereLight(0x90bde1,0x132138,2.1));
 const sun=new THREE.DirectionalLight(0xa8dfff,2.3);sun.position.set(4,13,8);scene.add(sun);
 const amber=new THREE.PointLight(0xe9a96a,18,30);amber.position.set(5,6,-1);scene.add(amber);
@@ -100,6 +100,7 @@ const orbitRing=new THREE.Mesh(new THREE.TorusGeometry(2.85,.012,6,160),new THRE
 const starGeo=new THREE.BufferGeometry();let positions=[];for(let i=0;i<360;i++){const a=Math.random()*Math.PI*2,b=Math.acos(2*Math.random()-1),r=18+Math.random()*52;positions.push(Math.sin(b)*Math.cos(a)*r,Math.cos(b)*r,Math.sin(b)*Math.sin(a)*r)}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9abdd8,size:.055,sizeAttenuation:true})));
 const state={mode:'observer',osc:[{freq:110,on:true,phase:0},{freq:170,on:true,phase:1.5},{freq:250,on:false,phase:3}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:15.5,panMode:false};
 const observerTarget=new THREE.Vector3(0,0,0);
+const observerPan=new THREE.Vector2(0,0); // screen-space pan in CSS pixels, independent of orbit pivot
 const oscRoot=$('oscillators');
 for(let i=0;i<3;i++){
 const row=document.createElement('div');row.className='osc';row.innerHTML=`<input type="checkbox" id="check${i}" ${state.osc[i].on?'checked':''} aria-label="Oscillator ${i+1} enabled"><label for="slider${i}">Wave ${i+1}</label><input id="slider${i}" type="range" min="60" max="420" step="1" value="${state.osc[i].freq}" aria-label="Oscillator ${i+1} frequency"><output id="output${i}">${state.osc[i].freq} Hz</output>`;oscRoot.append(row);
@@ -181,7 +182,7 @@ function zoom(factor){state.observerDistance=clamp(state.observerDistance*factor
 $('zoomIn').addEventListener('click',()=>zoom(.84));
 $('zoomOut').addEventListener('click',()=>zoom(1.19));
 $('resetView').addEventListener('click',()=>{
- state.orbitX=.35;state.orbitY=.28;state.observerDistance=15.5;observerTarget.set(0,0,0);toast('World recentered');
+ state.orbitX=.35;state.orbitY=.28;state.observerDistance=15.5;observerPan.set(0,0);toast('World recentered');
 });
 $('panToggle').addEventListener('click',()=>{
  state.panMode=!state.panMode;
@@ -191,12 +192,10 @@ $('panToggle').addEventListener('click',()=>{
  toast(state.panMode?'Pan mode: drag to move world':'Orbit mode: drag to rotate');
 });
 function panObserver(dx,dy){
- // The scale converts finger movement in screen pixels to world units at the target depth.
- const unitsPerPixel=2*state.observerDistance*Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)/Math.max(1,window.innerHeight);
- const right=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
- const up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
- observerTarget.addScaledVector(right,-dx*unitsPerPixel);
- observerTarget.addScaledVector(up,dy*unitsPerPixel);
+ // Store drag in screen coordinates, NOT in the orbit's world-space pivot.
+ // This lets the sphere turn around its true center even after panning.
+ observerPan.x=clamp(observerPan.x+dx,-window.innerWidth*.9,window.innerWidth*.9);
+ observerPan.y=clamp(observerPan.y+dy,-window.innerHeight*.9,window.innerHeight*.9);
 }
 function panImmersion(dx,dy){
  // Move the eye without changing its viewing direction.
@@ -250,21 +249,59 @@ canvas.addEventListener('pointerup',releasePointer);
 canvas.addEventListener('pointercancel',releasePointer);
 canvas.addEventListener('lostpointercapture',releasePointer);
 canvas.addEventListener('wheel',e=>{if(state.mode==='observer'){e.preventDefault();zoom(e.deltaY>0?1.08:.92)}},{passive:false});
-$('tilt').addEventListener('click',async()=>{try{if(typeof DeviceOrientationEvent==='undefined')throw new Error('Motion unavailable');if(typeof DeviceOrientationEvent.requestPermission==='function'){const result=await DeviceOrientationEvent.requestPermission();if(result!=='granted')throw new Error('Permission declined')}state.tilt=true;$('tilt').textContent='Tilt: On';$('tilt').classList.add('active');toast('Tilt enabled')}catch(e){toast(e.message||'Motion unavailable')}});
+$('tilt').addEventListener('click',async()=>{
+ const button=$('tilt');
+ if(state.tilt){
+   state.tilt=false;
+   button.textContent='Enable tilt';
+   button.classList.remove('active');
+   button.setAttribute('aria-pressed','false');
+   toast('Tilt disabled · Touch control restored');
+   return;
+ }
+ try {
+   if(typeof DeviceOrientationEvent==='undefined')throw new Error('Motion unavailable');
+   if(typeof DeviceOrientationEvent.requestPermission==='function'){
+     const permission=await DeviceOrientationEvent.requestPermission();
+     if(permission!=='granted')throw new Error('Permission declined');
+   }
+   state.tilt=true;
+   button.textContent='Disable tilt';
+   button.classList.add('active');
+   button.setAttribute('aria-pressed','true');
+   toast('Tilt enabled · Tap again to disable');
+ }catch(e){state.tilt=false;button.textContent='Enable tilt';button.classList.remove('active');toast(e.message||'Motion unavailable')}
+});
 window.addEventListener('deviceorientation',e=>{if(!state.tilt)return;const roll=Number(e.gamma||0),pitch=Number(e.beta||0);if(state.mode==='observer'){state.orbitX=roll*.016;state.orbitY=Math.max(-.7,Math.min(.8,pitch*.005))}else{state.pitch=Math.max(-.5,Math.min(.5,-pitch*.007))}});
 $('save').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');notes.push({saved:new Date().toISOString(),osc:state.osc.map(o=>({...o}))});localStorage.setItem('resonanceDiscoveries',JSON.stringify(notes.slice(-20)));toast(`Discovery saved (${Math.min(notes.length,20)})`)});
 $('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;for(let i=0;i<3;i++){$(`check${i}`).checked=state.osc[i].on;$(`slider${i}`).value=state.osc[i].freq;$(`output${i}`).textContent=state.osc[i].freq+' Hz'}syncAudio();renderField();toast('Latest discovery restored')});
 let toastTimer=0;function toast(txt){$('toast').textContent=txt;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),1750)}
 const clock=new THREE.Clock();let frame=0;
 function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();
-  if(state.mode==='observer'){const yaw=state.orbitX,pitch=state.orbitY;camera.position.set(observerTarget.x+state.observerDistance*Math.sin(yaw)*Math.cos(pitch),observerTarget.y+state.observerDistance*Math.sin(pitch),observerTarget.z+state.observerDistance*Math.cos(yaw)*Math.cos(pitch));camera.lookAt(observerTarget);shellGroup.rotation.y=0;world.rotation.y=0;}
+  if(state.mode==='observer'){
+    const yaw=state.orbitX,pitch=state.orbitY;
+    // First orbit the true sphere center, then apply any pan as a camera-space offset.
+    camera.position.set(observerTarget.x+state.observerDistance*Math.sin(yaw)*Math.cos(pitch),
+                        observerTarget.y+state.observerDistance*Math.sin(pitch),
+                        observerTarget.z+state.observerDistance*Math.cos(yaw)*Math.cos(pitch));
+    camera.lookAt(observerTarget);
+    const unitsPerPixel=2*state.observerDistance*Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)/Math.max(1,canvas.clientHeight);
+    const right=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
+    const up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
+    camera.position.addScaledVector(right,-observerPan.x*unitsPerPixel);
+    camera.position.addScaledVector(up,observerPan.y*unitsPerPixel);
+    shellGroup.rotation.y=0;world.rotation.y=0;
+  }
   else{world.rotation.y=0;const px=state.playerX;camera.position.set(px,1.85,4.2+state.playerZ);const direction=new THREE.Vector3(Math.cos(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),Math.sin(state.yaw)*Math.cos(state.pitch));camera.lookAt(camera.position.clone().add(direction));}
   core.rotation.y=t*.3;portal.rotation.z=t*.06;for(let i=0;i<rings.length;i++){rings[i].material.opacity=.13+.08*Math.sin(t*.8+i);}
   state.pulses=state.pulses.filter(p=>t-p.t<3);
   if(frame++%3===0)renderField(t);
   renderer.render(scene,camera);
 }
-function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false)}window.addEventListener('resize',resize);
+function resize(){
+ const w=canvas.clientWidth||window.innerWidth,h=canvas.clientHeight||window.innerHeight;
+ camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);
+}window.addEventListener('resize',resize);
 renderField();changeMode('observer');animate();
 </script>
 </body>
