@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 0.7</title>
+<title>Resonance: Worlds Within | Prototype 0.8</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -24,7 +24,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 #extras{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}#extras button{flex:1;font-size:12px;padding:9px 5px}#actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}#actions button{flex:1;font-size:11px;padding:9px 5px}
 #help{font-size:10px;color:#9db4c7;line-height:1.5;margin:10px 0 0}
 #move{position:absolute;left:12px;right:12px;bottom:calc(85px + env(safe-area-inset-bottom,0px));display:none;pointer-events:none;align-items:flex-end;justify-content:space-between;gap:12px;user-select:none;-webkit-user-select:none}#move.show{display:flex}.stickColumn{display:flex;flex-direction:column;align-items:center;gap:6px}.stickLabel{font-size:10px;font-weight:700;letter-spacing:.18em;color:#abd2e8;text-shadow:0 1px 4px #09101b}.joystick{position:relative;width:108px;height:108px;border-radius:56px;background:rgba(14,39,57,.67);border:1px solid rgba(153,208,231,.46);touch-action:none;display:grid;place-items:center;overscroll-behavior:none;pointer-events:auto}.joystick::after{content:'+';color:rgba(145,206,231,.42);font-size:34px;line-height:1}.stick{position:absolute;width:43px;height:43px;border-radius:50%;border:2px solid #95d5ed;background:rgba(62,139,168,.78);box-shadow:0 0 15px rgba(88,164,202,.28);pointer-events:none;z-index:1;transform:translate(0px,0px)}#lookStick{border-color:#ebc58d;background:rgba(173,112,55,.7)}
-#toast{position:absolute;top:calc(env(safe-area-inset-top,0px) + 125px);left:50%;transform:translateX(-50%);background:rgba(17,39,56,.9);border:1px solid var(--edge);border-radius:12px;padding:9px 13px;min-width:180px;text-align:center;color:#d4edfb;font-size:12px;opacity:0;transition:opacity .2s}#toast.show{opacity:1}
+#toast{position:absolute;top:calc(env(safe-area-inset-top,0px) + 125px);left:50%;transform:translateX(-50%);background:rgba(17,39,56,.9);border:1px solid var(--edge);border-radius:12px;padding:9px 13px;min-width:180px;text-align:center;color:#d4edfb;font-size:12px;opacity:0;transition:opacity .2s}#toast.show{opacity:1}#discovery{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:25px;pointer-events:auto;background:rgba(3,11,22,.72);backdrop-filter:blur(6px)}#discovery.hidden{display:none}#discoveryBox{width:min(100%,390px);background:#10263a;border:1px solid #7aa3b8;border-radius:22px;padding:22px;box-shadow:0 16px 75px #0009;text-align:center}#discoveryBox .spark{font-size:30px;color:#efc78b;margin-bottom:10px}#discoveryBox h2{font-size:21px;margin:5px 0 10px}#discoveryBox p{font-size:13px;line-height:1.6;color:#c4d8e8}#discoveryBox button{margin:5px;padding:11px 14px}#discoveryBox .primary{background:#296482;border-color:#6ac2e4}#objective{position:absolute;top:calc(env(safe-area-inset-top,0px) + 119px);left:15px;right:15px;pointer-events:none;text-align:center;font-size:11px;line-height:1.45;color:#dce3ec;text-shadow:0 2px 5px #07131b}
 @media(min-width:700px){#controls{right:18px;left:auto;width:385px;bottom:18px}#move{bottom:55px}}
 @media(max-height:690px){#controlBody{max-height:45vh;overflow:auto}#move{bottom:calc(72px + env(safe-area-inset-bottom,0px))}.joystick{width:95px;height:95px}}
 </style>
@@ -33,19 +33,19 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 0.7</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 0.8</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
     <div id="mode"><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div>
   </div>
-  <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div>
+  <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER 01 · Form a resonant crossing and reach the gold gate</div>
   <div id="viewControls"><button id="panToggle" aria-label="Switch between rotating and panning the world" aria-pressed="false">Pan</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div><div id="move"><div class="stickColumn"><div class="joystick" id="joystick" aria-label="Move joystick"><div class="stick" id="stick"></div></div><span class="stickLabel">MOVE</span></div><div class="stickColumn"><div class="joystick" id="lookJoystick" aria-label="Look joystick"><div class="stick" id="lookStick"></div></div><span class="stickLabel">LOOK</span></div></div>
-  <div id="toast"></div>
+  <div id="toast"></div><div id="discovery" class="hidden" role="dialog" aria-modal="true" aria-labelledby="discoveryTitle"><div id="discoveryBox"><div class="spark">✦</div><h2 id="discoveryTitle">Passage discovered</h2><p id="discoveryText">You crossed using a resonance configuration. Your discovery has been recorded.</p><button id="anotherRoute" class="primary">Try another solution</button><button id="keepExploring">Keep exploring</button></div></div>
   <section id="controls" class="collapsed">
     <div id="controlHeading"><div><strong>RESONANCE ENGINE</strong><br><small>Continuous field sources</small></div><div id="controlTools"><button id="audio" aria-label="Enable or disable audible sound">🔈 Sound off</button><button id="soundTest" aria-label="Test audible sound">♪ Test</button><button id="collapse" class="secondary" aria-label="Expand or collapse frequency controls">Controls ▴</button></div></div>
     <div id="controlBody">
       <div id="oscillators"></div>
       <div id="extras"><button id="knock">Knock</button><button id="chime">Chime</button><button id="pulse">Pulse</button></div>
       <div id="actions"><button id="testSound">Test chime</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
-      <p id="help">Tap Sound off to enable audio. ♪ Test plays an audible note to confirm output. Observer: drag to spin, two fingers to pan and zoom. Immersion: the left joystick moves; the right joystick aims. You can also drag to look. Geometry is experimental and collisions aren't implemented yet.</p>
+      <p id="help">CHAMBER 01: Tune the oscillators to form a continuous bridge, then enter Immersion and cross to the gold gate. Left stick moves; right stick looks around. Stable resonance fragments become solid ground. You can solve the same crossing with different frequencies. This is a stylized field experiment, not an exact acoustic simulation.</p>
     </div>
   </section>
 </div>
@@ -79,7 +79,7 @@ const portal=new THREE.Mesh(new THREE.TorusGeometry(1.4,.15,12,64),goldMat);port
 const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.65,1),new THREE.MeshStandardMaterial({color:0x7acdea,emissive:0x2d7794,emissiveIntensity:1,metalness:.2,roughness:.2}));core.position.set(-6.6,1.05,0);world.add(core);
 // Spatially sampled bridge tiles. A tile is supported wherever interference remains near a node.
 const NX=11,NZ=7,tiles=[];
-const tileGeom=new THREE.BoxGeometry(.69,.16,.69);
+const tileGeom=new THREE.BoxGeometry(.72,.16,.83);
 for(let ix=0;ix<NX;ix++)for(let iz=0;iz<NZ;iz++){
   const x=-3.45+ix*.69,z=-2.4+iz*.8;
   const material=new THREE.MeshStandardMaterial({color:0x61cbe3,emissive:0x216987,transparent:true,opacity:.6,metalness:.4,roughness:.2});
@@ -103,7 +103,7 @@ const shell=new THREE.Mesh(new THREE.SphereGeometry(2.6,48,32),new THREE.MeshPhy
 const rim=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(2.63,2)),new THREE.LineBasicMaterial({color:0x5fabc4,transparent:true,opacity:.15}));shellGroup.add(rim);
 const orbitRing=new THREE.Mesh(new THREE.TorusGeometry(2.85,.012,6,160),new THREE.MeshBasicMaterial({color:0x71bad4,transparent:true,opacity:.58}));orbitRing.rotation.x=1.18;orbitRing.rotation.y=.4;shellGroup.add(orbitRing);
 const starGeo=new THREE.BufferGeometry();let positions=[];for(let i=0;i<360;i++){const a=Math.random()*Math.PI*2,b=Math.acos(2*Math.random()-1),r=18+Math.random()*52;positions.push(Math.sin(b)*Math.cos(a)*r,Math.cos(b)*r,Math.sin(b)*Math.sin(a)*r)}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9abdd8,size:.055,sizeAttenuation:true})));
-const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0},{freq:170,on:true,phase:1.5},{freq:250,on:false,phase:3}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:15.5,panMode:false};
+const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0},{freq:95,on:true,phase:1.5},{freq:250,on:false,phase:3}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:15.5,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,lastGrounded:0,lastBlockMessage:-10};
 const observerPan=new THREE.Vector2(0,0); // Camera-space pan; globe pivot stays at origin.
 const oscRoot=$('oscillators');
 for(let i=0;i<3;i++){
@@ -114,23 +114,74 @@ $(`slider${i}`).addEventListener('input',e=>{state.osc[i].freq=Number(e.target.v
 function sampleField(x,z,time=0){
   let value=0,weight=0;
   const src=[[-5.5,-2.5],[5.2,2.2],[-.4,5.5]];
-  for(let i=0;i<3;i++)if(state.osc[i].on){const o=state.osc[i],p=src[i],dist=Math.hypot(x-p[0],z-p[1]);const k=.45+o.freq/115;value+=Math.cos(k*dist+o.phase-time*.25)*.85;weight+=.85;}
+  for(let i=0;i<3;i++)if(state.osc[i].on){const o=state.osc[i],p=src[i],dist=Math.hypot(x-p[0],z-p[1]);const k=.45+o.freq/115;value+=Math.cos(k*dist+o.phase)*.85;weight+=.85;}
   for(const p of state.pulses){const age=time-p.t,dist=Math.hypot(x-p.x,z-p.z);if(age<3&&age>=0){const front=age*p.speed;value+=p.strength*Math.exp(-Math.pow((dist-front)*1.4,2)) * Math.sin(dist*4.5-age*8)*(1-age/3);}}
   return weight?value/Math.max(weight,.85):0;
 }
 function renderField(time=0){
   let stableCount=0;
-  for(const t of tiles){const v=sampleField(t.x,t.z,time);const stable=Math.abs(v)<.63;stableCount+=stable?1:0;t.stable=stable;
+  for(const t of tiles){const v=sampleField(t.x,t.z,time);const stable=state.osc.some(o=>o.on)&&Math.abs(v)<.63;stableCount+=stable?1:0;t.stable=stable;
     // Width, height and luminosity are continuous results of the computed field.
-    const support=Math.max(0,Math.min(1,(.85-Math.abs(v))/.45));
-    t.mesh.scale.set(.78+.18*support,Math.max(.06,support*2.4),.78+.18*support);
-    t.mesh.position.y=-.68+support*.57;
-    t.mesh.material.opacity=.11+support*.78;
-    t.mesh.material.emissiveIntensity=.2+support*.85;
-    t.mesh.material.color.setHSL(.52+Math.abs(v)*.10,.62,.29+support*.24);
+    const support=state.osc.some(o=>o.on)?Math.max(0,Math.min(1,(.85-Math.abs(v))/.45)):0;
+    t.mesh.scale.set(stable?.98:.65,stable?1:.12,stable?.98:.65);
+    t.mesh.position.y=stable?(-.19+.12*support):-1.20;
+    t.mesh.material.opacity=stable?.55+.38*support:.07;
+    t.mesh.material.emissiveIntensity=stable?.35+.75*support:.08;
+    t.mesh.material.color.setHSL(.52+Math.abs(v)*.10,.65,stable?.29+support*.25:.16);
   }
-  $('fieldStatus').textContent=`${stableCount} stable fragments · ${state.mode==='observer'?(state.panMode?'Drag to pan · Tap ⌖ to recenter':'Grab & spin · Two fingers to pan'):'Left stick to move · Drag to look'}`;
+  state.passageOpen=hasConnectedPassage();
+  $('fieldStatus').textContent=state.passageOpen
+    ?`PASSAGE CONNECTED · ${stableCount}/${tiles.length} fragments · Cross to the gate`
+    :`PASSAGE INCOMPLETE · ${stableCount}/${tiles.length} fragments · Tune frequencies`;
+  portal.material.emissiveIntensity=state.passageOpen?1.5:.16;
 }
+// A route exists only when adjacent stable cells connect the two anchored islands.
+// Geometry emerges from the field, rather than switching among programmed bridge models.
+const tileGrid=Array.from({length:NX},()=>Array(NZ));
+for(const tile of tiles)tileGrid[tile.ix][tile.iz]=tile;
+function hasConnectedPassage(){
+ const queue=[],seen=new Set();
+ for(let z=0;z<NZ;z++)if(tileGrid[0][z].stable){queue.push([0,z]);seen.add('0:'+z);}
+ for(let head=0;head<queue.length;head++){
+   const [x,z]=queue[head];
+   if(x===NX-1)return true;
+   for(const [nx,nz] of [[x+1,z],[x-1,z],[x,z+1],[x,z-1]]){
+     if(nx<0||nx>=NX||nz<0||nz>=NZ)continue;
+     const key=nx+':'+nz;
+     if(tileGrid[nx][nz].stable&&!seen.has(key)){seen.add(key);queue.push([nx,nz]);}
+   }
+ }
+ return false;
+}
+function groundAt(x,z){
+ if(Math.abs(z)<=3.95 && x>=-7.82&&x<=-3.29)return true;
+ if(Math.abs(z)<=3.95 && x>=3.29&&x<=7.82)return true;
+ const ix=Math.round((x+3.45)/.69),iz=Math.round((z+2.4)/.8);
+ if(ix<0||ix>=NX||iz<0||iz>=NZ)return false;
+ const tile=tileGrid[ix][iz];
+ return tile.stable&&Math.abs(x-tile.x)<.395&&Math.abs(z-tile.z)<.455;
+}
+function finishPassage(){
+ if(state.finished)return;
+ state.finished=true;
+ stopJoystick(null);stopLookJoystick(null);
+ const config=state.osc.map(o=>({hz:o.freq,on:o.on,phase:o.phase}));
+ const saved=JSON.parse(localStorage.getItem('resonanceCrossings')||'[]');
+ const key=config.map(o=>o.on?o.hz:'off').join('-');
+ if(!saved.some(entry=>entry.key===key)){
+   saved.push({key,date:new Date().toISOString(),config});
+   localStorage.setItem('resonanceCrossings',JSON.stringify(saved.slice(-25)));
+ }
+ $('discoveryText').textContent=
+   `You crossed a pathway created by the resonance field. Your configuration (${key}) is recorded. ${saved.length} distinct crossing solution${saved.length===1?'':'s'} discovered.`;
+ $('discovery').classList.remove('hidden');
+}
+$('keepExploring').addEventListener('click',()=>$('discovery').classList.add('hidden'));
+$('anotherRoute').addEventListener('click',()=>{
+ $('discovery').classList.add('hidden');state.finished=false;state.hasCrossedGap=false;
+ state.playerX=-5.5;state.playerZ=0;state.yaw=0;state.pitch=-.07;
+ toast('Try a new configuration and discover another crossing');
+});
 let audioCtx=null,voices=[],soundOn=false,masterGain=null;
 async function toggleSound(){
   try {
@@ -272,10 +323,7 @@ function panObserver(dx,dy){
  observerPan.y=clamp(observerPan.y+dy,-window.innerHeight*.27,window.innerHeight*.27);
 }
 function panImmersion(dx,dy){
- // Move the eye without changing its viewing direction.
- const step=.024;
- state.playerX=clamp(state.playerX-dx*step,-8,8);
- state.playerZ=clamp(state.playerZ+dy*step,-4,4);
+ // No free-camera bypass: only the gameplay movement joystick traverses the chamber.
 }
 const pointers=new Map();let pinchDistance=0,gestureCentroid=null;
 function pairInfo(){
@@ -370,14 +418,29 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
  if(state.mode==='immersion'){
    state.yaw-=state.lookX*2.15*dt;
    state.pitch=clamp(state.pitch+state.lookY*1.55*dt,-1.05,1.05);
- }
- if(state.mode==='immersion'&&(state.moveX||state.moveY)){
-  const speed=2.6,length=Math.max(1,Math.hypot(state.moveX,state.moveY));
-  const forward=state.moveY/length,side=state.moveX/length;
-  const vx=forward*Math.cos(state.yaw)-side*Math.sin(state.yaw);
-  const vz=forward*Math.sin(state.yaw)+side*Math.cos(state.yaw);
-  state.playerX=clamp(state.playerX+vx*speed*dt,-7.5,7.5);
-  state.playerZ=clamp(state.playerZ+vz*speed*dt,-3.8,3.8);
+   if(state.moveX||state.moveY){
+     const speed=2.65,len=Math.max(1,Math.hypot(state.moveX,state.moveY));
+     const forward=state.moveY/len,side=state.moveX/len;
+     const vx=forward*Math.cos(state.yaw)-side*Math.sin(state.yaw);
+     const vz=forward*Math.sin(state.yaw)+side*Math.cos(state.yaw);
+     // Try each axis separately so the player can slide naturally along unstable edges.
+     const targetX=clamp(state.playerX+vx*speed*dt,-7.5,7.5);
+     const targetZ=clamp(state.playerZ+vz*speed*dt,-3.8,3.8);
+     const canX=groundAt(targetX,state.playerZ);
+     if(canX)state.playerX=targetX;
+     const canZ=groundAt(state.playerX,targetZ);
+     if(canZ)state.playerZ=targetZ;
+     if(!canX&&!canZ&&t-state.lastBlockMessage>1.5){
+       state.lastBlockMessage=t;toast('Unstable ground · Tune the oscillators');
+     }
+   }
+   if(Math.abs(state.playerX)<3.29)state.hasCrossedGap=true;
+   if(state.hasCrossedGap&&state.playerX>6.45&&Math.abs(state.playerZ)<2.85)finishPassage();
+   if(groundAt(state.playerX,state.playerZ))state.lastGrounded=t;
+   else if(t-state.lastGrounded>1){
+     state.playerX=-5.5;state.playerZ=0;state.hasCrossedGap=false;
+     state.lastGrounded=t;toast('Field collapsed · Returned to entrance');
+   }
  }
   if(state.mode==='observer'){
     const unitsPerPixel=2*state.observerDistance*Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)/Math.max(1,canvas.clientHeight);
