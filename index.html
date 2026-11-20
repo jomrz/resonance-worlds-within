@@ -51,8 +51,8 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
     <div id="controlBody">
       <div id="oscillators"></div>
       
-      <div id="actions"><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
-      <p id="help">Observer: tune continuous frequencies to shape the global standing field and find a crossing. Immersion: move inside that same field and use physical thumps, chimes and pulses at your location to disturb nearby structures.</p>
+      <div id="actions"><button id="atlasToggle" aria-pressed="true">Field atlas: On</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
+      <p id="help">Observer is outside time. The standing-field atlas reveals how global waves overlap across the floor, bridges and columns simultaneously. Teal and violet show opposite field signs, and bright bands indicate nodes. Change frequencies to reshape the whole field. In Immersion, time flows and local impulses travel through the environment.</p>
     </div>
   </section>
   <section id="immersionTools" aria-label="Local sound instruments">
@@ -131,11 +131,66 @@ $('invertLook').addEventListener('click',()=>{
  try{localStorage.setItem('resonanceInvertY',invertLookY?'1':'0')}catch(e){}
  toast(invertLookY?'Flight: down looks up':'Normal: up looks up');
 });
+// Global atlas: an interference map of space, sampled at a single timeless state.
+// The fragment geometry and this field use the same mathematical sampleField().
+const atlasGeometry=new THREE.PlaneGeometry(15.3,8.1,64,36);
+atlasGeometry.rotateX(-Math.PI/2);
+const atlasColorAttribute=new THREE.BufferAttribute(
+ new Float32Array(atlasGeometry.attributes.position.count*3),3
+);
+atlasGeometry.setAttribute('color',atlasColorAttribute);
+const atlasMesh=new THREE.Mesh(atlasGeometry,new THREE.MeshBasicMaterial({
+ vertexColors:true,transparent:true,opacity:.63,side:THREE.DoubleSide,
+ depthWrite:false,blending:THREE.AdditiveBlending
+}));
+atlasMesh.position.y=.13;world.add(atlasMesh);
+const waveProbes=new THREE.Group();world.add(waveProbes);
+const columnProbes=[];
+for(const x of [-7.3,-4,4,7.3])for(const z of [-3.5,3.5]){
+ const h=3+Math.abs(x)*.11;
+ const halo=new THREE.Mesh(
+  new THREE.TorusGeometry(.38,.03,6,32),
+  new THREE.MeshBasicMaterial({color:0x81d5e7,transparent:true,opacity:.8,depthWrite:false})
+ );
+ halo.rotation.x=Math.PI/2;halo.position.set(x,h-.27,z);
+ waveProbes.add(halo);columnProbes.push({x,z,halo});
+}
+let atlasEnabled=true,atlasDirty=true;
+const atlasColor=new THREE.Color();
+function drawFieldAtlas(){
+ const vertices=atlasGeometry.attributes.position,colors=atlasColorAttribute;
+ const active=state.osc.some(o=>o.on);
+ for(let i=0;i<vertices.count;i++){
+   const x=vertices.getX(i),z=vertices.getZ(i);
+   const v=active?sampleField(x,z,0):0;
+   const intensity=Math.min(1,Math.abs(v)),node=Math.exp(-v*v*78);
+   atlasColor.setHSL(v<0?.75:.52,.79,active?(.09+.30*intensity+.38*node):.008);
+   colors.setXYZ(i,atlasColor.r,atlasColor.g,atlasColor.b);
+ }
+ colors.needsUpdate=true;
+ for(const p of columnProbes){
+   const v=active?sampleField(p.x,p.z,0):0,intensity=Math.min(1,Math.abs(v));
+   p.halo.material.color.setHSL(v<0?.75:.52,.75,.22+.42*intensity);
+   p.halo.material.opacity=active?.3+.6*intensity:.05;
+   p.halo.scale.setScalar(.74+.35*intensity);
+ }
+}
+function syncAtlasVisibility(){
+ const visible=atlasEnabled&&state.mode==='observer';
+ atlasMesh.visible=visible;waveProbes.visible=visible;
+}
+$('atlasToggle').addEventListener('click',()=>{
+ atlasEnabled=!atlasEnabled;
+ $('atlasToggle').textContent=atlasEnabled?'Field atlas: On':'Field atlas: Off';
+ $('atlasToggle').setAttribute('aria-pressed',String(atlasEnabled));
+ atlasDirty=true;syncAtlasVisibility();
+ toast(atlasEnabled?'Timeless field atlas visible':'Field atlas hidden');
+});
 const oscRoot=$('oscillators');
 for(let i=0;i<3;i++){
 const row=document.createElement('div');row.className='osc';row.innerHTML=`<input type="checkbox" id="check${i}" ${state.osc[i].on?'checked':''} aria-label="Oscillator ${i+1} enabled"><label for="slider${i}">Wave ${i+1}</label><input id="slider${i}" type="range" min="60" max="420" step="1" value="${state.osc[i].freq}" aria-label="Oscillator ${i+1} frequency"><output id="output${i}">${state.osc[i].freq} Hz</output>`;oscRoot.append(row);
-$(`check${i}`).addEventListener('change',e=>{state.osc[i].on=e.target.checked;syncAudio();renderField()});
-$(`slider${i}`).addEventListener('input',e=>{state.osc[i].freq=Number(e.target.value);$(`output${i}`).textContent=state.osc[i].freq+' Hz';syncAudio();renderField()});
+$(`check${i}`).addEventListener('change',e=>{state.osc[i].on=e.target.checked;atlasDirty=true;syncAudio();renderField()});
+$(`slider${i}`).addEventListener('input',e=>{state.osc[i].freq=Number(e.target.value);$(`output${i}`).textContent=state.osc[i].freq+' Hz';atlasDirty=true;syncAudio();renderField()});
 }
 function sampleField(x,z,time=0){
   let value=0,weight=0;
@@ -145,6 +200,11 @@ function sampleField(x,z,time=0){
   return weight?value/Math.max(weight,.85):0;
 }
 function renderField(time=0){
+  // Observer has no temporal progression. The complete spatial pattern is visible at once.
+  if(state.mode==='observer'){
+    time=0;
+    if(atlasDirty){drawFieldAtlas();atlasDirty=false;}
+  }
   let stableCount=0;
   for(const t of tiles){const v=sampleField(t.x,t.z,time);const stable=state.osc.some(o=>o.on)&&Math.abs(v)<.63;stableCount+=stable?1:0;t.stable=stable;
     // Width, height and luminosity are continuous results of the computed field.
@@ -323,7 +383,8 @@ function changeMode(mode){
  shellGroup.visible=mode==='observer';
  $('viewControls').classList.toggle('hidden',mode!=='observer');
  world.scale.setScalar(mode==='observer'?.23:1);world.position.set(0,0,0);
- toast(mode==='observer'?'Observer: global resonance':'Immersion: local physical sound');
+ atlasDirty=true;syncAtlasVisibility();
+ toast(mode==='observer'?'Observer: all waves at once':'Immersion: traveling waves in time');
 }
 $('observer').addEventListener('click',()=>changeMode('observer'));
 $('immerse').addEventListener('click',()=>changeMode('immersion'));
@@ -483,7 +544,7 @@ window.addEventListener('deviceorientation',e=>{
  }
 });
 $('save').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');notes.push({saved:new Date().toISOString(),osc:state.osc.map(o=>({...o}))});localStorage.setItem('resonanceDiscoveries',JSON.stringify(notes.slice(-20)));toast(`Discovery saved (${Math.min(notes.length,20)})`)});
-$('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;for(let i=0;i<3;i++){$(`check${i}`).checked=state.osc[i].on;$(`slider${i}`).value=state.osc[i].freq;$(`output${i}`).textContent=state.osc[i].freq+' Hz'}syncAudio();renderField();toast('Latest discovery restored')});
+$('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;for(let i=0;i<3;i++){$(`check${i}`).checked=state.osc[i].on;$(`slider${i}`).value=state.osc[i].freq;$(`output${i}`).textContent=state.osc[i].freq+' Hz'}atlasDirty=true;syncAudio();renderField();toast('Latest discovery restored')});
 let toastTimer=0;function toast(txt){$('toast').textContent=txt;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),1750)}
 const clock=new THREE.Clock();let frame=0,immersionTime=0;
 let previousFrame=0;
