@@ -181,6 +181,7 @@ const nodeCloud=new THREE.Points(nodeGeometry,
  new THREE.PointsMaterial({size:2.0,sizeAttenuation:false,color:0xe9f6ff,transparent:true,
  opacity:.3,depthWrite:false,blending:THREE.AdditiveBlending}));
 volumeGroup.add(amplitudeCloud,nodeCloud);
+amplitudeCloud.frustumCulled=false;nodeCloud.frustumCulled=false;
 const nodalSheets=[];
 function nodeSheet(w,h,x,y,z,axis,color){
  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
@@ -234,7 +235,7 @@ let atlasEnabled=true,atlasDirty=true;
 const atlasColor=new THREE.Color();
 function drawFieldAtlas(){
  const vertices=atlasGeometry.attributes.position,colors=atlasColorAttribute;
- const active=state.osc.some(o=>o.on);
+ const active=state.poolCoupling>.035||state.wallCoupling>.035;
  for(let i=0;i<vertices.count;i++){
    const x=vertices.getX(i),z=vertices.getZ(i);
    const v=active?sampleField(x,z,0):0;
@@ -474,8 +475,8 @@ function playImpulse(kind){
  if(state.mode!=='immersion')return;
  const cfg={
   knock:{hz:185,length:.20,speed:3.1,strength:1.15,reach:3.2,color:0xe0bd87,label:'Thump'},
-  chime:{hz:698,length:1.45,speed:2.4,strength:.70,reach:6.5,color:0xf1cc84,label:'Chime'},
-  pulse:{hz:275,length:.54,speed:7.5,strength:1.4,reach:14,color:0x81dbf1,label:'Pulse'}
+  chime:{hz:WALL_MODE_HZ*3,length:1.45,speed:2.4,strength:.70,reach:6.5,color:0xf1cc84,label:'Chime'},
+  pulse:{hz:WATER_MODE_HZ*2,length:.54,speed:7.5,strength:1.4,reach:14,color:0x81dbf1,label:'Pulse'}
  }[kind];
  const source=kind==='pulse'?{x:state.playerX,z:state.playerZ}:{
   x:state.playerX+Math.cos(state.yaw)*1.15,
