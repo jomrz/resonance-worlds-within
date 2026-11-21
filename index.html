@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.1</title>
+<title>Resonance: Worlds Within | Prototype 1.2</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -20,7 +20,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 #controls {position:absolute;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:540px;margin:auto;background:rgba(9,21,36,.93);border:1px solid var(--edge);border-radius:18px;box-shadow:0 12px 45px rgba(0,0,0,.35);pointer-events:auto;backdrop-filter:blur(15px);overflow:hidden}
 #controlHeading{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;gap:8px}#controlHeading strong{font-size:13px;letter-spacing:.04em}#controlHeading small{font-size:10px;color:var(--muted)}#controlHeading button{padding:8px 9px;font-size:12px}#controlTools{display:flex;align-items:center;gap:6px;flex-shrink:0}#soundTest{padding:8px 7px;font-size:11px;color:#d0f5ff}#audio{min-width:89px}#audio{background:rgba(44,90,111,.86);border-color:#528eae;color:#e7f8ff}#audio.active{background:#285e6e}#viewControls{position:absolute;top:calc(env(safe-area-inset-top,0px) + 146px);right:12px;display:flex;flex-direction:column;gap:7px;pointer-events:auto}#viewControls.hidden{display:none}#viewControls button{width:42px;height:42px;padding:0;font-size:22px;background:rgba(12,29,46,.84);border-color:rgba(137,185,208,.34);border-radius:14px}#viewControls button:last-child{font-size:19px}#viewControls{align-items:flex-end}#viewControls #panToggle{width:70px;font-size:13px;font-weight:650}#viewControls #panToggle.active{background:rgba(55,106,133,.9);border-color:#86d5e6}
 #responseReadout{margin-top:8px;padding:9px 10px;border:1px solid rgba(95,169,198,.23);border-radius:11px;background:rgba(36,73,94,.20)}#responseReadout .measurement{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 0;font-size:11px;color:#b9dfef}#responseReadout strong{font-size:12px;color:#e7f4ff;font-variant-numeric:tabular-nums}#responseReadout small{color:#a4bfcd;font-size:10px;line-height:1.4;display:block;margin-top:6px}#controlBody{padding:0 13px 13px;}#controls.collapsed #controlBody{display:none}
-.osc{display:grid;grid-template-columns:22px 54px 1fr 57px;align-items:center;gap:9px;margin:9px 0}.osc label{font-size:12px;color:#bed2df} .osc output{font-size:12px;text-align:right;color:#d4eefa;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:#7dcee3;height:22px;touch-action:pan-y}.osc input[type=checkbox]{width:17px;height:17px;accent-color:#86cbe7;margin:0}
+.osc{display:grid;grid-template-columns:22px minmax(82px,95px) minmax(75px,1fr) 52px;align-items:center;gap:7px;margin:10px 0}.osc label{font-size:12px;color:#bed2df}.osc label small{display:block;font-size:10px;color:#79aabc;margin-top:3px}.potentialTrack{height:5px;border-radius:6px;background:#233a4d;overflow:hidden;margin:3px 0 8px}.potentialTrack span{display:block;width:0%;height:100%;background:linear-gradient(90deg,#315f83,#82cddf);border-radius:6px;transition:width .1s}.potentialTrack.wall span{background:linear-gradient(90deg,#65517d,#dbb1ef)}#powerHint{font-size:10px;line-height:1.4;color:#e4c8a4;margin-top:7px} .osc output{font-size:12px;text-align:right;color:#d4eefa;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:#7dcee3;height:22px;touch-action:pan-y}.osc input[type=checkbox]{width:17px;height:17px;accent-color:#86cbe7;margin:0}
 #extras{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}#extras button{flex:1;font-size:12px;padding:9px 5px}#actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}#actions button{flex:1;font-size:11px;padding:9px 5px}
 #help{font-size:10px;color:#9db4c7;line-height:1.5;margin:10px 0 0}
 #controls.immersed{display:none}
@@ -40,7 +40,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.1</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.2</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
     <div id="mode"><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER 01 · Water crossing and the hidden wall</div>
@@ -49,10 +49,10 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
   <section id="controls" class="collapsed">
     <div id="controlHeading"><div><strong>RESONANCE ENGINE</strong><br><small>Continuous field sources</small></div><div id="controlTools"><button id="audio" aria-label="Enable or disable audible sound">🔈 Sound off</button><button id="soundTest" aria-label="Test audible sound">♪ Test</button><button id="collapse" class="secondary" aria-label="Expand or collapse frequency controls">Controls ▴</button></div></div>
     <div id="controlBody">
-      <div id="oscillators"></div><div id="responseReadout"><div class="measurement"><span>Water resonance</span><strong id="poolLevel">0%</strong></div><div class="measurement"><span>Hidden wall resonance</span><strong id="wallLevel">0%</strong></div><small id="modeHint">Thump the environment inside to identify its natural tones.</small></div>
+      <div id="oscillators"></div><div id="responseReadout"><div class="measurement"><span>Water resonance</span><strong id="poolLevel">0%</strong></div><div class="potentialTrack"><span id="poolBar"></span></div><div class="measurement"><span>Hidden wall resonance</span><strong id="wallLevel">0%</strong></div><div class="potentialTrack wall"><span id="wallBar"></span></div><small id="modeHint">Thump the environment inside to identify its natural tones.</small><div id="powerHint">Active emitters share the available energy.</div></div>
       
       <div id="actions"><button id="atlasToggle" aria-pressed="true">3D field: On</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
-      <p id="help">In Observer, see the 3D standing mode as luminous positive and negative volumes with pale nodal sheets. These remain still outside time. Thump the pool rim or hollow wall in Immersion to discover their tones; tune those modes outside, then use local Pulse and Chime to activate the mineral path and reveal the door.</p>
+      <p id="help">Three emitters occupy different positions and share a fixed energy supply. Use the pool-side emitter near 136 Hz to prepare the water or the far-wall emitter near 224 Hz to prepare the passage. Several active emitters divide power. After a physical impulse, the mechanism retains its state temporarily, so you can change possibilities in Observer without losing progress. This is an approximate modal-coupling model.</p>
     </div>
   </section>
   <section id="immersionTools" aria-label="Local sound instruments">
@@ -254,7 +254,7 @@ function drawFieldAtlas(){
 }
 function syncAtlasVisibility(){
  const visible=atlasEnabled&&state.mode==='observer';
- atlasMesh.visible=visible;waveProbes.visible=visible;volumeGroup.visible=visible;
+ atlasMesh.visible=visible;waveProbes.visible=visible;volumeGroup.visible=visible;emitterMarkers.visible=state.mode==='observer';
 }
 $('atlasToggle').addEventListener('click',()=>{
  atlasEnabled=!atlasEnabled;
@@ -263,9 +263,27 @@ $('atlasToggle').addEventListener('click',()=>{
  atlasDirty=true;syncAtlasVisibility();
  toast(atlasEnabled?'3D standing modes visible':'3D field hidden');
 });
+// Each emitter occupies a real location and its distance affects mode coupling.
+const EMITTERS=[
+ {x:-4.35,z:0,label:'Pool side',color:0x67cde7},
+ {x:5.35,z:0,label:'Far wall',color:0xe1af7e},
+ {x:0,z:0,label:'Midpoint',color:0xb896de}
+];
+const emitterMarkers=new THREE.Group();world.add(emitterMarkers);
+for(const p of EMITTERS){
+ const marker=new THREE.Mesh(new THREE.IcosahedronGeometry(.14,1),
+  new THREE.MeshBasicMaterial({color:p.color}));
+ marker.position.set(p.x,1.04,p.z);
+ const halo=new THREE.Mesh(new THREE.TorusGeometry(.28,.018,5,32),
+  new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:.8}));
+ halo.rotation.x=Math.PI/2;halo.position.set(p.x,.78,p.z);
+ emitterMarkers.add(marker,halo);
+}
 const oscRoot=$('oscillators');
 for(let i=0;i<3;i++){
-const row=document.createElement('div');row.className='osc';row.innerHTML=`<input type="checkbox" id="check${i}" ${state.osc[i].on?'checked':''} aria-label="Oscillator ${i+1} enabled"><label for="slider${i}">Wave ${i+1}</label><input id="slider${i}" type="range" min="60" max="420" step="1" value="${state.osc[i].freq}" aria-label="Oscillator ${i+1} frequency"><output id="output${i}">${state.osc[i].freq} Hz</output>`;oscRoot.append(row);
+ const row=document.createElement('div');row.className='osc';
+ row.innerHTML=`<input type="checkbox" id="check${i}" ${state.osc[i].on?'checked':''} aria-label="Emitter ${i+1} enabled"><label for="slider${i}">Emitter ${i+1}<small>${EMITTERS[i].label}</small></label><input id="slider${i}" type="range" min="60" max="420" step="1" value="${state.osc[i].freq}" aria-label="Emitter ${i+1} frequency"><output id="output${i}">${state.osc[i].freq} Hz</output>`;
+ oscRoot.append(row);
 $(`check${i}`).addEventListener('change',e=>{state.osc[i].on=e.target.checked;atlasDirty=true;syncAudio();renderField()});
 $(`slider${i}`).addEventListener('input',e=>{state.osc[i].freq=Number(e.target.value);$(`output${i}`).textContent=state.osc[i].freq+' Hz';atlasDirty=true;syncAudio();renderField()});
 }
@@ -277,9 +295,23 @@ function resonance(frequency,center,width){
  return Math.exp(-.5*detune*detune);
 }
 function updateCouplings(){
- const active=state.osc.filter(o=>o.on);
- state.poolCoupling=active.length?Math.max(...active.map(o=>resonance(o.freq,WATER_MODE_HZ,5.5))):0;
- state.wallCoupling=active.length?Math.max(...active.map(o=>resonance(o.freq,WALL_MODE_HZ,7))):0;
+ // Unlike the former MAX model, every enabled emitter consumes part of the
+ // limited energy budget. Location and detuning determine its effectiveness.
+ const enabled=state.osc.reduce((n,o)=>n+(o.on?1:0),0);
+ state.activeEmitters=enabled;
+ const coupling=(modeHz,bandwidth,target)=>{
+  if(!enabled)return 0;
+  let total=0;
+  state.osc.forEach((o,i)=>{
+   if(!o.on)return;
+   const p=EMITTERS[i],distance=Math.hypot(p.x-target.x,p.z-target.z);
+   const spatial=Math.exp(-.5*Math.pow(distance/5,2));
+   total+=resonance(o.freq,modeHz,bandwidth)*spatial/enabled;
+  });
+  return Math.min(1,total);
+ };
+ state.poolCoupling=coupling(WATER_MODE_HZ,5.5,{x:-4.12,z:0});
+ state.wallCoupling=coupling(WALL_MODE_HZ,7,{x:5.82,z:0});
 }
 function waterMode(x,y,z){
  const envelope=Math.exp(-Math.pow(x/5.5,4));
@@ -309,8 +341,9 @@ function renderField(time=0){
  if(state.mode==='observer'){
   time=0;if(atlasDirty){drawFieldAtlas();atlasDirty=false;}
  }
- const crossingActive=state.poolCoupling>.72&&state.waterRaisedUntil>immersionTime;
- const doorwayActive=state.wallCoupling>.72&&state.wallOpenUntil>immersionTime;
+ // Material memory: the world holds its recent state for a limited immersed time.
+ const crossingActive=state.waterRaisedUntil>immersionTime;
+ const doorwayActive=state.wallOpenUntil>immersionTime;
  let stableCount=0;
  for(const tile of tiles){
   // The raised walkway follows a fixed mineral lattice: three parallel lanes.
@@ -330,25 +363,32 @@ function renderField(time=0){
  poolSurface.material.emissiveIntensity=crossingActive?.62:.10;
  poolRim.material.emissiveIntensity=.15+state.poolCoupling*.85;
  portal.material.emissiveIntensity=doorwayActive?1.8:.15;
- $('poolLevel').textContent=Math.round(state.poolCoupling*100)+'%';
- $('wallLevel').textContent=Math.round(state.wallCoupling*100)+'%';
+ const poolPercent=Math.round(state.poolCoupling*100),wallPercent=Math.round(state.wallCoupling*100);
+ $('poolLevel').textContent=poolPercent+'%'+(state.poolCoupling>.78?' · READY':'');
+ $('wallLevel').textContent=wallPercent+'%'+(state.wallCoupling>.78?' · READY':'');
+ $('poolBar').style.width=poolPercent+'%';
+ $('wallBar').style.width=wallPercent+'%';
+ $('powerHint').textContent=state.activeEmitters===0
+  ?'No active sources. Enable one emitter.'
+  :state.activeEmitters===1?'One emitter active. Full energy available for one mode.'
+  :state.activeEmitters+' emitters active. Each receives '+Math.round(100/state.activeEmitters)+'% of total power. Disable unused sources.';
  $('modeHint').textContent=state.foundPoolTone||state.foundWallTone
    ?[(state.foundPoolTone?'Pool: '+WATER_MODE_HZ+' Hz':null),
      (state.foundWallTone?'Hollow wall: '+WALL_MODE_HZ+' Hz':null)].filter(Boolean).join(' · ')
    :'Thump near a material in Immersion to learn its tone';
  if(state.mode==='observer'){
-  $('fieldStatus').textContent=state.poolCoupling>.72
+  $('fieldStatus').textContent=state.poolCoupling>.78
    ?'POOL RESONATES · Go inside and PULSE near the rim'
-   :state.wallCoupling>.72?'WALL RESONATES · Go inside and CHIME near the seam'
+   :state.wallCoupling>.78?'WALL RESONATES · Go inside and CHIME near the seam'
    :'TUNE A RESONANT MODE · Thump materials to hear their tones';
  }else if(state.playerX< -3.1){
   const remaining=Math.max(0,Math.ceil(state.waterRaisedUntil-immersionTime));
   $('fieldStatus').textContent=crossingActive?'WATER PATH RAISED · '+remaining+' seconds left'
-   :state.poolCoupling>.72?'POOL IS RESONATING · PULSE to raise the path'
+   :state.poolCoupling>.78?'POOL IS RESONATING · PULSE to raise the path'
    :'POOL IS QUIET · Thump the rim and retune outside';
  }else{
   $('fieldStatus').textContent=doorwayActive?'HIDDEN DOOR OPEN · Reach the gate'
-   :state.wallCoupling>.72?'HOLLOW WALL RESONATES · CHIME near it'
+   :state.wallCoupling>.78?'HOLLOW WALL RESONATES · CHIME near it'
    :'STONE WALL BLOCKS THE EXIT · Thump it to investigate';
  }
 }
@@ -374,7 +414,7 @@ function groundAt(x,z){
  if(Math.abs(z)>3.92)return false;
  // The far wall blocks progress until its central concealed door is opened.
  if(x>5.75&&x<6.35){
-   const open=state.wallCoupling>.72&&state.wallOpenUntil>immersionTime;
+   const open=state.wallOpenUntil>immersionTime;
    if(!open||Math.abs(z)>1.02)return false;
  }
  if(Math.abs(z)<=3.95 && x>=-7.82&&x<=-3.29)return true;
@@ -512,12 +552,12 @@ function playImpulse(kind){
      response='That wall sounds hollow · Resonance near '+WALL_MODE_HZ+' Hz';
    }else response='Stone rings solid · Try thumping the pool rim or far wall';
  }else if(kind==='pulse'&&nearPool){
-   if(state.poolCoupling>.72){
+   if(state.poolCoupling>.78){
      state.waterRaisedUntil=immersionTime+38;
      response='The mineral-water lattice rises · 38 seconds of solid footing';
    }else response='The pool only ripples · Tune its natural resonance in Observer';
  }else if(kind==='chime'&&nearWall){
-   if(state.wallCoupling>.72){
+   if(state.wallCoupling>.78){
      state.wallOpenUntil=immersionTime+30;
      state.foundWallTone=true;
      response='Hidden stone cavity resonates · A doorway lifts open';
