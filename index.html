@@ -309,6 +309,12 @@ function hasConnectedPassage(){
  return false;
 }
 function groundAt(x,z){
+ if(Math.abs(z)>3.92)return false;
+ // The far wall blocks progress until its central concealed door is opened.
+ if(x>5.75&&x<6.35){
+   const open=state.wallCoupling>.72&&state.wallOpenUntil>immersionTime;
+   if(!open||Math.abs(z)>1.02)return false;
+ }
  if(Math.abs(z)<=3.95 && x>=-7.82&&x<=-3.29)return true;
  if(Math.abs(z)<=3.95 && x>=3.29&&x<=7.82)return true;
  const ix=Math.round((x+3.45)/.69),iz=Math.round((z+2.4)/.8);
@@ -328,14 +334,15 @@ function finishPassage(){
    localStorage.setItem('resonanceCrossings',JSON.stringify(saved.slice(-25)));
  }
  $('discoveryText').textContent=
-   `You crossed a pathway created by the resonance field. Your configuration (${key}) is recorded. ${saved.length} distinct crossing solution${saved.length===1?'':'s'} discovered.`;
+   `You coupled a standing mode to the mineral pool, raised the stepping stones with a pulse, and revealed the concealed passage with a chime. Configuration (${key}) recorded. ${saved.length} distinct crossing solution${saved.length===1?'':'s'} discovered.`;
  $('discovery').classList.remove('hidden');
 }
 $('keepExploring').addEventListener('click',()=>$('discovery').classList.add('hidden'));
 $('anotherRoute').addEventListener('click',()=>{
  $('discovery').classList.add('hidden');state.finished=false;state.hasCrossedGap=false;
  state.playerX=-5.5;state.playerZ=0;state.yaw=0;state.pitch=-.07;
- toast('Try a new configuration and discover another crossing');
+ state.waterRaisedUntil=-1;state.wallOpenUntil=-1;
+ toast('Both mechanisms reset. Test another configuration');
 });
 let audioCtx=null,voices=[],soundOn=false,masterGain=null;
 async function toggleSound(){
@@ -429,7 +436,46 @@ function playImpulse(kind){
    o.connect(gain);harmonic.connect(gain);gain.connect(masterGain);
    o.start(at);harmonic.start(at);o.stop(at+cfg.length+.02);harmonic.stop(at+cfg.length+.02);
  }
- toast(cfg.label+' · Local wave emitted');
+ const nearPool=state.playerX>-6.6&&state.playerX<-3.1&&Math.abs(state.playerZ)<2.5;
+ const nearWall=state.playerX>3.7&&state.playerX<6.1&&Math.abs(state.playerZ)<2.2;
+ let response=cfg.label+' · A wave travels through the chamber';
+ if(kind==='knock'){
+   if(nearPool){
+     state.foundPoolTone=true;
+     playMaterialEcho(WATER_MODE_HZ);
+     response='Mineral pool rings near '+WATER_MODE_HZ+' Hz · Remember this tone';
+   }else if(nearWall){
+     state.foundWallTone=true;
+     playMaterialEcho(WALL_MODE_HZ);
+     response='That wall sounds hollow · Resonance near '+WALL_MODE_HZ+' Hz';
+   }else response='Stone rings solid · Try thumping the pool rim or far wall';
+ }else if(kind==='pulse'&&nearPool){
+   if(state.poolCoupling>.72){
+     state.waterRaisedUntil=immersionTime+38;
+     response='The mineral-water lattice rises · 38 seconds of solid footing';
+   }else response='The pool only ripples · Tune its natural resonance in Observer';
+ }else if(kind==='chime'&&nearWall){
+   if(state.wallCoupling>.72){
+     state.wallOpenUntil=immersionTime+30;
+     state.foundWallTone=true;
+     response='Hidden stone cavity resonates · A doorway lifts open';
+   }else response='A hollow echo answers · Tune this wall mode in Observer';
+ }else if(kind==='pulse')response='Pulse travels out, but no responsive pool is nearby';
+ else if(kind==='chime')response='Chime rings here, but the hollow wall is farther away';
+ atlasDirty=true;
+ renderField(immersionTime);
+ toast(response);
+}
+function playMaterialEcho(hz){
+ if(!soundOn||!audioCtx||audioCtx.state!=='running')return;
+ const t=audioCtx.currentTime;
+ const osc=audioCtx.createOscillator(),harm=audioCtx.createOscillator(),gain=audioCtx.createGain();
+ osc.type='triangle';harm.type='sine';
+ osc.frequency.value=hz;harm.frequency.value=hz*3;
+ gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(.13,t+.02);
+ gain.gain.exponentialRampToValueAtTime(.0001,t+.72);
+ osc.connect(gain);harm.connect(gain);gain.connect(masterGain);
+ osc.start(t);harm.start(t);osc.stop(t+.75);harm.stop(t+.75);
 }
 for(const kind of ['knock','chime','pulse'])$(kind).addEventListener('click',()=>playImpulse(kind));
 function changeMode(mode){
@@ -631,11 +677,12 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
      const canZ=groundAt(state.playerX,targetZ);
      if(canZ)state.playerZ=targetZ;
      if(!canX&&!canZ&&t-state.lastBlockMessage>1.5){
-       state.lastBlockMessage=t;toast('Unstable ground · Tune the oscillators');
+       state.lastBlockMessage=t;
+       toast(state.playerX>5?'Stone wall · Investigate with Thump and Chime':'No footing · Tune the pool, then PULSE');
      }
    }
    if(Math.abs(state.playerX)<3.29)state.hasCrossedGap=true;
-   if(state.hasCrossedGap&&state.playerX>6.45&&Math.abs(state.playerZ)<2.85)finishPassage();
+   if(state.hasCrossedGap&&state.playerX>7.0&&Math.abs(state.playerZ)<1.1&&state.wallOpenUntil>immersionTime)finishPassage();
    if(groundAt(state.playerX,state.playerZ))state.lastGrounded=t;
    else if(t-state.lastGrounded>1){
      state.playerX=-5.5;state.playerZ=0;state.hasCrossedGap=false;
