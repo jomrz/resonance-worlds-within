@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.0</title>
+<title>Resonance: Worlds Within | Prototype 1.1</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -19,7 +19,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 #status {position:absolute;top:calc(env(safe-area-inset-top,0px) + 89px);left:15px;right:15px;pointer-events:none;display:flex;justify-content:center}#status span{max-width:340px;text-align:center;color:#b1cbdd;background:rgba(8,19,31,.64);padding:6px 11px;border-radius:999px;font-size:11px}
 #controls {position:absolute;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:540px;margin:auto;background:rgba(9,21,36,.93);border:1px solid var(--edge);border-radius:18px;box-shadow:0 12px 45px rgba(0,0,0,.35);pointer-events:auto;backdrop-filter:blur(15px);overflow:hidden}
 #controlHeading{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;gap:8px}#controlHeading strong{font-size:13px;letter-spacing:.04em}#controlHeading small{font-size:10px;color:var(--muted)}#controlHeading button{padding:8px 9px;font-size:12px}#controlTools{display:flex;align-items:center;gap:6px;flex-shrink:0}#soundTest{padding:8px 7px;font-size:11px;color:#d0f5ff}#audio{min-width:89px}#audio{background:rgba(44,90,111,.86);border-color:#528eae;color:#e7f8ff}#audio.active{background:#285e6e}#viewControls{position:absolute;top:calc(env(safe-area-inset-top,0px) + 146px);right:12px;display:flex;flex-direction:column;gap:7px;pointer-events:auto}#viewControls.hidden{display:none}#viewControls button{width:42px;height:42px;padding:0;font-size:22px;background:rgba(12,29,46,.84);border-color:rgba(137,185,208,.34);border-radius:14px}#viewControls button:last-child{font-size:19px}#viewControls{align-items:flex-end}#viewControls #panToggle{width:70px;font-size:13px;font-weight:650}#viewControls #panToggle.active{background:rgba(55,106,133,.9);border-color:#86d5e6}
-#controlBody{padding:0 13px 13px;}#controls.collapsed #controlBody{display:none}
+#responseReadout{margin-top:8px;padding:9px 10px;border:1px solid rgba(95,169,198,.23);border-radius:11px;background:rgba(36,73,94,.20)}#responseReadout .measurement{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 0;font-size:11px;color:#b9dfef}#responseReadout strong{font-size:12px;color:#e7f4ff;font-variant-numeric:tabular-nums}#responseReadout small{color:#a4bfcd;font-size:10px;line-height:1.4;display:block;margin-top:6px}#controlBody{padding:0 13px 13px;}#controls.collapsed #controlBody{display:none}
 .osc{display:grid;grid-template-columns:22px 54px 1fr 57px;align-items:center;gap:9px;margin:9px 0}.osc label{font-size:12px;color:#bed2df} .osc output{font-size:12px;text-align:right;color:#d4eefa;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:#7dcee3;height:22px;touch-action:pan-y}.osc input[type=checkbox]{width:17px;height:17px;accent-color:#86cbe7;margin:0}
 #extras{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}#extras button{flex:1;font-size:12px;padding:9px 5px}#actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}#actions button{flex:1;font-size:11px;padding:9px 5px}
 #help{font-size:10px;color:#9db4c7;line-height:1.5;margin:10px 0 0}
@@ -40,19 +40,19 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.0</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.1</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
     <div id="mode"><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div>
   </div>
-  <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">OBSERVER · Timeless standing-field atlas</div>
+  <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER 01 · Water crossing and the hidden wall</div>
   <div id="viewControls"><button id="panToggle" aria-label="Switch between rotating and panning the world" aria-pressed="false">Pan</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div><div id="move"><div class="stickColumn"><div class="joystick" id="joystick" aria-label="Move joystick"><div class="stick" id="stick"></div></div><span class="stickLabel">MOVE</span></div><div class="stickColumn"><div class="joystick" id="lookJoystick" aria-label="Look joystick"><div class="stick" id="lookStick"></div></div><span class="stickLabel">LOOK</span><button id="invertLook" aria-pressed="false" aria-label="Reverse vertical look direction">Y: Normal</button></div></div>
   <div id="toast"></div><div id="discovery" class="hidden" role="dialog" aria-modal="true" aria-labelledby="discoveryTitle"><div id="discoveryBox"><div class="spark">✦</div><h2 id="discoveryTitle">Passage discovered</h2><p id="discoveryText">You crossed using a resonance configuration. Your discovery has been recorded.</p><button id="anotherRoute" class="primary">Try another solution</button><button id="keepExploring">Keep exploring</button></div></div>
   <section id="controls" class="collapsed">
     <div id="controlHeading"><div><strong>RESONANCE ENGINE</strong><br><small>Continuous field sources</small></div><div id="controlTools"><button id="audio" aria-label="Enable or disable audible sound">🔈 Sound off</button><button id="soundTest" aria-label="Test audible sound">♪ Test</button><button id="collapse" class="secondary" aria-label="Expand or collapse frequency controls">Controls ▴</button></div></div>
     <div id="controlBody">
-      <div id="oscillators"></div>
+      <div id="oscillators"></div><div id="responseReadout"><div class="measurement"><span>Water resonance</span><strong id="poolLevel">0%</strong></div><div class="measurement"><span>Hidden wall resonance</span><strong id="wallLevel">0%</strong></div><small id="modeHint">Thump the environment inside to identify its natural tones.</small></div>
       
       <div id="actions"><button id="atlasToggle" aria-pressed="true">Field atlas: On</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
-      <p id="help">Observer is outside time. The standing-field atlas reveals how global waves overlap across the floor, bridges and columns simultaneously. Teal and violet show opposite field signs, and bright bands indicate nodes. Change frequencies to reshape the whole field. In Immersion, time flows and local impulses travel through the environment.</p>
+      <p id="help">This chamber has a resonant mineral pool and a concealed doorway. In Immersion, thump nearby materials to learn their natural tones. In Observer, tune the standing modes. Back inside, PULSE can raise solid stepping stones from the pool, while CHIME can open the concealed wall. Both effects last only while time flows.</p>
     </div>
   </section>
   <section id="immersionTools" aria-label="Local sound instruments">
@@ -88,6 +88,21 @@ makeBox(world,4.5,.6,8,5.55,-.45,0,stoneMat);
 makeBox(world,1.7,.1,6,-5.25,-.08,0,crystalMat);
 makeBox(world,1.7,.1,6,5.25,-.08,0,crystalMat);
 for(const x of [-7.3,-4,4,7.3])for(const z of [-3.5,3.5])makeColumn(x,z,3+(Math.abs(x)*.11));
+// Fictional mineral-rich water responds to a coupled standing mode and a physical pulse.
+const poolSurface=new THREE.Mesh(new THREE.PlaneGeometry(7.15,7.95),
+ new THREE.MeshPhysicalMaterial({color:0x287b9f,emissive:0x0b354b,metalness:.36,roughness:.16,transparent:true,opacity:.68,side:THREE.DoubleSide,depthWrite:false}));
+poolSurface.rotation.x=-Math.PI/2;poolSurface.position.set(0,-.36,0);world.add(poolSurface);
+const poolRim=new THREE.Mesh(new THREE.TorusGeometry(.78,.07,7,48),
+ new THREE.MeshStandardMaterial({color:0xb8d9e5,emissive:0x3c8599,emissiveIntensity:.3}));
+poolRim.rotation.x=Math.PI/2;poolRim.position.set(-4.12,.02,0);world.add(poolRim);
+// Stone spans the far platform. The center section is a concealed movable door.
+const hiddenDoorMaterial=stoneMat.clone();hiddenDoorMaterial.transparent=true;
+makeBox(world,.48,3.8,2.88,6.03,1.75,-2.56,stoneMat);
+makeBox(world,.48,3.8,2.88,6.03,1.75, 2.56,stoneMat);
+const hiddenDoor=makeBox(world,.48,3.8,2.24,6.03,1.75,0,hiddenDoorMaterial);
+const doorSeam=new THREE.Mesh(new THREE.BoxGeometry(.505,3.63,.045),
+ new THREE.MeshBasicMaterial({color:0x7ed0e6,transparent:true,opacity:.07,depthWrite:false}));
+doorSeam.position.set(5.76,1.75,1.09);world.add(doorSeam);
 const portal=new THREE.Mesh(new THREE.TorusGeometry(1.4,.15,12,64),goldMat);portal.rotation.y=Math.PI/2;portal.position.set(7.2,1.6,0);world.add(portal);
 const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.65,1),new THREE.MeshStandardMaterial({color:0x7acdea,emissive:0x2d7794,emissiveIntensity:1,metalness:.2,roughness:.2}));core.position.set(-6.6,1.05,0);world.add(core);
 // Spatially sampled bridge tiles. A tile is supported wherever interference remains near a node.
@@ -116,7 +131,7 @@ const shell=new THREE.Mesh(new THREE.SphereGeometry(2.6,48,32),new THREE.MeshPhy
 const rim=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(2.63,2)),new THREE.LineBasicMaterial({color:0x5fabc4,transparent:true,opacity:.15}));shellGroup.add(rim);
 const orbitRing=new THREE.Mesh(new THREE.TorusGeometry(2.85,.012,6,160),new THREE.MeshBasicMaterial({color:0x71bad4,transparent:true,opacity:.58}));orbitRing.rotation.x=1.18;orbitRing.rotation.y=.4;shellGroup.add(orbitRing);
 const starGeo=new THREE.BufferGeometry();let positions=[];for(let i=0;i<360;i++){const a=Math.random()*Math.PI*2,b=Math.acos(2*Math.random()-1),r=18+Math.random()*52;positions.push(Math.sin(b)*Math.cos(a)*r,Math.cos(b)*r,Math.sin(b)*Math.sin(a)*r)}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9abdd8,size:.055,sizeAttenuation:true})));
-const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0},{freq:95,on:true,phase:1.5},{freq:250,on:false,phase:3}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:15.5,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,lastGrounded:0,lastBlockMessage:-10};
+const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0},{freq:95,on:true,phase:1.5},{freq:250,on:false,phase:3}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:15.5,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false};
 const observerPan=new THREE.Vector2(0,0); // Camera-space pan; globe pivot stays at origin.
 let invertLookY=false;
 try{invertLookY=localStorage.getItem('resonanceInvertY')==='1'}catch(e){}
@@ -192,39 +207,88 @@ const row=document.createElement('div');row.className='osc';row.innerHTML=`<inpu
 $(`check${i}`).addEventListener('change',e=>{state.osc[i].on=e.target.checked;atlasDirty=true;syncAudio();renderField()});
 $(`slider${i}`).addEventListener('input',e=>{state.osc[i].freq=Number(e.target.value);$(`output${i}`).textContent=state.osc[i].freq+' Hz';atlasDirty=true;syncAudio();renderField()});
 }
+// Spatial modal approximation. The resonant center is a property of each object,
+// not a password. Narrow, continuous response envelopes constrain solutions.
+const WATER_MODE_HZ=136,WALL_MODE_HZ=224;
+function resonance(frequency,center,width){
+ const detune=(frequency-center)/width;
+ return Math.exp(-.5*detune*detune);
+}
+function updateCouplings(){
+ const active=state.osc.filter(o=>o.on);
+ state.poolCoupling=active.length?Math.max(...active.map(o=>resonance(o.freq,WATER_MODE_HZ,5.5))):0;
+ state.wallCoupling=active.length?Math.max(...active.map(o=>resonance(o.freq,WALL_MODE_HZ,7))):0;
+}
+function waterMode(x,y,z){
+ const envelope=Math.exp(-Math.pow(x/5.5,4));
+ return Math.cos(Math.PI*x/6.9)*Math.cos(Math.PI*z/4.2)*Math.cos(Math.PI*(y-.3)/4.7)*envelope;
+}
+function doorwayMode(x,y,z){
+ const envelope=Math.exp(-Math.pow((x-5.5)/4.7,4));
+ return Math.cos(Math.PI*(x-6.0)/4.7)*Math.cos(2*Math.PI*z/7.8)*Math.cos(Math.PI*y/4.4)*envelope;
+}
+function modalField(x,y,z){
+ return state.poolCoupling*waterMode(x,y,z)+state.wallCoupling*doorwayMode(x,y,z);
+}
 function sampleField(x,z,time=0){
-  let value=0,weight=0;
-  const src=[[-5.5,-2.5],[5.2,2.2],[-.4,5.5]];
-  for(let i=0;i<3;i++)if(state.osc[i].on){const o=state.osc[i],p=src[i],dist=Math.hypot(x-p[0],z-p[1]);const k=.45+o.freq/115;value+=Math.cos(k*dist+o.phase)*.85;weight+=.85;}
-  if(state.mode==='immersion')for(const p of state.pulses){const age=time-p.t,dist=Math.hypot(x-p.x,z-p.z);if(age<3&&age>=0){const front=age*p.speed;value+=p.strength*Math.exp(-Math.pow((dist-front)*1.4,2)) * Math.sin(dist*4.5-age*8)*(1-age/3)*Math.max(0,1-dist/p.reach);}}
-  return weight?value/Math.max(weight,.85):0;
+ let value=modalField(x,.4,z);
+ if(state.mode==='immersion')for(const p of state.pulses){
+  const age=time-p.t,dist=Math.hypot(x-p.x,z-p.z);
+  if(age<3&&age>=0){
+   const front=age*p.speed;
+   value+=p.strength*Math.exp(-Math.pow((dist-front)*1.4,2))*
+    Math.sin(dist*4.5-age*8)*(1-age/3)*Math.max(0,1-dist/p.reach);
+  }
+ }
+ return value;
 }
 function renderField(time=0){
-  // Observer has no temporal progression. The complete spatial pattern is visible at once.
-  if(state.mode==='observer'){
-    time=0;
-    if(atlasDirty){drawFieldAtlas();atlasDirty=false;}
-  }
-  let stableCount=0;
-  for(const t of tiles){const v=sampleField(t.x,t.z,time);const stable=state.osc.some(o=>o.on)&&Math.abs(v)<.63;stableCount+=stable?1:0;t.stable=stable;
-    // Width, height and luminosity are continuous results of the computed field.
-    const support=state.osc.some(o=>o.on)?Math.max(0,Math.min(1,(.85-Math.abs(v))/.45)):0;
-    t.mesh.scale.set(stable?.98:.65,stable?1:.12,stable?.98:.65);
-    t.mesh.position.y=stable?(-.19+.12*support):-1.20;
-    t.mesh.material.opacity=stable?.55+.38*support:.07;
-    t.mesh.material.emissiveIntensity=stable?.35+.75*support:.08;
-    t.mesh.material.color.setHSL(.52+Math.abs(v)*.10,.65,stable?.29+support*.25:.16);
-  }
-  state.passageOpen=hasConnectedPassage();
-  if(state.mode==='observer'){
-    $('fieldStatus').textContent=state.passageOpen
-      ?`PASSAGE CONNECTED · ${stableCount}/${tiles.length} fragments · Enter the chamber`
-      :`PASSAGE INCOMPLETE · ${stableCount}/${tiles.length} fragments · Tune frequencies`;
-  }else{
-    const local=Math.abs(sampleField(state.playerX,state.playerZ,time));
-    $('fieldStatus').textContent=local>.65?'NEARBY FIELD · Strong vibration':local>.28?'NEARBY FIELD · Subtle vibration':'NEARBY FIELD · Quiet, try a thump, chime or pulse';
-  }
-  portal.material.emissiveIntensity=state.passageOpen?1.5:.16;
+ updateCouplings();
+ if(state.mode==='observer'){
+  time=0;if(atlasDirty){drawFieldAtlas();atlasDirty=false;}
+ }
+ const crossingActive=state.poolCoupling>.72&&state.waterRaisedUntil>immersionTime;
+ const doorwayActive=state.wallCoupling>.72&&state.wallOpenUntil>immersionTime;
+ let stableCount=0;
+ for(const tile of tiles){
+  // The raised walkway follows a fixed mineral lattice: three parallel lanes.
+  // Different arbitrary standing wave nodes do not automatically make ground.
+  const stable=crossingActive&&Math.abs(tile.z)<=.82;
+  stableCount+=stable?1:0;tile.stable=stable;
+  tile.mesh.scale.set(stable?1:.67,stable?1:.12,stable?1:.67);
+  tile.mesh.position.y=stable?-.04:-.90;
+  tile.mesh.material.opacity=stable?.94:.12;
+  tile.mesh.material.emissiveIntensity=stable?.72:.09;
+  tile.mesh.material.color.setHSL(.52,.66,stable?.56:.21);
+ }
+ state.passageOpen=hasConnectedPassage();
+ hiddenDoor.position.y=doorwayActive?5.8:1.75;
+ hiddenDoor.material.opacity=doorwayActive?.12:1;
+ doorSeam.material.opacity=doorwayActive?.64:state.wallCoupling*.24;
+ poolSurface.material.emissiveIntensity=crossingActive?.62:.10;
+ poolRim.material.emissiveIntensity=.15+state.poolCoupling*.85;
+ portal.material.emissiveIntensity=doorwayActive?1.8:.15;
+ $('poolLevel').textContent=Math.round(state.poolCoupling*100)+'%';
+ $('wallLevel').textContent=Math.round(state.wallCoupling*100)+'%';
+ $('modeHint').textContent=state.foundPoolTone||state.foundWallTone
+   ?[(state.foundPoolTone?'Pool: '+WATER_MODE_HZ+' Hz':null),
+     (state.foundWallTone?'Hollow wall: '+WALL_MODE_HZ+' Hz':null)].filter(Boolean).join(' · ')
+   :'Thump near a material in Immersion to learn its tone';
+ if(state.mode==='observer'){
+  $('fieldStatus').textContent=state.poolCoupling>.72
+   ?'POOL RESONATES · Go inside and PULSE near the rim'
+   :state.wallCoupling>.72?'WALL RESONATES · Go inside and CHIME near the seam'
+   :'TUNE A RESONANT MODE · Thump materials to hear their tones';
+ }else if(state.playerX< -3.1){
+  const remaining=Math.max(0,Math.ceil(state.waterRaisedUntil-immersionTime));
+  $('fieldStatus').textContent=crossingActive?'WATER PATH RAISED · '+remaining+' seconds left'
+   :state.poolCoupling>.72?'POOL IS RESONATING · PULSE to raise the path'
+   :'POOL IS QUIET · Thump the rim and retune outside';
+ }else{
+  $('fieldStatus').textContent=doorwayActive?'HIDDEN DOOR OPEN · Reach the gate'
+   :state.wallCoupling>.72?'HOLLOW WALL RESONATES · CHIME near it'
+   :'STONE WALL BLOCKS THE EXIT · Thump it to investigate';
+ }
 }
 // A route exists only when adjacent stable cells connect the two anchored islands.
 // Geometry emerges from the field, rather than switching among programmed bridge models.
