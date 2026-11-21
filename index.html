@@ -51,8 +51,8 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
     <div id="controlBody">
       <div id="oscillators"></div><div id="responseReadout"><div class="measurement"><span>Water resonance</span><strong id="poolLevel">0%</strong></div><div class="measurement"><span>Hidden wall resonance</span><strong id="wallLevel">0%</strong></div><small id="modeHint">Thump the environment inside to identify its natural tones.</small></div>
       
-      <div id="actions"><button id="atlasToggle" aria-pressed="true">Field atlas: On</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
-      <p id="help">This chamber has a resonant mineral pool and a concealed doorway. In Immersion, thump nearby materials to learn their natural tones. In Observer, tune the standing modes. Back inside, PULSE can raise solid stepping stones from the pool, while CHIME can open the concealed wall. Both effects last only while time flows.</p>
+      <div id="actions"><button id="atlasToggle" aria-pressed="true">3D field: On</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
+      <p id="help">In Observer, see the 3D standing mode as luminous positive and negative volumes with pale nodal sheets. These remain still outside time. Thump the pool rim or hollow wall in Immersion to discover their tones; tune those modes outside, then use local Pulse and Chime to activate the mineral path and reveal the door.</p>
     </div>
   </section>
   <section id="immersionTools" aria-label="Local sound instruments">
@@ -159,6 +159,66 @@ const atlasMesh=new THREE.Mesh(atlasGeometry,new THREE.MeshBasicMaterial({
  depthWrite:false,blending:THREE.AdditiveBlending
 }));
 atlasMesh.position.y=.13;world.add(atlasMesh);
+// The Observer can perceive the 3D energy field as a static volume.
+const volumeGroup=new THREE.Group();world.add(volumeGroup);
+const volumeGeometry=new THREE.BufferGeometry(),nodeGeometry=new THREE.BufferGeometry();
+const fieldCoords=[];
+for(let x=-7.25;x<=7.25;x+=.76){
+ for(let y=.25;y<=4.05;y+=.56){
+  for(let z=-3.45;z<=3.45;z+=.76)fieldCoords.push([x,y,z]);
+ }
+}
+const fieldPositions=new Float32Array(fieldCoords.length*3);
+const fieldColors=new Float32Array(fieldCoords.length*3);
+const nodePositions=new Float32Array(fieldCoords.length*3);
+volumeGeometry.setAttribute('position',new THREE.BufferAttribute(fieldPositions,3));
+volumeGeometry.setAttribute('color',new THREE.BufferAttribute(fieldColors,3));
+nodeGeometry.setAttribute('position',new THREE.BufferAttribute(nodePositions,3));
+const amplitudeCloud=new THREE.Points(volumeGeometry,
+ new THREE.PointsMaterial({size:3.2,sizeAttenuation:false,vertexColors:true,transparent:true,
+ opacity:.58,depthWrite:false,blending:THREE.AdditiveBlending}));
+const nodeCloud=new THREE.Points(nodeGeometry,
+ new THREE.PointsMaterial({size:2.0,sizeAttenuation:false,color:0xe9f6ff,transparent:true,
+ opacity:.3,depthWrite:false,blending:THREE.AdditiveBlending}));
+volumeGroup.add(amplitudeCloud,nodeCloud);
+const nodalSheets=[];
+function nodeSheet(w,h,x,y,z,axis,color){
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+  new THREE.MeshBasicMaterial({color,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}));
+ m.position.set(x,y,z);
+ if(axis==='horizontal')m.rotation.x=-Math.PI/2;
+ volumeGroup.add(m);nodalSheets.push({mesh:m,kind:color===0x83d7e9?'pool':'wall'});
+}
+nodeSheet(7.4,4.4,0,2.05,-2.1,'vertical',0x83d7e9);
+nodeSheet(7.4,4.4,0,2.05,2.1,'vertical',0x83d7e9);
+nodeSheet(7.4,7.8,0,2.65,0,'horizontal',0x83d7e9);
+nodeSheet(4.5,4.2,5.3,2.05,-1.95,'vertical',0xcc91ee);
+nodeSheet(4.5,4.2,5.3,2.05,1.95,'vertical',0xcc91ee);
+function drawWaveVolume(){
+ const positive=new THREE.Color(0x4dd9f3),negative=new THREE.Color(0xd48def);
+ const color=new THREE.Color();
+ for(let i=0;i<fieldCoords.length;i++){
+  const [x,y,z]=fieldCoords[i],v=modalField(x,y,z),amplitude=Math.abs(v);
+  const j=i*3;
+  if(amplitude>.27){
+   fieldPositions[j]=x;fieldPositions[j+1]=y;fieldPositions[j+2]=z;
+   color.copy(v>=0?positive:negative).multiplyScalar(.38+Math.min(1,amplitude)*.85);
+   fieldColors[j]=color.r;fieldColors[j+1]=color.g;fieldColors[j+2]=color.b;
+  }else{fieldPositions[j]=0;fieldPositions[j+1]=-150;fieldPositions[j+2]=0;}
+  // A pressure node is a 3D surface, sampled here as a pale dot cloud.
+  if((state.poolCoupling>.17||state.wallCoupling>.17)&&amplitude<.10){
+   nodePositions[j]=x;nodePositions[j+1]=y;nodePositions[j+2]=z;
+  }else{nodePositions[j]=0;nodePositions[j+1]=-150;nodePositions[j+2]=0;}
+ }
+ volumeGeometry.attributes.position.needsUpdate=true;
+ volumeGeometry.attributes.color.needsUpdate=true;
+ nodeGeometry.attributes.position.needsUpdate=true;
+ // Mesh nodes show exact zero-pressure sheets of the individual modal functions.
+ for(const item of nodalSheets){
+  const energy=item.kind==='pool'?state.poolCoupling:state.wallCoupling;
+  item.mesh.material.opacity=energy>.18?.015+.065*energy:0;
+ }
+}
 const waveProbes=new THREE.Group();world.add(waveProbes);
 const columnProbes=[];
 for(const x of [-7.3,-4,4,7.3])for(const z of [-3.5,3.5]){
@@ -183,6 +243,7 @@ function drawFieldAtlas(){
    colors.setXYZ(i,atlasColor.r,atlasColor.g,atlasColor.b);
  }
  colors.needsUpdate=true;
+ drawWaveVolume();
  for(const p of columnProbes){
    const v=active?sampleField(p.x,p.z,0):0,intensity=Math.min(1,Math.abs(v));
    p.halo.material.color.setHSL(v<0?.75:.52,.75,.22+.42*intensity);
@@ -192,14 +253,14 @@ function drawFieldAtlas(){
 }
 function syncAtlasVisibility(){
  const visible=atlasEnabled&&state.mode==='observer';
- atlasMesh.visible=visible;waveProbes.visible=visible;
+ atlasMesh.visible=visible;waveProbes.visible=visible;volumeGroup.visible=visible;
 }
 $('atlasToggle').addEventListener('click',()=>{
  atlasEnabled=!atlasEnabled;
- $('atlasToggle').textContent=atlasEnabled?'Field atlas: On':'Field atlas: Off';
+ $('atlasToggle').textContent=atlasEnabled?'3D field: On':'3D field: Off';
  $('atlasToggle').setAttribute('aria-pressed',String(atlasEnabled));
  atlasDirty=true;syncAtlasVisibility();
- toast(atlasEnabled?'Timeless field atlas visible':'Field atlas hidden');
+ toast(atlasEnabled?'3D standing modes visible':'3D field hidden');
 });
 const oscRoot=$('oscillators');
 for(let i=0;i<3;i++){
