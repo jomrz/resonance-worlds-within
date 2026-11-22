@@ -44,7 +44,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 .emitterTabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}
 .emitterTab{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 2px;border-radius:9px;min-width:0;background:rgba(22,46,64,.63);font-size:11px;color:#b9d1df}
 .emitterTab.selected{border-color:#87cfdf;background:rgba(49,93,111,.72);color:#f1fbff}.emitterTab.off{opacity:.63}.emitterTab .dot{width:6px;height:6px;border-radius:50%;background:#477083;flex-shrink:0}.emitterTab.powered .dot{background:#91dddf;box-shadow:0 0 7px #6cd5f2}
-#freqEditor{display:flex;align-items:center;gap:5px;margin-top:5px}
+#freqEditor{display:none;align-items:center;gap:5px;margin-top:5px}#freqEditor.expanded{display:flex}
 #freqEditor input[type=range]{flex:1;min-width:20px;height:27px;touch-action:none}
 #freqEditor button{border-radius:8px;padding:6px 7px;font-size:13px}
 #freqDown,#freqUp{min-width:31px}#powerToggle{font-size:11px!important;min-width:38px}#powerToggle.active{background:rgba(44,103,108,.85);border-color:#7ed3cc}
@@ -53,6 +53,9 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 #dockReadout strong{color:#cfeef6;font-weight:650;font-variant-numeric:tabular-nums}#dockReadout .potentialTrack{margin:0;height:4px}
 #dockSettings.hidden,#actionChoices.hidden{display:none!important}
 #dockSettings{position:absolute;bottom:calc(100% + 8px);left:0;right:0;border:1px solid var(--edge);background:rgba(8,24,39,.96);border-radius:15px;padding:10px;box-shadow:0 8px 30px #0008}
+#dockSettings #viewControls{position:static;display:flex;flex-direction:row;justify-content:flex-end;align-items:center;gap:6px;margin-top:8px}
+#dockSettings #viewControls button{width:auto;min-width:36px;height:32px;padding:3px 8px;font-size:15px;border-radius:9px}
+#dockSettings #viewControls #panToggle{width:auto;font-size:11px}
 #dockSettingActions{display:flex;gap:5px;flex-wrap:wrap}#dockSettingActions button{font-size:11px;padding:7px;flex:1;white-space:nowrap}
 #modeHint,#powerHint{display:block;margin-top:7px;font-size:10px;color:#a7bdc9;line-height:1.4}#dockSettings #help{margin-top:6px}
 #move{left:12px;right:auto;bottom:calc(19px + env(safe-area-inset-bottom,0px));gap:0}
@@ -83,15 +86,16 @@ body.in-immersion #objective{display:none}
     <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER 01 · Water crossing and the hidden wall</div>
-  <div id="viewControls"><button id="panToggle" aria-label="Switch between rotating and panning the world" aria-pressed="false">Pan</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div><div id="move"><div class="stickColumn"><div class="joystick" id="joystick" aria-label="Move joystick"><div class="stick" id="stick"></div></div><span class="stickLabel">MOVE</span></div><div class="stickColumn"><div class="joystick" id="lookJoystick" aria-label="Look joystick"><div class="stick" id="lookStick"></div></div><span class="stickLabel">LOOK</span><button id="invertLook" aria-pressed="false" aria-label="Reverse vertical look direction">Y: Normal</button></div></div>
+  <div id="move"><div class="stickColumn"><div class="joystick" id="joystick" aria-label="Move joystick"><div class="stick" id="stick"></div></div><span class="stickLabel">MOVE</span></div><div class="stickColumn"><div class="joystick" id="lookJoystick" aria-label="Look joystick"><div class="stick" id="lookStick"></div></div><span class="stickLabel">LOOK</span><button id="invertLook" aria-pressed="false" aria-label="Reverse vertical look direction">Y: Normal</button></div></div>
   <div id="toast"></div><div id="discovery" class="hidden" role="dialog" aria-modal="true" aria-labelledby="discoveryTitle"><div id="discoveryBox"><div class="spark">✦</div><h2 id="discoveryTitle">Passage discovered</h2><p id="discoveryText">You crossed using a resonance configuration. Your discovery has been recorded.</p><button id="anotherRoute" class="primary">Try another solution</button><button id="keepExploring">Keep exploring</button></div></div>
   <section id="controls" aria-label="Observer resonance instrument">
-    <div id="dockTop"><span class="dockTitle">OBSERVER <small>RESONANCE</small></span><div class="dockRight"><span id="selectedEmitter">Pool side</span><button id="atlasToggle" aria-label="Change topology visualization layer">All layers</button><button id="dockOptions" aria-expanded="false" aria-controls="dockSettings" aria-label="Instrument settings">⋯</button></div></div>
+    <div id="dockTop"><span class="dockTitle">OBSERVER <small>RESONANCE</small></span><div class="dockRight"><span id="selectedEmitter">Choose source</span><button id="atlasToggle" aria-label="Change topology visualization layer">All layers</button><button id="dockOptions" aria-expanded="false" aria-controls="dockSettings" aria-label="Instrument settings">⋯</button></div></div>
     <div id="oscillators" class="emitterTabs" aria-label="Select an emitter"></div>
     <div id="freqEditor"><button id="freqDown" aria-label="Decrease selected frequency by one hertz">−</button><input id="frequencyRange" type="range" min="60" max="420" step="1" value="110" aria-label="Selected emitter frequency"><button id="freqUp" aria-label="Increase selected frequency by one hertz">+</button><output id="freqValue">110 Hz</output><button id="powerToggle" aria-pressed="true">On</button></div>
     <div id="dockReadout"><span>Pool <strong id="poolLevel">0%</strong></span><div class="potentialTrack"><span id="poolBar"></span></div><span>Stone <strong id="wallLevel">0%</strong></span><div class="potentialTrack wall"><span id="wallBar"></span></div></div>
     <div id="dockSettings" class="hidden" aria-label="Instrument settings">
       <div id="dockSettingActions"><button id="audio">🔈 Sound off</button><button id="soundTest">♪ Test</button><button id="tilt">Enable tilt</button><button id="save">Save</button><button id="restore">Restore</button></div>
+      <div id="viewControls"><button id="panToggle" aria-label="Switch between rotating and panning the world" aria-pressed="false">Pan</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div>
       <div id="powerHint">Emitters share a limited energy supply.</div><small id="modeHint">Thump materials inside to discover natural tones.</small>
       <p id="help">The field is now calculated from real stone mesh faces and the pool surface: direct sound plus simplified first reflections. The topology changes as wave paths interfere against these boundaries. It is a geometry-aware approximation, not a complete acoustic wave solver. Tune one source at a time, inspect Nodes or Energy, then Shift to Immersion. Drag to look, steer using the left pad and select your local instrument with ⋯.</p>
     </div>
@@ -497,7 +501,7 @@ for(const p of EMITTERS){
  emitterMarkers.add(marker,halo);
 }
 const oscRoot=$('oscillators');
-let selectedEmitterIndex=0;
+let selectedEmitterIndex=-1;
 const emitterButtons=[];
 for(let i=0;i<3;i++){
  const button=document.createElement('button');
@@ -505,11 +509,14 @@ for(let i=0;i<3;i++){
  button.id='emitterBtn'+i;
  button.innerHTML='<span class="dot"></span><span>Source '+(i+1)+'</span>';
  button.setAttribute('aria-label','Select '+EMITTERS[i].label+' emitter');
- button.addEventListener('click',()=>{selectedEmitterIndex=i;updateEmitterDock()});
+ button.addEventListener('click',()=>{selectedEmitterIndex=selectedEmitterIndex===i?-1:i;updateEmitterDock()});
  oscRoot.append(button);emitterButtons.push(button);
 }
 function updateEmitterDock(){
- const current=state.osc[selectedEmitterIndex];
+ const selected=selectedEmitterIndex>=0;
+ $('freqEditor').classList.toggle('expanded',selected);
+ if(!selected){$('selectedEmitter').textContent='Choose source';}
+ const current=selected?state.osc[selectedEmitterIndex]:null;
  emitterButtons.forEach((button,i)=>{
   const active=i===selectedEmitterIndex;
   button.classList.toggle('selected',active);
@@ -517,6 +524,7 @@ function updateEmitterDock(){
   button.classList.toggle('off',!state.osc[i].on);
   button.setAttribute('aria-pressed',String(active));
  });
+ if(!selected)return;
  $('selectedEmitter').textContent=EMITTERS[selectedEmitterIndex].label;
  $('frequencyRange').value=String(current.freq);
  $('freqValue').textContent=current.freq+' Hz';
@@ -525,15 +533,17 @@ function updateEmitterDock(){
  $('powerToggle').setAttribute('aria-pressed',String(current.on));
 }
 function setSelectedFrequency(value){
+ if(selectedEmitterIndex<0)return;
  const current=state.osc[selectedEmitterIndex];
  const v=Math.min(420,Math.max(60,Math.round(value)));
  if(current.freq===v)return;
  current.freq=v;updateEmitterDock();atlasDirty=true;syncAudio();renderField();
 }
 $('frequencyRange').addEventListener('input',e=>setSelectedFrequency(Number(e.target.value)));
-$('freqDown').addEventListener('click',()=>setSelectedFrequency(state.osc[selectedEmitterIndex].freq-1));
-$('freqUp').addEventListener('click',()=>setSelectedFrequency(state.osc[selectedEmitterIndex].freq+1));
+$('freqDown').addEventListener('click',()=>{if(selectedEmitterIndex>=0)setSelectedFrequency(state.osc[selectedEmitterIndex].freq-1)});
+$('freqUp').addEventListener('click',()=>{if(selectedEmitterIndex>=0)setSelectedFrequency(state.osc[selectedEmitterIndex].freq+1)});
 $('powerToggle').addEventListener('click',()=>{
+ if(selectedEmitterIndex<0)return;
  state.osc[selectedEmitterIndex].on=!state.osc[selectedEmitterIndex].on;
  updateEmitterDock();atlasDirty=true;syncAudio();renderField();
 });
