@@ -93,7 +93,7 @@ body.in-immersion #objective{display:none}
     <div id="dockSettings" class="hidden" aria-label="Instrument settings">
       <div id="dockSettingActions"><button id="audio">🔈 Sound off</button><button id="soundTest">♪ Test</button><button id="tilt">Enable tilt</button><button id="save">Save</button><button id="restore">Restore</button></div>
       <div id="powerHint">Emitters share a limited energy supply.</div><small id="modeHint">Thump materials inside to discover natural tones.</small>
-      <p id="help">Select an emitter, then adjust its frequency with the single visible range control. Multiple emitters share power. Observer shows resonance instead of physical matter. Touch the view to rotate, or select Nodes / Energy. Immersion shows the physical room. Drag to look, steer with the left pad, and use your selected sound tool at the bottom right.</p>
+      <p id="help">The field is now calculated from real stone mesh faces and the pool surface: direct sound plus simplified first reflections. The topology changes as wave paths interfere against these boundaries. It is a geometry-aware approximation, not a complete acoustic wave solver. Tune one source at a time, inspect Nodes or Energy, then Shift to Immersion. Drag to look, steer using the left pad and select your local instrument with ⋯.</p>
     </div>
   </section>
   <div id="crosshair" aria-hidden="true">·</div>
@@ -224,17 +224,11 @@ const fieldTargets=new Float32Array(fieldSamples.length);
 let fieldInitialized=false,fieldTransitionActive=false,fieldLastStep=-1;
 let atlasDirty=true,atlasLastBuilt=-1,topologyView='all';
 function bell(x,center,width){return Math.exp(-Math.pow((x-center)/width,2));}
-function surveyEcho(x,y,z){
- const background=.085*Math.sin(1.15*x+.32*Math.cos(1.38*z))*Math.cos(.72*y);
- const pool=.16*bell(x,0,3.25)*bell(y,-.28,1.12)*Math.cos(1.7*z+.3*Math.sin(x));
- const wall=.105*bell(x,5.95,1.5)*Math.cos(1.8*y+1.25*z);
- // Learning the wall's hollow tone changes how its interior response is perceived.
- const cavity=(state.foundWallTone?.26:.035)*bell(x,6.2,1.27)*bell(z,0,1.35)
-  *bell(y,1.6,1.55)*Math.cos(3.35*Math.hypot(z,y-1.55)+.3*x);
- return background+pool+wall+cavity;
-}
-function topologyAt(x,y,z){
- return surveyEcho(x,y,z)+.94*modalField(x,y,z);
+function topologyAt(x,y,z,index){
+ // The visible topology is driven primarily by pressure reflected from the
+ // real stone and water meshes. The approximate tuned modal fields represent
+ // energy stored in resonant materials, blending with the geometric response.
+ return .90*acousticFieldAtGrid(index)+.30*modalField(x,y,z);
 }
 function interpolateEdge(a,b,va,vb,iso){
  const t=Math.abs(vb-va)<1e-8?.5:Math.max(0,Math.min(1,(iso-va)/(vb-va)));
@@ -298,7 +292,7 @@ function refreshFieldTarget(){
  const g=FIELD_GRID;
  for(let x=0;x<g.nx;x++)for(let y=0;y<g.ny;y++)for(let z=0;z<g.nz;z++)
   fieldTargets[fieldIndex(x,y,z)]=topologyAt(
-   g.x0+x*g.dx,g.y0+y*g.dy,g.z0+z*g.dz);
+   g.x0+x*g.dx,g.y0+y*g.dy,g.z0+z*g.dz,fieldIndex(x,y,z));
  if(!fieldInitialized){
   fieldSamples.set(fieldTargets);
   fieldInitialized=true;
@@ -362,6 +356,129 @@ const EMITTERS=[
  {x:5.35,z:0,label:'Far wall',color:0xe1af7e},
  {x:0,z:0,label:'Midpoint',color:0xb896de}
 ];
+// GEOMETRY-AWARE ACOUSTIC FIELD 0.1
+// Instead of scripted echoes around imagined surfaces, inspect the actual
+// rendered stone meshes and water plane, and compute direct + one-bounce
+// image-source reflections from their finite physical faces.
+// This is NOT a full wave-equation or eigenmode solver; it is a real geometry
+// interrogation with simplified material reflection and no higher-order bounces.
+const SOUND_SPEED=343;
+const REFLECTION_CAP=38;
+let acousticCache=null;
+function extractAcousticSurfaces(){
+ const solids=[],faces=[];
+ for(const mesh of physicalWorld.children){
+  if(!mesh.isMesh||mesh.geometry.type!=='BoxGeometry')continue;
+  if(mesh.material!==stoneMat&&mesh.material!==hiddenDoorMaterial)continue;
+  const par=mesh.geometry.parameters;
+  const c=[mesh.position.x,mesh.position.y,mesh.position.z];
+  const half=[par.width*mesh.scale.x/2,par.height*mesh.scale.y/2,par.depth*mesh.scale.z/2];
+  const low=c.map((v,i)=>v-half[i]),high=c.map((v,i)=>v+half[i]);
+  solids.push({low,high});
+  for(let axis=0;axis<3;axis++){
+   const tangent=[0,1,2].filter(i=>i!==axis);
+   const area=(high[tangent[0]]-low[tangent[0]])*(high[tangent[1]]-low[tangent[1]]);
+   if(area<.5)continue;
+   for(const at of [low[axis],high[axis]])
+    faces.push({axis,at,tangent,low,high,area,reflection:.66,material:'stone'});
+  }
+ }
+ // Acoustic boundary obtained directly from the actual visual water plane.
+ const water=poolSurface.geometry.parameters;
+ const low=[poolSurface.position.x-water.width/2,poolSurface.position.y,
+  poolSurface.position.z-water.height/2];
+ const high=[poolSurface.position.x+water.width/2,poolSurface.position.y,
+  poolSurface.position.z+water.height/2];
+ faces.push({axis:1,at:poolSurface.position.y,tangent:[0,2],
+  low,high,area:water.width*water.height,reflection:-.42,material:'water'});
+ // Select strongest finite reflectors, retaining columns and walls as well.
+ faces.sort((a,b)=>b.area-a.area);
+ return {solids,faces:faces.slice(0,REFLECTION_CAP)};
+}
+function reflectionLength(source,point,face){
+ const axis=face.axis,at=face.at;
+ // An acoustic reflection requires source and listener on the same side.
+ const ds=source[axis]-at,dp=point[axis]-at;
+ if(ds*dp<=.005)return 0;
+ const image=[source[0],source[1],source[2]];
+ image[axis]=2*at-source[axis];
+ const delta=point[axis]-image[axis];
+ if(Math.abs(delta)<1e-8)return 0;
+ const t=(at-image[axis])/delta;
+ if(t<=0||t>=1)return 0;
+ for(const ax of face.tangent){
+  const hit=image[ax]+t*(point[ax]-image[ax]);
+  if(hit<face.low[ax]-.02||hit>face.high[ax]+.02)return 0;
+ }
+ return Math.hypot(point[0]-image[0],point[1]-image[1],point[2]-image[2]);
+}
+function makeAcousticCache(){
+ const sceneGeometry=extractAcousticSurfaces(),g=FIELD_GRID;
+ const total=g.nx*g.ny*g.nz,nFaces=sceneGeometry.faces.length;
+ // Three tunable emitters plus a faint fixed diagnostic probe to perceive
+ // the environment even before any strong mode is excited.
+ const sources=[...EMITTERS.map(p=>[p.x,1.04,p.z]),[-6.7,1.3,-2.7]];
+ const paths=sources.map(()=>new Float32Array(total*(1+nFaces)));
+ const opaque=new Uint8Array(total);
+ for(let x=0;x<g.nx;x++)for(let y=0;y<g.ny;y++)for(let z=0;z<g.nz;z++){
+  const j=fieldIndex(x,y,z),p=[g.x0+x*g.dx,g.y0+y*g.dy,g.z0+z*g.dz];
+  if(sceneGeometry.solids.some(b=>
+   p.every((v,k)=>v>b.low[k]+.01&&v<b.high[k]-.01)))opaque[j]=1;
+  sources.forEach((source,si)=>{
+   const cache=paths[si],start=j*(1+nFaces);
+   cache[start]=Math.hypot(p[0]-source[0],p[1]-source[1],p[2]-source[2]);
+   for(let n=0;n<nFaces;n++)cache[start+n+1]=
+    reflectionLength(source,p,sceneGeometry.faces[n]);
+  });
+ }
+ return {...sceneGeometry,sources,paths,opaque,nFaces,total,doorY:hiddenDoor.position.y};
+}
+function ensureAcousticCache(){
+ if(!acousticCache||Math.abs(acousticCache.doorY-hiddenDoor.position.y)>.2)
+  acousticCache=makeAcousticCache();
+ return acousticCache;
+}
+function pressureFromPaths(paths,index,frequency,phase,reflectors){
+ const stride=reflectors.length+1,base=index*stride;
+ const direct=paths[base];
+ const k=2*Math.PI*frequency/SOUND_SPEED;
+ let real=Math.cos(k*direct+phase)/(1+.13*direct);
+ for(let i=0;i<reflectors.length;i++){
+  const length=paths[base+i+1];
+  if(!length)continue;
+  const face=reflectors[i];
+  real+=face.reflection*.16*Math.cos(k*length+phase)/(1+.13*length);
+ }
+ return real;
+}
+function acousticFieldAtGrid(index){
+ const cache=ensureAcousticCache();
+ if(cache.opaque[index])return 0;
+ let energy=0;
+ const enabled=Math.max(1,state.activeEmitters||0);
+ for(let i=0;i<3;i++){
+  const src=state.osc[i];
+  if(!src.on)continue;
+  energy+=pressureFromPaths(cache.paths[i],index,src.freq,src.phase,cache.faces)*.57/enabled;
+ }
+ // A subdued stationary diagnostic probe reveals the chamber's boundaries
+ // even when all tunable sources are disabled.
+ energy+=.13*pressureFromPaths(cache.paths[3],index,87,0,cache.faces);
+ return energy;
+}
+function reflectedMagnitude(source,point,freq){
+ const {faces}=ensureAcousticCache();
+ const direct=Math.hypot(...source.map((v,i)=>point[i]-v));
+ const k=2*Math.PI*freq/SOUND_SPEED;
+ let real=Math.cos(k*direct)/(1+.13*direct),imag=Math.sin(k*direct)/(1+.13*direct);
+ for(const face of faces){
+  const len=reflectionLength(source,point,face);
+  if(!len)continue;
+  const gain=face.reflection*.16/(1+.13*len);
+  real+=gain*Math.cos(k*len);imag+=gain*Math.sin(k*len);
+ }
+ return Math.hypot(real,imag);
+}
 const emitterMarkers=new THREE.Group();world.add(emitterMarkers);
 for(const p of EMITTERS){
  const marker=new THREE.Mesh(new THREE.IcosahedronGeometry(.14,1),
@@ -437,7 +554,12 @@ function updateCouplings(){
    if(!o.on)return;
    const p=EMITTERS[i],distance=Math.hypot(p.x-target.x,p.z-target.z);
    const spatial=Math.exp(-.5*Math.pow(distance/5,2));
-   total+=resonance(o.freq,modeHz,bandwidth)*spatial/enabled;
+   const source=[p.x,1.04,p.z],receiver=[target.x,1.5,target.z];
+   const reference=Math.max(.15,reflectedMagnitude(source,receiver,modeHz));
+   const actual=reflectedMagnitude(source,receiver,o.freq);
+   // Calibrated so resonance at its natural frequency remains playable.
+   const geometryEffect=Math.max(.75,Math.min(1.12,actual/reference));
+   total+=resonance(o.freq,modeHz,bandwidth)*spatial*geometryEffect/enabled;
   });
   return Math.min(1,total);
  };
