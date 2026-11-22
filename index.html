@@ -396,6 +396,7 @@ function extractAcousticSurfaces(){
  for(const mesh of physicalWorld.children){
   if(!mesh.isMesh||mesh.geometry.type!=='BoxGeometry')continue;
   if(mesh.material!==stoneMat&&mesh.material!==hiddenDoorMaterial)continue;
+  if(mesh===acousticMirror)continue; // Rotated mirror is traced explicitly.
   const par=mesh.geometry.parameters;
   const c=[mesh.position.x,mesh.position.y,mesh.position.z];
   const half=[par.width*mesh.scale.x/2,par.height*mesh.scale.y/2,par.depth*mesh.scale.z/2];
@@ -489,10 +490,20 @@ function acousticFieldAtGrid(index){
  if(cache.opaque[index])return 0;
  let energy=0;
  const enabled=Math.max(1,state.activeEmitters||0);
+ const g=FIELD_GRID,ix=Math.floor(index/(g.ny*g.nz)),remainder=index-ix*g.ny*g.nz;
+ const iy=Math.floor(remainder/g.nz),iz=remainder%g.nz;
+ const point={x:g.x0+ix*g.dx,z:g.z0+iz*g.dz};
  for(let i=0;i<3;i++){
   const src=state.osc[i];
   if(!src.on)continue;
-  energy+=pressureFromPaths(cache.paths[i],index,src.freq,src.phase,cache.faces)*.57/enabled;
+  const direction=beamToPoint(i,point);
+  const base=pressureFromPaths(cache.paths[i],index,src.freq,src.phase,cache.faces);
+  let pressure=base*direction.direct;
+  if(direction.bounce&&direction.reflected>.0001){
+   const phase=2*Math.PI*src.freq*direction.bounce.length/SOUND_SPEED+src.phase;
+   pressure+=direction.reflected*.86*Math.cos(phase);
+  }
+  energy+=pressure*.73/enabled;
  }
  // A subdued stationary diagnostic probe reveals the chamber's boundaries
  // even when all tunable sources are disabled.
@@ -583,6 +594,7 @@ function updateBeatResponse(){
  state.beatCharge=state.beatOverlap*matching;
 }
 const beamGuideGroup=new THREE.Group();topologyGroup.add(beamGuideGroup);
+let beamGuideDirty=true;
 const beamGuides=EMITTERS.map((p,i)=>{
  const material=new THREE.LineBasicMaterial({color:p.color,transparent:true,opacity:.61,depthWrite:false});
  const line=new THREE.Line(new THREE.BufferGeometry(),material);
@@ -620,7 +632,23 @@ function refreshBeamGuides(){
   }else points.push(new THREE.Vector3(rawEnd.x,1.04,rawEnd.z));
   line.geometry.dispose();line.geometry=new THREE.BufferGeometry().setFromPoints(points);
  }
+ beamGuideDirty=false;
 }
+// An acoustic imprint makes the physical player legible in Observer.
+const avatarGroup=new THREE.Group();topologyGroup.add(avatarGroup);
+const avatarMaterial=new THREE.MeshBasicMaterial({color:0xe4f6ff,transparent:true,opacity:.88,depthWrite:false});
+const avatarBody=new THREE.Mesh(new THREE.CylinderGeometry(.13,.22,.78,10),avatarMaterial);
+avatarBody.position.y=.78;avatarGroup.add(avatarBody);
+const avatarHead=new THREE.Mesh(new THREE.SphereGeometry(.2,12,8),avatarMaterial);
+avatarHead.position.y=1.43;avatarGroup.add(avatarHead);
+const avatarBase=new THREE.Mesh(new THREE.TorusGeometry(.36,.024,6,36),
+ new THREE.MeshBasicMaterial({color:0x89d6ee,transparent:true,opacity:.72,depthWrite:false}));
+avatarBase.rotation.x=Math.PI/2;avatarBase.position.y=.1;avatarGroup.add(avatarBase);
+const facingArrow=new THREE.Mesh(new THREE.ConeGeometry(.16,.40,8),avatarMaterial);
+facingArrow.rotation.z=-Math.PI/2;facingArrow.position.set(.47,.35,0);avatarGroup.add(facingArrow);
+const beatHalo=new THREE.Mesh(new THREE.TorusGeometry(.88,.04,8,54),
+ new THREE.MeshBasicMaterial({color:0xd8b1ec,transparent:true,opacity:.1,depthWrite:false}));
+beatHalo.position.set(DISC.x,DISC.y,DISC.z);topologyGroup.add(beatHalo);
 const emitterMarkers=new THREE.Group();world.add(emitterMarkers);
 for(const p of EMITTERS){
  const marker=new THREE.Mesh(new THREE.IcosahedronGeometry(.14,1),
@@ -676,7 +704,7 @@ function setSelectedFrequency(value){
   :Math.min(420,Math.max(60,Math.round(value)));
  const prop=editorMode==='aim'?'aim':'freq';
  if(current[prop]===v)return;
- current[prop]=v;updateEmitterDock();atlasDirty=true;syncAudio();renderField();
+ current[prop]=v;updateEmitterDock();atlasDirty=true;beamGuideDirty=true;syncAudio();renderField();
 }
 $('freqMode').addEventListener('click',()=>{editorMode=editorMode==='frequency'?'aim':'frequency';updateEmitterDock()});
 $('frequencyRange').addEventListener('input',e=>setSelectedFrequency(Number(e.target.value)));
@@ -685,7 +713,7 @@ $('freqUp').addEventListener('click',()=>{if(selectedEmitterIndex>=0)setSelected
 $('powerToggle').addEventListener('click',()=>{
  if(selectedEmitterIndex<0)return;
  state.osc[selectedEmitterIndex].on=!state.osc[selectedEmitterIndex].on;
- updateEmitterDock();atlasDirty=true;syncAudio();renderField();
+ updateEmitterDock();atlasDirty=true;beamGuideDirty=true;syncAudio();renderField();
 });
 $('dockOptions').addEventListener('click',()=>{
  const hidden=$('dockSettings').classList.toggle('hidden');
@@ -748,6 +776,8 @@ function sampleField(x,z,time=0){
 }
 function renderField(time=0){
  updateCouplings();
+ updateBeatResponse();
+ if(state.mode==='observer'&&beamGuideDirty)refreshBeamGuides();
  if(state.mode==='observer'){
   time=0;
    if(atlasDirty||fieldTransitionActive||atlasLastBuilt<0){
@@ -781,6 +811,12 @@ function renderField(time=0){
  $('wallLevel').textContent=wallPercent+'%'+(state.wallCoupling>.78?' · READY':'');
  $('poolBar').style.width=poolPercent+'%';
  $('wallBar').style.width=wallPercent+'%';
+ $('beatMeter').textContent=Math.round(state.beatCharge*100)+'%'+(state.beatCharge>.56?' READY':'');
+ $('beatInfo').textContent=(state.osc[0].on&&state.osc[1].on)
+   ?state.beatRate+' Hz beat':'Two sources needed';
+ $('aimTip').textContent=state.beatOverlap>.35?'Beams overlap':'Aim toward the disc';
+ beatHalo.material.opacity=.10+.70*state.beatCharge;
+ beatHalo.scale.setScalar(.8+.45*state.beatCharge);
  $('powerHint').textContent=state.activeEmitters===0
   ?'No active sources. Enable one emitter.'
   :state.activeEmitters===1?'One emitter active. Full energy available for one mode.'
@@ -790,10 +826,18 @@ function renderField(time=0){
      (state.foundWallTone?'Hollow wall: '+WALL_MODE_HZ+' Hz':null)].filter(Boolean).join(' · ')
    :'Thump near a material in Immersion to learn its tone';
  if(state.mode==='observer'){
-  $('fieldStatus').textContent=state.poolCoupling>.78
+  $('fieldStatus').textContent=state.beatCharge>.56
+   ?'DISC POTENTIAL · Shift inside and CHIME near the disc'
+   :state.poolCoupling>.78
    ?'POOL RESONATES · Go inside and PULSE near the rim'
    :state.wallCoupling>.78?'WALL RESONATES · Go inside and CHIME near the seam'
    :'TUNE A RESONANT MODE · Thump materials to hear their tones';
+ }else if(Math.hypot(state.playerX-DISC.x,state.playerZ-DISC.z)<2.3){
+  $('fieldStatus').textContent=state.beatOpenUntil>immersionTime
+   ?'BEAT VAULT OPEN · Explore the northern alcove'
+   :state.beatCharge>.56?'DISC BEATING · CHIME TO ACTIVATE'
+   :state.beatOverlap>.35?'TWO BEAMS OVERLAP · TUNE THEIR BEAT RATE'
+   :'DISC IS QUIET · AIM TWO SOURCES IN OBSERVER';
  }else if(state.playerX< -3.1){
   const remaining=Math.max(0,Math.ceil(state.waterRaisedUntil-immersionTime));
   $('fieldStatus').textContent=crossingActive?'WATER PATH RAISED · '+remaining+' seconds left'
@@ -1028,7 +1072,7 @@ function changeMode(mode){
  shellGroup.visible=mode==='observer';
  $('viewControls').classList.toggle('hidden',mode!=='observer');
  world.scale.setScalar(mode==='observer'?.23:1);world.position.set(0,0,0);
- atlasDirty=true;syncAtlasVisibility();
+ atlasDirty=true;beamGuideDirty=true;syncAtlasVisibility();
  toast(mode==='observer'?'Matter disappears · Only resonance remains':'Matter visible · Time resumes');
 }
 $('shiftMode').addEventListener('click',()=>changeMode(state.mode==='observer'?'immersion':'observer'));
@@ -1190,7 +1234,9 @@ window.addEventListener('deviceorientation',e=>{
  }
 });
 $('save').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');notes.push({saved:new Date().toISOString(),osc:state.osc.map(o=>({...o}))});localStorage.setItem('resonanceDiscoveries',JSON.stringify(notes.slice(-20)));toast(`Discovery saved (${Math.min(notes.length,20)})`)});
-$('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;updateEmitterDock();atlasDirty=true;syncAudio();renderField();toast('Latest discovery restored')});
+$('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;
+ state.osc.forEach(o=>{if(!Number.isFinite(o.aim))o.aim=0});
+ updateEmitterDock();atlasDirty=true;beamGuideDirty=true;syncAudio();renderField();toast('Latest discovery restored')});
 let toastTimer=0;function toast(txt){$('toast').textContent=txt;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),1750)}
 const clock=new THREE.Clock();let frame=0,immersionTime=0;
 let previousFrame=0;
@@ -1226,6 +1272,8 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
    }
  }
   if(state.mode==='observer'){
+    avatarGroup.position.set(state.playerX,0,state.playerZ);
+    avatarGroup.rotation.y=-state.yaw;
     const unitsPerPixel=2*state.observerDistance*Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)/Math.max(1,canvas.clientHeight);
     camera.position.set(-observerPan.x*unitsPerPixel,observerPan.y*unitsPerPixel,state.observerDistance);
     camera.rotation.set(0,0,0);
