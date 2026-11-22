@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.5</title>
+<title>Resonance: Worlds Within | Prototype 1.6</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -76,13 +76,15 @@ body.in-immersion #identity .name{font-size:13px;color:#b0c8d8;margin-top:0}
 body.in-immersion #status{top:calc(env(safe-area-inset-top,0px) + 65px)}
 body.in-immersion #objective{display:none}
 @media(max-height:690px){#controls{max-height:none}#move{bottom:calc(17px + env(safe-area-inset-bottom,0px))}.joystick{width:91px!important;height:91px!important}}
+#beatReadout{display:flex;justify-content:space-between;gap:7px;align-items:center;margin-top:6px;font-size:10px;color:#a9c0d2}#beatReadout strong{color:#e9c0eb}#beatInfo{color:#bfa6e0;font-variant-numeric:tabular-nums}#aimTip{color:#839eaf;max-width:33%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#freqMode{min-width:38px;font-size:11px!important;color:#b8e9e9;border-color:#4f93ac!important}
 </style>
 </head>
 <body>
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.5</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.6</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · Reflection Chamber</div></div>
     <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER 01 · Water crossing and the hidden wall</div>
@@ -91,8 +93,9 @@ body.in-immersion #objective{display:none}
   <section id="controls" aria-label="Observer resonance instrument">
     <div id="dockTop"><span class="dockTitle">OBSERVER <small>RESONANCE</small></span><div class="dockRight"><span id="selectedEmitter">Choose source</span><button id="atlasToggle" aria-label="Change topology visualization layer">All layers</button><button id="dockOptions" aria-expanded="false" aria-controls="dockSettings" aria-label="Instrument settings">⋯</button></div></div>
     <div id="oscillators" class="emitterTabs" aria-label="Select an emitter"></div>
-    <div id="freqEditor"><button id="freqDown" aria-label="Decrease selected frequency by one hertz">−</button><input id="frequencyRange" type="range" min="60" max="420" step="1" value="110" aria-label="Selected emitter frequency"><button id="freqUp" aria-label="Increase selected frequency by one hertz">+</button><output id="freqValue">110 Hz</output><button id="powerToggle" aria-pressed="true">On</button></div>
+    <div id="freqEditor"><button id="freqMode" aria-pressed="false">Hz</button><button id="freqDown" aria-label="Decrease selected setting">−</button><input id="frequencyRange" type="range" min="60" max="420" step="1" value="110" aria-label="Selected emitter frequency or aim"><button id="freqUp" aria-label="Increase selected setting">+</button><output id="freqValue">110 Hz</output><button id="powerToggle" aria-pressed="true">On</button></div>
     <div id="dockReadout"><span>Pool <strong id="poolLevel">0%</strong></span><div class="potentialTrack"><span id="poolBar"></span></div><span>Stone <strong id="wallLevel">0%</strong></span><div class="potentialTrack wall"><span id="wallBar"></span></div></div>
+    <div id="beatReadout"><span>Disc <strong id="beatMeter">0%</strong></span><span id="beatInfo">2 beams · 4 Hz beat</span><span id="aimTip">Select a source to aim it</span></div>
     <div id="dockSettings" class="hidden" aria-label="Instrument settings">
       <div id="dockSettingActions"><button id="audio">🔈 Sound off</button><button id="soundTest">♪ Test</button><button id="tilt">Enable tilt</button><button id="save">Save</button><button id="restore">Restore</button></div>
       <div id="viewControls"><button id="panToggle" aria-label="Switch between rotating and panning the world" aria-pressed="false">Pan</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div>
@@ -133,13 +136,32 @@ const world=new THREE.Group();scene.add(world);
 function makeBox(parent,w,h,d,x,y,z,material){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);parent.add(m);return m}
 function makeColumn(x,z,h){makeBox(world,.42,h,.42,x,h/2-.6,z,stoneMat);makeBox(world,.75,.27,.75,x,h-.6,z,stoneMat)}
 // The fixed landmarks are authored; the crossing is derived from an interfering spatial field.
-makeBox(world,4.5,.6,8,-5.55,-.45,0,stoneMat);
-makeBox(world,4.5,.6,8,5.55,-.45,0,stoneMat);
+makeBox(world,4.5,.6,13.8,-5.55,-.45,0,stoneMat);
+makeBox(world,4.5,.6,13.8,5.55,-.45,0,stoneMat);
 makeBox(world,1.7,.1,6,-5.25,-.08,0,crystalMat);
 makeBox(world,1.7,.1,6,5.25,-.08,0,crystalMat);
 for(const x of [-7.3,-4,4,7.3])for(const z of [-3.5,3.5])makeColumn(x,z,3+(Math.abs(x)*.11));
+for(const x of [-7.3,-4,4,7.3])for(const z of [-5.7,5.7])makeColumn(x,z,2.8+(Math.abs(x)*.12));
+// Additional obstructions are true meshes that participate in acoustic boundaries.
+const acousticBaffle=makeBox(world,.9,3.4,1.4,0,1.18,2.35,stoneMat);
+const northMonolith=makeBox(world,.82,3.2,1.1,6.75,1.15,-5.4,stoneMat);
+const sideMonolith=makeBox(world,.85,2.7,.95,-6.75,.95,-5.15,stoneMat);
+// The angled mirror is a genuine wall mesh, not an invisible ray endpoint.
+const acousticMirror=makeBox(world,3.35,3.2,.24,-3.58,1.4,6.12,stoneMat);
+acousticMirror.rotation.y=.12;acousticMirror.userData.acousticMirror=true;
+const discMaterial=new THREE.MeshStandardMaterial({color:0xb8a2cd,metalness:.85,roughness:.22,emissive:0x33223b,emissiveIntensity:.1});
+const beatDisc=new THREE.Mesh(new THREE.CylinderGeometry(.76,.76,.13,36),discMaterial);
+beatDisc.rotation.x=Math.PI/2;beatDisc.position.set(-5.42,2.25,4.62);world.add(beatDisc);
+makeBox(world,.045,1.0,.045,-5.42,3.2,4.62,stoneMat);
+const discRim=new THREE.Mesh(new THREE.TorusGeometry(.82,.055,8,48),
+ new THREE.MeshBasicMaterial({color:0xd8b5f2,transparent:true,opacity:.16}));
+discRim.position.set(-5.42,2.25,4.55);world.add(discRim);
+const beatVault=makeBox(world,1.9,2.7,.25,-5.45,1.2,6.49,stoneMat);
+const beatVaultSeam=new THREE.Mesh(new THREE.TorusGeometry(.83,.018,6,48),
+ new THREE.MeshBasicMaterial({color:0xb5a2db,transparent:true,opacity:.10}));
+beatVaultSeam.position.set(-5.45,1.6,6.25);world.add(beatVaultSeam);
 // Fictional mineral-rich water responds to a coupled standing mode and a physical pulse.
-const poolSurface=new THREE.Mesh(new THREE.PlaneGeometry(7.15,7.95),
+const poolSurface=new THREE.Mesh(new THREE.PlaneGeometry(7.15,13.85),
  new THREE.MeshPhysicalMaterial({color:0x287b9f,emissive:0x0b354b,metalness:.36,roughness:.16,transparent:true,opacity:.68,side:THREE.DoubleSide,depthWrite:false}));
 poolSurface.rotation.x=-Math.PI/2;poolSurface.position.set(0,-.36,0);world.add(poolSurface);
 const poolRim=new THREE.Mesh(new THREE.TorusGeometry(.78,.07,7,48),
@@ -147,8 +169,8 @@ const poolRim=new THREE.Mesh(new THREE.TorusGeometry(.78,.07,7,48),
 poolRim.rotation.x=Math.PI/2;poolRim.position.set(-4.12,.02,0);world.add(poolRim);
 // Stone spans the far platform. The center section is a concealed movable door.
 const hiddenDoorMaterial=stoneMat.clone();hiddenDoorMaterial.transparent=true;
-makeBox(world,.48,3.8,2.88,6.03,1.75,-2.56,stoneMat);
-makeBox(world,.48,3.8,2.88,6.03,1.75, 2.56,stoneMat);
+makeBox(world,.48,3.8,5.75,6.03,1.75,-3.995,stoneMat);
+makeBox(world,.48,3.8,5.75,6.03,1.75, 3.995,stoneMat);
 const hiddenDoor=makeBox(world,.48,3.8,2.24,6.03,1.75,0,hiddenDoorMaterial);
 const doorSeam=new THREE.Mesh(new THREE.BoxGeometry(.505,3.63,.045),
  new THREE.MeshBasicMaterial({color:0x7ed0e6,transparent:true,opacity:.07,depthWrite:false}));
@@ -185,7 +207,7 @@ const shell=new THREE.Mesh(new THREE.SphereGeometry(2.6,48,32),new THREE.MeshPhy
 const rim=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(2.63,2)),new THREE.LineBasicMaterial({color:0x5fabc4,transparent:true,opacity:.15}));shellGroup.add(rim);
 const orbitRing=new THREE.Mesh(new THREE.TorusGeometry(2.85,.012,6,160),new THREE.MeshBasicMaterial({color:0x71bad4,transparent:true,opacity:.58}));orbitRing.rotation.x=1.18;orbitRing.rotation.y=.4;shellGroup.add(orbitRing);
 const starGeo=new THREE.BufferGeometry();let positions=[];for(let i=0;i<360;i++){const a=Math.random()*Math.PI*2,b=Math.acos(2*Math.random()-1),r=18+Math.random()*52;positions.push(Math.sin(b)*Math.cos(a)*r,Math.cos(b)*r,Math.sin(b)*Math.sin(a)*r)}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9abdd8,size:.055,sizeAttenuation:true})));
-const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0},{freq:95,on:false,phase:1.5},{freq:250,on:false,phase:3}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:15.5,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false};
+const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0},{freq:95,on:false,phase:1.5},{freq:250,on:false,phase:3}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:15.5,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false};
 const observerPan=new THREE.Vector2(0,0); // Camera-space pan; globe pivot stays at origin.
 let invertLookY=false;
 try{invertLookY=localStorage.getItem('resonanceInvertY')==='1'}catch(e){}
@@ -218,7 +240,7 @@ const lineViews=fieldColors.map((c,i)=>{
   new THREE.LineBasicMaterial({color:c,transparent:true,opacity:i===0?.48:.42,depthWrite:false}));
  lines.frustumCulled=false;topologyGroup.add(lines);return lines;
 });
-const FIELD_GRID={nx:27,ny:12,nz:17,x0:-7.85,y0:-.10,z0:-4.05,dx:15.7/26,dy:4.75/11,dz:8.1/16};
+const FIELD_GRID={nx:27,ny:12,nz:27,x0:-7.85,y0:-.10,z0:-6.99,dx:15.7/26,dy:4.75/11,dz:13.98/26};
 const FIELD_CORNERS=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
 const FIELD_TETRA=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
 const fieldSamples=new Float32Array(FIELD_GRID.nx*FIELD_GRID.ny*FIELD_GRID.nz);
@@ -684,14 +706,14 @@ function hasConnectedPassage(){
  return false;
 }
 function groundAt(x,z){
- if(Math.abs(z)>3.92)return false;
+ if(Math.abs(z)>6.72)return false;
  // The far wall blocks progress until its central concealed door is opened.
  if(x>5.75&&x<6.35){
    const open=state.wallOpenUntil>immersionTime;
    if(!open||Math.abs(z)>1.02)return false;
  }
- if(Math.abs(z)<=3.95 && x>=-7.82&&x<=-3.29)return true;
- if(Math.abs(z)<=3.95 && x>=3.29&&x<=7.82)return true;
+ if(Math.abs(z)<=6.72 && x>=-7.82&&x<=-3.29)return true;
+ if(Math.abs(z)<=6.72 && x>=3.29&&x<=7.82)return true;
  const ix=Math.round((x+3.45)/.69),iz=Math.round((z+2.4)/.8);
  if(ix<0||ix>=NX||iz<0||iz>=NZ)return false;
  const tile=tileGrid[ix][iz];
@@ -1067,7 +1089,7 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
      const vz=forward*Math.sin(state.yaw)+side*Math.cos(state.yaw);
      // Try each axis separately so the player can slide naturally along unstable edges.
      const targetX=clamp(state.playerX+vx*speed*dt,-7.5,7.5);
-     const targetZ=clamp(state.playerZ+vz*speed*dt,-3.8,3.8);
+     const targetZ=clamp(state.playerZ+vz*speed*dt,-6.63,6.63);
      const canX=groundAt(targetX,state.playerZ);
      if(canX)state.playerX=targetX;
      const canZ=groundAt(state.playerX,targetZ);
