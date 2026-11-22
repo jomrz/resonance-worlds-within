@@ -882,8 +882,9 @@ function groundAt(x,z){
    mesh.isMesh&&mesh.material===stoneMat&&mesh.geometry.type==='BoxGeometry');
  for(const mesh of obstacles){
   const p=mesh.geometry.parameters;
-  const top=mesh.position.y+p.height*mesh.scale.y/2;
-  if(top<.36)continue; // walkable platform stones do not obstruct feet
+  const halfHeight=p.height*mesh.scale.y/2;
+  const top=mesh.position.y+halfHeight,bottom=mesh.position.y-halfHeight;
+  if(top<.36||bottom>1.70)continue; // ignore floor and lifted doors above head
   const dx=x-mesh.position.x,dz=z-mesh.position.z;
   const ca=Math.cos(mesh.rotation.y),sa=Math.sin(mesh.rotation.y);
   const lx=ca*dx-sa*dz,lz=sa*dx+ca*dz;
