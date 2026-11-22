@@ -100,7 +100,7 @@ body.in-immersion #objective{display:none}
       <div id="dockSettingActions"><button id="audio">🔈 Sound off</button><button id="soundTest">♪ Test</button><button id="tilt">Enable tilt</button><button id="save">Save</button><button id="restore">Restore</button></div>
       <div id="viewControls"><button id="panToggle" aria-label="Switch between rotating and panning the world" aria-pressed="false">Pan</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div>
       <div id="powerHint">Emitters share a limited energy supply.</div><small id="modeHint">Thump materials inside to discover natural tones.</small>
-      <p id="help">The field is now calculated from real stone mesh faces and the pool surface: direct sound plus simplified first reflections. The topology changes as wave paths interfere against these boundaries. It is a geometry-aware approximation, not a complete acoustic wave solver. Tune one source at a time, inspect Nodes or Energy, then Shift to Immersion. Drag to look, steer using the left pad and select your local instrument with ⋯.</p>
+      <p id="help">Expanded reflection chamber: more pillars, a blocking baffle, an angled stone reflector and a suspended disc on the north end of the left platform. Select an emitter and tap Hz to switch its slider to Aim. Both beams must reach the disc with a 4 Hz difference. The second beam can reflect off the actual angled slab. The resulting disc vibrates in Immersion, where Chime can open the northern vault. In Observer the beat potential is timeless. This uses direct and approximate one-bounce acoustic paths, not a complete room-mode solver.</p>
     </div>
   </section>
   <div id="crosshair" aria-hidden="true">·</div>
@@ -744,7 +744,9 @@ function updateCouplings(){
    const actual=reflectedMagnitude(source,receiver,o.freq);
    // Calibrated so resonance at its natural frequency remains playable.
    const geometryEffect=Math.max(.75,Math.min(1.12,actual/reference));
-   total+=resonance(o.freq,modeHz,bandwidth)*spatial*geometryEffect/enabled;
+   // Aim now influences all coupled resonances, not just the beat disc.
+   const pointing=beamToPoint(i,target).strength;
+   total+=resonance(o.freq,modeHz,bandwidth)*spatial*geometryEffect*pointing/enabled;
   });
   return Math.min(1,total);
  };
@@ -800,6 +802,9 @@ function renderField(time=0){
   tile.mesh.material.color.setHSL(.52,.66,stable?.56:.21);
  }
  state.passageOpen=hasConnectedPassage();
+ const beatOpened=state.beatOpenUntil>immersionTime;
+ beatVault.position.y=beatOpened?5.2:1.2;
+ beatVaultSeam.material.opacity=beatOpened?.8:.10+.45*state.beatCharge;
  hiddenDoor.position.y=doorwayActive?5.8:1.75;
  hiddenDoor.material.opacity=doorwayActive?.12:1;
  doorSeam.material.opacity=doorwayActive?.64:state.wallCoupling*.24;
@@ -885,7 +890,7 @@ function finishPassage(){
  if(state.finished)return;
  state.finished=true;
  stopJoystick(null);stopLookJoystick(null);
- const config=state.osc.map(o=>({hz:o.freq,on:o.on,phase:o.phase}));
+ const config=state.osc.map(o=>({hz:o.freq,on:o.on,phase:o.phase,aim:o.aim||0}));
  const saved=JSON.parse(localStorage.getItem('resonanceCrossings')||'[]');
  const key=config.map(o=>o.on?o.hz:'off').join('-');
  if(!saved.some(entry=>entry.key===key)){
@@ -900,7 +905,7 @@ $('keepExploring').addEventListener('click',()=>$('discovery').classList.add('hi
 $('anotherRoute').addEventListener('click',()=>{
  $('discovery').classList.add('hidden');state.finished=false;state.hasCrossedGap=false;
  state.playerX=-5.5;state.playerZ=0;state.yaw=0;state.pitch=-.07;
- state.waterRaisedUntil=-1;state.wallOpenUntil=-1;
+ state.waterRaisedUntil=-1;state.wallOpenUntil=-1;state.beatOpenUntil=-1;
  toast('Both mechanisms reset. Test another configuration');
 });
 let audioCtx=null,voices=[],soundOn=false,masterGain=null;
@@ -997,9 +1002,14 @@ function playImpulse(kind){
  }
  const nearPool=state.playerX>-6.6&&state.playerX<-3.1&&Math.abs(state.playerZ)<2.5;
  const nearWall=state.playerX>3.7&&state.playerX<6.1&&Math.abs(state.playerZ)<2.2;
+ const nearDisc=Math.hypot(state.playerX-DISC.x,state.playerZ-DISC.z)<2.3;
  let response=cfg.label+' · A wave travels through the chamber';
  if(kind==='knock'){
-   if(nearPool){
+   if(nearDisc){
+     state.foundDisc=true;
+     playMaterialEcho(180);
+     response='Hanging disc has a slow 4 Hz mechanical response · Find two converging waves';
+   }else if(nearPool){
      state.foundPoolTone=true;
      playMaterialEcho(WATER_MODE_HZ);
      response='Mineral pool rings near '+WATER_MODE_HZ+' Hz · Remember this tone';
@@ -1013,6 +1023,13 @@ function playImpulse(kind){
      state.waterRaisedUntil=immersionTime+38;
      response='The mineral-water lattice rises · 38 seconds of solid footing';
    }else response='The pool only ripples · Tune its natural resonance in Observer';
+ }else if(kind==='chime'&&nearDisc){
+   if(state.beatCharge>.56){
+     state.beatOpenUntil=immersionTime+28;state.foundDisc=true;
+     response='TWO BEAMS INTERLOCK · The northern vault rises for 28 seconds';
+   }else if(state.beatOverlap<.35)
+     response='The disc needs two beams · Redirect one off the angled reflector';
+   else response='Both beams reach the disc · Tune their difference to 4 Hz';
  }else if(kind==='chime'&&nearWall){
    if(state.wallCoupling>.78){
      state.wallOpenUntil=immersionTime+30;
@@ -1286,6 +1303,13 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
     camera.lookAt(camera.position.clone().add(direction));
   }
   const perceivedTime=state.mode==='immersion'?immersionTime:0;
+  const discBeat=state.mode==='immersion'?(.5+.5*Math.sin(2*Math.PI*state.beatRate*immersionTime)):.5;
+  const discResponse=state.beatCharge;
+  discMaterial.emissiveIntensity=.08+.2*discResponse+
+    (state.mode==='immersion'?discBeat*discResponse*.85:0);
+  beatDisc.scale.setScalar(1+(state.mode==='immersion'?(discBeat-.5)*discResponse*.04:0));
+  discRim.material.opacity=.13+.18*discResponse+
+    (state.mode==='immersion'?discBeat*discResponse*.55:0);
   core.rotation.y=perceivedTime*.3;portal.rotation.z=perceivedTime*.06;
   for(let i=0;i<rings.length;i++)rings[i].material.opacity=.13+.08*Math.sin(perceivedTime*.8+i);
   for(const p of state.pulses){
