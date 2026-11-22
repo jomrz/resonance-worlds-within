@@ -465,10 +465,12 @@ function makeAcousticCache(){
     reflectionLength(source,p,sceneGeometry.faces[n]);
   });
  }
- return {...sceneGeometry,sources,paths,opaque,nFaces,total,doorY:hiddenDoor.position.y};
+ return {...sceneGeometry,sources,paths,opaque,nFaces,total,
+  doorY:hiddenDoor.position.y,vaultY:beatVault.position.y};
 }
 function ensureAcousticCache(){
- if(!acousticCache||Math.abs(acousticCache.doorY-hiddenDoor.position.y)>.2)
+ if(!acousticCache||Math.abs(acousticCache.doorY-hiddenDoor.position.y)>.2||
+    Math.abs(acousticCache.vaultY-beatVault.position.y)>.2)
   acousticCache=makeAcousticCache();
  return acousticCache;
 }
@@ -874,6 +876,20 @@ function hasConnectedPassage(){
 }
 function groundAt(x,z){
  if(Math.abs(z)>6.72)return false;
+ // Navigable matter: prevent the player from walking through the extra
+ // resonant columns, scattering blocks, angled mirror or closed northern vault.
+ const obstacles=[...physicalWorld.children].filter(mesh=>
+   mesh.isMesh&&mesh.material===stoneMat&&mesh.geometry.type==='BoxGeometry');
+ for(const mesh of obstacles){
+  const p=mesh.geometry.parameters;
+  const top=mesh.position.y+p.height*mesh.scale.y/2;
+  if(top<.36)continue; // walkable platform stones do not obstruct feet
+  const dx=x-mesh.position.x,dz=z-mesh.position.z;
+  const ca=Math.cos(mesh.rotation.y),sa=Math.sin(mesh.rotation.y);
+  const lx=ca*dx-sa*dz,lz=sa*dx+ca*dz;
+  if(Math.abs(lx)<p.width*mesh.scale.x/2+.14&&
+     Math.abs(lz)<p.depth*mesh.scale.z/2+.14)return false;
+ }
  // The far wall blocks progress until its central concealed door is opened.
  if(x>5.75&&x<6.35){
    const open=state.wallOpenUntil>immersionTime;
@@ -1002,7 +1018,7 @@ function playImpulse(kind){
  }
  const nearPool=state.playerX>-6.6&&state.playerX<-3.1&&Math.abs(state.playerZ)<2.5;
  const nearWall=state.playerX>3.7&&state.playerX<6.1&&Math.abs(state.playerZ)<2.2;
- const nearDisc=Math.hypot(state.playerX-DISC.x,state.playerZ-DISC.z)<2.3;
+ const nearDisc=Math.hypot(state.playerX-DISC.x,state.playerZ-DISC.z)<1.8;
  let response=cfg.label+' · A wave travels through the chamber';
  if(kind==='knock'){
    if(nearDisc){
