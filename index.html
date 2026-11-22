@@ -316,6 +316,7 @@ function contourAtLevel(level){
  geom.setAttribute('position',new THREE.Float32BufferAttribute(out,3));
  return geom;
 }
+const DISPLAY_NEIGHBORS=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
 function updateDisplayField(){
  // Small spatial filter removes pixel-grid terraces while retaining the
  // acoustic layout and real surface-driven reflections.
@@ -324,7 +325,7 @@ function updateDisplayField(){
  for(let x=0;x<g.nx;x++)for(let y=0;y<g.ny;y++)for(let z=0;z<g.nz;z++){
   const j=fieldIndex(x,y,z);
   let sum=fieldSamples[j]*4,weight=4;
-  for(const [dx,dy,dz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]){
+  for(const [dx,dy,dz] of DISPLAY_NEIGHBORS){
    const xx=x+dx,yy=y+dy,zz=z+dz;
    if(xx<0||xx>=g.nx||yy<0||yy>=g.ny||zz<0||zz>=g.nz)continue;
    sum+=fieldSamples[fieldIndex(xx,yy,zz)];weight++;
@@ -366,9 +367,12 @@ function amplitudeSurfaceGeometry(){
  vertexPositions.set(positive,0);vertexPositions.set(negative,positive.length);
  const vertexColors=new Float32Array(vertexPositions.length);
  const cyan=new THREE.Color(0x57c5db),violet=new THREE.Color(0xb394db);
- for(let k=0;k<positive.length;k+=3)vertexColors.set([cyan.r,cyan.g,cyan.b],k);
- for(let k=positive.length;k<vertexColors.length;k+=3)
-  vertexColors.set([violet.r,violet.g,violet.b],k);
+ for(let k=0;k<positive.length;k+=3){
+  vertexColors[k]=cyan.r;vertexColors[k+1]=cyan.g;vertexColors[k+2]=cyan.b;
+ }
+ for(let k=positive.length;k<vertexColors.length;k+=3){
+  vertexColors[k]=violet.r;vertexColors[k+1]=violet.g;vertexColors[k+2]=violet.b;
+ }
  const geom=new THREE.BufferGeometry();
  geom.setAttribute('position',new THREE.BufferAttribute(vertexPositions,3));
  geom.setAttribute('color',new THREE.BufferAttribute(vertexColors,3));
