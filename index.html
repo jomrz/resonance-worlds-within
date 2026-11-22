@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.6.1</title>
+<title>Resonance: Worlds Within | Prototype 1.7</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -84,14 +84,14 @@ body.in-immersion #objective{display:none}
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.6.1</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · Reflection Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.7</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · Reflection Chamber</div></div>
     <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER 01 · Water crossing and the hidden wall</div>
   <div id="move"><div class="stickColumn"><div class="joystick" id="joystick" aria-label="Move joystick"><div class="stick" id="stick"></div></div><span class="stickLabel">MOVE</span></div><div class="stickColumn"><div class="joystick" id="lookJoystick" aria-label="Look joystick"><div class="stick" id="lookStick"></div></div><span class="stickLabel">LOOK</span><button id="invertLook" aria-pressed="false" aria-label="Reverse vertical look direction">Y: Normal</button></div></div>
   <div id="toast"></div><div id="discovery" class="hidden" role="dialog" aria-modal="true" aria-labelledby="discoveryTitle"><div id="discoveryBox"><div class="spark">✦</div><h2 id="discoveryTitle">Passage discovered</h2><p id="discoveryText">You crossed using a resonance configuration. Your discovery has been recorded.</p><button id="anotherRoute" class="primary">Try another solution</button><button id="keepExploring">Keep exploring</button></div></div>
   <section id="controls" aria-label="Observer resonance instrument">
-    <div id="dockTop"><span class="dockTitle">OBSERVER <small>RESONANCE</small></span><div class="dockRight"><span id="selectedEmitter">Choose source</span><button id="atlasToggle" aria-label="Change topology visualization layer">All layers</button><button id="dockOptions" aria-expanded="false" aria-controls="dockSettings" aria-label="Instrument settings">⋯</button></div></div>
+    <div id="dockTop"><span class="dockTitle">OBSERVER <small>RESONANCE</small></span><div class="dockRight"><span id="selectedEmitter">Choose source</span><button id="atlasToggle" aria-label="Change acoustic field visualization">View: Field</button><button id="dockOptions" aria-expanded="false" aria-controls="dockSettings" aria-label="Instrument settings">⋯</button></div></div>
     <div id="oscillators" class="emitterTabs" aria-label="Select an emitter"></div>
     <div id="freqEditor"><button id="freqMode" aria-pressed="false">Hz</button><button id="freqDown" aria-label="Decrease selected setting">−</button><input id="frequencyRange" type="range" min="60" max="420" step="1" value="110" aria-label="Selected emitter frequency or aim"><button id="freqUp" aria-label="Increase selected setting">+</button><output id="freqValue">110 Hz</output><button id="powerToggle" aria-pressed="true">On</button></div>
     <div id="dockReadout"><span>Pool <strong id="poolLevel">0%</strong></span><div class="potentialTrack"><span id="poolBar"></span></div><span>Stone <strong id="wallLevel">0%</strong></span><div class="potentialTrack wall"><span id="wallBar"></span></div></div>
@@ -100,7 +100,7 @@ body.in-immersion #objective{display:none}
       <div id="dockSettingActions"><button id="audio">🔈 Sound off</button><button id="soundTest">♪ Test</button><button id="tilt">Enable tilt</button><button id="save">Save</button><button id="restore">Restore</button></div>
       <div id="viewControls"><button id="panToggle" aria-label="Switch between rotating and panning the world" aria-pressed="false">Pan</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div>
       <div id="powerHint">Emitters share a limited energy supply.</div><small id="modeHint">Thump materials inside to discover natural tones.</small>
-      <p id="help">To aim: tap Source 1, 2 or 3, tap Aim ↗ beside the slider, then drag the bearing (0° points right, 90° toward +Z, 180° left, 270° toward −Z). Use the slider while watching the source's beam ray move around the chamber. Tap Hz to tune frequency again. Turn sources Off to remove their waves completely. The beat disc responds when two beams overlap and differ by 4 Hz. Reflection paths are approximate, not a full acoustic wave solver.</p>
+      <p id="help">Field is the simpler default view: colored translucent surfaces show positive and negative pressure response. The dense white zero-pressure membranes are now a separate Nodes diagnostic and are only calculated when selected. Select a Source, tap Aim ↗ to rotate its direction (0° right, 90° +Z), or tap Hz to tune. All sources off means no waves. Beams and reflected paths still use the chamber's simplified geometric acoustic model.</p>
     </div>
   </section>
   <div id="crosshair" aria-hidden="true">·</div>
@@ -204,8 +204,8 @@ const globeRotation=new THREE.Quaternion();
 const tiltRotation=new THREE.Quaternion();
 const tiltNeutral={beta:null,gamma:null};
 const shell=new THREE.Mesh(new THREE.SphereGeometry(2.6,48,32),new THREE.MeshPhysicalMaterial({color:0x4b92bd,transparent:true,opacity:.12,metalness:.2,roughness:.08,depthWrite:false,side:THREE.DoubleSide}));shellGroup.add(shell);
-const rim=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(2.63,2)),new THREE.LineBasicMaterial({color:0x5fabc4,transparent:true,opacity:.15}));shellGroup.add(rim);
-const orbitRing=new THREE.Mesh(new THREE.TorusGeometry(2.85,.012,6,160),new THREE.MeshBasicMaterial({color:0x71bad4,transparent:true,opacity:.58}));orbitRing.rotation.x=1.18;orbitRing.rotation.y=.4;shellGroup.add(orbitRing);
+const rim=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(2.63,2)),new THREE.LineBasicMaterial({color:0x5fabc4,transparent:true,opacity:.075}));shellGroup.add(rim);
+// Removed the decorative orbit ring: it looked like an unexplained wave reflection.
 const starGeo=new THREE.BufferGeometry();let positions=[];for(let i=0;i<360;i++){const a=Math.random()*Math.PI*2,b=Math.acos(2*Math.random()-1),r=18+Math.random()*52;positions.push(Math.sin(b)*Math.cos(a)*r,Math.cos(b)*r,Math.sin(b)*Math.sin(a)*r)}starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0x9abdd8,size:.055,sizeAttenuation:true})));
 const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0},{freq:95,on:false,phase:1.5,aim:0},{freq:250,on:false,phase:3,aim:0}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:15.5,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false};
 const observerPan=new THREE.Vector2(0,0); // Camera-space pan; globe pivot stays at origin.
@@ -226,20 +226,21 @@ $('invertLook').addEventListener('click',()=>{
 // Isosurfaces and contour-lines share one scalar field. Matter itself is hidden.
 // Survey echoes are a simplified acoustic model, not a full wave solver.
 const topologyGroup=new THREE.Group();world.add(topologyGroup);
-const fieldLevels=[0,.20,-.20];
-const fieldColors=[0xe0edf4,0x5dd1e5,0xbda0e7];
-const surfaceMaterials=fieldColors.map((c,i)=>new THREE.MeshBasicMaterial({
- color:c,side:THREE.DoubleSide,transparent:true,opacity:i===0?.15:.12,depthWrite:false
-}));
-const surfaceViews=surfaceMaterials.map(material=>{
- const mesh=new THREE.Mesh(new THREE.BufferGeometry(),material);
- mesh.frustumCulled=false;topologyGroup.add(mesh);return mesh;
+// Field mode uses ONE mesh, with cyan and violet vertices for opposite
+// pressure signs. Nodal geometry is allocated only when diagnostic mode is open.
+const fieldMaterial=new THREE.MeshBasicMaterial({
+ vertexColors:true,side:THREE.DoubleSide,transparent:true,opacity:.27,depthWrite:false
 });
-const lineViews=fieldColors.map((c,i)=>{
- const lines=new THREE.LineSegments(new THREE.BufferGeometry(),
-  new THREE.LineBasicMaterial({color:c,transparent:true,opacity:i===0?.48:.42,depthWrite:false}));
- lines.frustumCulled=false;topologyGroup.add(lines);return lines;
+const fieldSurface=new THREE.Mesh(new THREE.BufferGeometry(),fieldMaterial);
+fieldSurface.frustumCulled=false;topologyGroup.add(fieldSurface);
+const nodeMaterial=new THREE.MeshBasicMaterial({
+ color:0xd7edf6,side:THREE.DoubleSide,transparent:true,opacity:.11,depthWrite:false
 });
+const nodeSurface=new THREE.Mesh(new THREE.BufferGeometry(),nodeMaterial);
+nodeSurface.frustumCulled=false;topologyGroup.add(nodeSurface);
+const nodeLines=new THREE.LineSegments(new THREE.BufferGeometry(),
+ new THREE.LineBasicMaterial({color:0xc4dfe9,transparent:true,opacity:.29,depthWrite:false}));
+nodeLines.frustumCulled=false;topologyGroup.add(nodeLines);
 const FIELD_GRID={nx:27,ny:12,nz:27,x0:-7.85,y0:-.10,z0:-6.99,dx:15.7/26,dy:4.75/11,dz:13.98/26};
 const FIELD_CORNERS=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
 const FIELD_TETRA=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
@@ -248,7 +249,8 @@ const fieldIndex=(x,y,z)=>(x*FIELD_GRID.ny+y)*FIELD_GRID.nz+z;
 // Display transitions are visual smoothing only: no time passes in Observer.
 const fieldTargets=new Float32Array(fieldSamples.length);
 let fieldInitialized=false,fieldTransitionActive=false,fieldLastStep=-1;
-let atlasDirty=true,atlasLastBuilt=-1,topologyView='all';
+let atlasDirty=true,atlasLastBuilt=-1,topologyView='field',viewDirty=true;
+const displayFieldSamples=new Float32Array(fieldSamples.length);
 function bell(x,center,width){return Math.exp(-Math.pow((x-center)/width,2));}
 function topologyAt(x,y,z,index){
  // The visible topology is driven primarily by pressure reflected from the
@@ -294,16 +296,16 @@ function meshAtLevel(level){
  return geom;
 }
 function contourAtLevel(level){
+ // Diagnostic contour slices are built only while Node view is selected.
  const out=[],g=FIELD_GRID,edges=[[0,1],[1,2],[2,3],[3,0]];
- // Line contours at several heights expose the topology's depth, like a terrain map.
- for(const y of [1,3,5,7,9]){
+ for(const y of [2,5,8]){
   for(let x=0;x<g.nx-1;x++)for(let z=0;z<g.nz-1;z++){
    const xx=[x,x+1,x+1,x],zz=[z,z,z+1,z+1];
    const values=xx.map((ix,i)=>fieldSamples[fieldIndex(ix,y,zz[i])]);
    const intersections=[];
    for(const [a,b] of edges){
     if((values[a]>=level)===(values[b]>=level))continue;
-    const at=(i)=>[g.x0+xx[i]*g.dx,g.y0+y*g.dy+.014,g.z0+zz[i]*g.dz];
+    const at=i=>[g.x0+xx[i]*g.dx,g.y0+y*g.dy+.014,g.z0+zz[i]*g.dz];
     intersections.push(interpolateEdge(at(a),at(b),values[a],values[b],level));
    }
    for(let i=0;i+1<intersections.length;i+=2)
@@ -312,6 +314,64 @@ function contourAtLevel(level){
  }
  const geom=new THREE.BufferGeometry();
  geom.setAttribute('position',new THREE.Float32BufferAttribute(out,3));
+ return geom;
+}
+function updateDisplayField(){
+ // Small spatial filter removes pixel-grid terraces while retaining the
+ // acoustic layout and real surface-driven reflections.
+ const g=FIELD_GRID;
+ let maxAmplitude=0;
+ for(let x=0;x<g.nx;x++)for(let y=0;y<g.ny;y++)for(let z=0;z<g.nz;z++){
+  const j=fieldIndex(x,y,z);
+  let sum=fieldSamples[j]*4,weight=4;
+  for(const [dx,dy,dz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]){
+   const xx=x+dx,yy=y+dy,zz=z+dz;
+   if(xx<0||xx>=g.nx||yy<0||yy>=g.ny||zz<0||zz>=g.nz)continue;
+   sum+=fieldSamples[fieldIndex(xx,yy,zz)];weight++;
+  }
+  const value=sum/weight;
+  displayFieldSamples[j]=value;
+  maxAmplitude=Math.max(maxAmplitude,Math.abs(value));
+ }
+ return maxAmplitude;
+}
+function amplitudeSurfaceGeometry(){
+ // One traversal assembles the positive and negative signed-pressure lobes
+ // into a single render mesh, instead of three meshes plus contour layers.
+ const maxAmplitude=updateDisplayField();
+ const level=Math.max(.055,Math.min(.19,maxAmplitude*.30));
+ const positive=[],negative=[],g=FIELD_GRID;
+ if(maxAmplitude<level){
+  const empty=new THREE.BufferGeometry();
+  empty.setAttribute('position',new THREE.Float32BufferAttribute([],3));
+  empty.setAttribute('color',new THREE.Float32BufferAttribute([],3));
+  return empty;
+ }
+ for(let x=0;x<g.nx-1;x++)for(let y=0;y<g.ny-1;y++)for(let z=0;z<g.nz-1;z++){
+  const pts=[],values=[];
+  for(const [ox,oy,oz] of FIELD_CORNERS){
+   pts.push([g.x0+(x+ox)*g.dx,g.y0+(y+oy)*g.dy,g.z0+(z+oz)*g.dz]);
+   values.push(displayFieldSamples[fieldIndex(x+ox,y+oy,z+oz)]);
+  }
+  const hasPositive=Math.max(...values)>=level && Math.min(...values)<level;
+  const hasNegative=Math.min(...values)<=-level && Math.max(...values)>-level;
+  if(!hasPositive&&!hasNegative)continue;
+  for(const tet of FIELD_TETRA){
+   const corners=tet.map(i=>pts[i]),signed=tet.map(i=>values[i]);
+   if(hasPositive)tetraSurface(positive,corners,signed,level);
+   if(hasNegative)tetraSurface(negative,corners,signed.map(v=>-v),level);
+  }
+ }
+ const vertexPositions=new Float32Array(positive.length+negative.length);
+ vertexPositions.set(positive,0);vertexPositions.set(negative,positive.length);
+ const vertexColors=new Float32Array(vertexPositions.length);
+ const cyan=new THREE.Color(0x57c5db),violet=new THREE.Color(0xb394db);
+ for(let k=0;k<positive.length;k+=3)vertexColors.set([cyan.r,cyan.g,cyan.b],k);
+ for(let k=positive.length;k<vertexColors.length;k+=3)
+  vertexColors.set([violet.r,violet.g,violet.b],k);
+ const geom=new THREE.BufferGeometry();
+ geom.setAttribute('position',new THREE.BufferAttribute(vertexPositions,3));
+ geom.setAttribute('color',new THREE.BufferAttribute(vertexColors,3));
  return geom;
 }
 function refreshFieldTarget(){
@@ -325,32 +385,31 @@ function refreshFieldTarget(){
  }else fieldTransitionActive=true;
 }
 function rebuildField(){
- fieldLevels.forEach((level,i)=>{
-  const surf=meshAtLevel(level),lines=contourAtLevel(level);
-  surfaceViews[i].geometry.dispose();surfaceViews[i].geometry=surf;
-  lineViews[i].geometry.dispose();lineViews[i].geometry=lines;
- });
- const energy=Math.max(state.poolCoupling,state.wallCoupling);
- surfaceMaterials[0].opacity=.105+.055*energy;
- surfaceMaterials[1].opacity=.105+.12*energy;
- surfaceMaterials[2].opacity=.095+.12*energy;
+ if(!state.osc.some(o=>o.on))return; // Nothing to tessellate during silence.
+ if(topologyView==='field'){
+  const next=amplitudeSurfaceGeometry();
+  fieldSurface.geometry.dispose();fieldSurface.geometry=next;
+  fieldMaterial.opacity=.21+.085*Math.max(state.poolCoupling,state.wallCoupling,state.beatCharge);
+ }else{
+  // Expensive zero-crossing surfaces and contours only exist when requested.
+  const surface=meshAtLevel(0),contours=contourAtLevel(0);
+  nodeSurface.geometry.dispose();nodeSurface.geometry=surface;
+  nodeLines.geometry.dispose();nodeLines.geometry=contours;
+ }
 }
 function syncAtlasVisibility(){
- const visible=state.mode==='observer';
- const emitting=state.osc.some(o=>o.on);
+ const visible=state.mode==='observer',emitting=state.osc.some(o=>o.on);
  topologyGroup.visible=visible;
- // Still show the player's location and emitter markers in a silent chamber.
- // Hide ALL acoustic surfaces and contours until a real source emits energy.
- surfaceViews[0].visible=lineViews[0].visible=visible&&emitting&&(topologyView==='all'||topologyView==='nodes');
- for(const i of [1,2])
-  surfaceViews[i].visible=lineViews[i].visible=visible&&emitting&&(topologyView==='all'||topologyView==='energy');
+ fieldSurface.visible=visible&&emitting&&topologyView==='field';
+ nodeSurface.visible=nodeLines.visible=visible&&emitting&&topologyView==='nodes';
  emitterMarkers.visible=visible;
 }
 $('atlasToggle').addEventListener('click',()=>{
- topologyView=topologyView==='all'?'nodes':topologyView==='nodes'?'energy':'all';
- $('atlasToggle').textContent='View: '+(topologyView==='all'?'All':topologyView==='nodes'?'Nodes':'Energy');
+ topologyView=topologyView==='field'?'nodes':'field';
+ $('atlasToggle').textContent=topologyView==='field'?'View: Field':'View: Nodes';
+ viewDirty=true;
  syncAtlasVisibility();
- toast(topologyView==='all'?'All resonant contours':topologyView==='nodes'?'Nodal membranes':'Resonant energy volumes');
+ toast(topologyView==='field'?'Field: pressure response, without nodal clutter':'Nodes: diagnostic zero-pressure membranes');
 });
 function drawFieldAtlas(now){
  if(atlasDirty){
@@ -376,6 +435,7 @@ function drawFieldAtlas(now){
  }
  fieldLastStep=now;
  rebuildField();
+ viewDirty=false;
  atlasLastBuilt=now;
  syncAtlasVisibility();
 }
@@ -789,7 +849,7 @@ function renderField(time=0){
  if(state.mode==='observer'&&beamGuideDirty)refreshBeamGuides();
  if(state.mode==='observer'){
   time=0;
-   if(atlasDirty||fieldTransitionActive||atlasLastBuilt<0){
+   if(atlasDirty||fieldTransitionActive||atlasLastBuilt<0||viewDirty){
      drawFieldAtlas(performance.now());
    }
  }
