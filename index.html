@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.3</title>
+<title>Resonance: Worlds Within | Prototype 1.4</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -40,7 +40,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.3</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.4</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
     <div id="mode"><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER 01 · Water crossing and the hidden wall</div>
@@ -52,7 +52,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
       <div id="oscillators"></div><div id="responseReadout"><div class="measurement"><span>Water resonance</span><strong id="poolLevel">0%</strong></div><div class="potentialTrack"><span id="poolBar"></span></div><div class="measurement"><span>Stone signature</span><strong id="wallLevel">0%</strong></div><div class="potentialTrack wall"><span id="wallBar"></span></div><small id="modeHint">Thump the environment inside to identify its natural tones.</small><div id="powerHint">Active emitters share the available energy.</div></div>
       
       <div id="actions"><button id="atlasToggle">View: All</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
-      <p id="help">Observer sees the chamber through resonance alone. Pale 3D membranes are pressure nodes; cyan and violet layers show equal-strength field contours. Reflected survey echoes hint at unseen boundaries. Tune the emitters to reveal a dominant mode, and tap View to isolate Nodes or Energy. Return to Immersion to see matter and use physical tools. This is a stylized acoustic model.</p>
+      <p id="help">Observer sees resonance instead of the physical room. The translucent 3D topology now morphs smoothly when you tune; this is display interpolation, not the passage of time. Pale membranes show nodal regions, while cyan and violet surfaces show equal-field contours. Boundary hints are currently stylized survey echoes, not yet calculations from the actual meshes. Tap View for Nodes or Energy.</p>
     </div>
   </section>
   <section id="immersionTools" aria-label="Local sound instruments">
@@ -173,6 +173,9 @@ const FIELD_CORNERS=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,
 const FIELD_TETRA=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
 const fieldSamples=new Float32Array(FIELD_GRID.nx*FIELD_GRID.ny*FIELD_GRID.nz);
 const fieldIndex=(x,y,z)=>(x*FIELD_GRID.ny+y)*FIELD_GRID.nz+z;
+// Display transitions are visual smoothing only: no time passes in Observer.
+const fieldTargets=new Float32Array(fieldSamples.length);
+let fieldInitialized=false,fieldTransitionActive=false,fieldLastStep=-1;
 let atlasDirty=true,atlasLastBuilt=-1,topologyView='all';
 function bell(x,center,width){return Math.exp(-Math.pow((x-center)/width,2));}
 function surveyEcho(x,y,z){
@@ -245,11 +248,17 @@ function contourAtLevel(level){
  geom.setAttribute('position',new THREE.Float32BufferAttribute(out,3));
  return geom;
 }
-function rebuildField(){
+function refreshFieldTarget(){
  const g=FIELD_GRID;
  for(let x=0;x<g.nx;x++)for(let y=0;y<g.ny;y++)for(let z=0;z<g.nz;z++)
-  fieldSamples[fieldIndex(x,y,z)]=topologyAt(
+  fieldTargets[fieldIndex(x,y,z)]=topologyAt(
    g.x0+x*g.dx,g.y0+y*g.dy,g.z0+z*g.dz);
+ if(!fieldInitialized){
+  fieldSamples.set(fieldTargets);
+  fieldInitialized=true;
+ }else fieldTransitionActive=true;
+}
+function rebuildField(){
  fieldLevels.forEach((level,i)=>{
   const surf=meshAtLevel(level),lines=contourAtLevel(level);
   surfaceViews[i].geometry.dispose();surfaceViews[i].geometry=surf;
@@ -274,7 +283,33 @@ $('atlasToggle').addEventListener('click',()=>{
  syncAtlasVisibility();
  toast(topologyView==='all'?'All resonant contours':topologyView==='nodes'?'Nodal membranes':'Resonant energy volumes');
 });
-function drawFieldAtlas(){rebuildField();syncAtlasVisibility();}
+function drawFieldAtlas(now){
+ if(atlasDirty){
+  refreshFieldTarget();
+  atlasDirty=false;
+ }
+ // Only rebuild geometry while needed. During a slider drag, the old field
+ // approaches the new sampled shape gradually instead of jumping between meshes.
+ if(atlasLastBuilt>=0 && now-atlasLastBuilt<82)return;
+ if(fieldTransitionActive){
+  const dt=fieldLastStep<0?.08:Math.min(.16,Math.max(.016,(now-fieldLastStep)/1000));
+  const alpha=1-Math.exp(-dt/.16);
+  let maxError=0;
+  for(let i=0;i<fieldSamples.length;i++){
+   const delta=fieldTargets[i]-fieldSamples[i];
+   fieldSamples[i]+=delta*alpha;
+   maxError=Math.max(maxError,Math.abs(delta));
+  }
+  if(maxError<.0016){
+   fieldSamples.set(fieldTargets);
+   fieldTransitionActive=false;
+  }
+ }
+ fieldLastStep=now;
+ rebuildField();
+ atlasLastBuilt=now;
+ syncAtlasVisibility();
+}
 // Each emitter occupies a real location and its distance affects mode coupling.
 const EMITTERS=[
  {x:-4.35,z:0,label:'Pool side',color:0x67cde7},
@@ -352,9 +387,8 @@ function renderField(time=0){
  updateCouplings();
  if(state.mode==='observer'){
   time=0;
-   const now=performance.now();
-   if(atlasDirty&&(atlasLastBuilt<0||now-atlasLastBuilt>110)){
-     drawFieldAtlas();atlasDirty=false;atlasLastBuilt=now;
+   if(atlasDirty||fieldTransitionActive||atlasLastBuilt<0){
+     drawFieldAtlas(performance.now());
    }
  }
  // Material memory: the world holds its recent state for a limited immersed time.
