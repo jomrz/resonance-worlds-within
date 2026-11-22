@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.2</title>
+<title>Resonance: Worlds Within | Prototype 1.3</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -40,7 +40,7 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.2</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.3</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · First Chamber</div></div>
     <div id="mode"><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER 01 · Water crossing and the hidden wall</div>
@@ -51,8 +51,8 @@ button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10
     <div id="controlBody">
       <div id="oscillators"></div><div id="responseReadout"><div class="measurement"><span>Water resonance</span><strong id="poolLevel">0%</strong></div><div class="potentialTrack"><span id="poolBar"></span></div><div class="measurement"><span>Stone signature</span><strong id="wallLevel">0%</strong></div><div class="potentialTrack wall"><span id="wallBar"></span></div><small id="modeHint">Thump the environment inside to identify its natural tones.</small><div id="powerHint">Active emitters share the available energy.</div></div>
       
-      <div id="actions"><button id="atlasToggle" aria-pressed="true">3D field: On</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
-      <p id="help">Three emitters occupy different positions and share a fixed energy supply. Use the pool-side emitter near 136 Hz to prepare the water or the far-wall emitter near 224 Hz to prepare the passage. Several active emitters divide power. After a physical impulse, the mechanism retains its state temporarily, so you can change possibilities in Observer without losing progress. This is an approximate modal-coupling model.</p>
+      <div id="actions"><button id="atlasToggle">View: All</button><button id="tilt">Enable tilt</button><button id="save">Save discovery</button><button id="restore">Restore</button></div>
+      <p id="help">Observer sees the chamber through resonance alone. Pale 3D membranes are pressure nodes; cyan and violet layers show equal-strength field contours. Reflected survey echoes hint at unseen boundaries. Tune the emitters to reveal a dominant mode, and tap View to isolate Nodes or Energy. Return to Immersion to see matter and use physical tools. This is a stylized acoustic model.</p>
     </div>
   </section>
   <section id="immersionTools" aria-label="Local sound instruments">
@@ -120,6 +120,10 @@ for(let i=0;i<6;i++){
   const r=new THREE.Mesh(new THREE.TorusGeometry(1.5+i*.55,.008,5,96),new THREE.MeshBasicMaterial({color:i%2?0x65bce1:0xc89dd8,transparent:true,opacity:.16}));
   r.rotation.x=Math.PI/2;r.position.set(0,-1.4-i*.1,0);world.add(r);rings.push(r);
 }
+// All physical objects belong to the Immersion view, not the Observer.
+const physicalWorld=new THREE.Group();
+for(const object of [...world.children])physicalWorld.add(object);
+world.add(physicalWorld);
 // Larger-on-the-inside illusion: outer shell shows the same world at miniature scale.
 const shellGroup=new THREE.Group();
 const globe=new THREE.Group();scene.add(globe);
@@ -146,123 +150,131 @@ $('invertLook').addEventListener('click',()=>{
  try{localStorage.setItem('resonanceInvertY',invertLookY?'1':'0')}catch(e){}
  toast(invertLookY?'Flight: down looks up':'Normal: up looks up');
 });
-// Global atlas: an interference map of space, sampled at a single timeless state.
-// The fragment geometry and this field use the same mathematical sampleField().
-const atlasGeometry=new THREE.PlaneGeometry(15.3,8.1,64,36);
-atlasGeometry.rotateX(-Math.PI/2);
-const atlasColorAttribute=new THREE.BufferAttribute(
- new Float32Array(atlasGeometry.attributes.position.count*3),3
-);
-atlasGeometry.setAttribute('color',atlasColorAttribute);
-const atlasMesh=new THREE.Mesh(atlasGeometry,new THREE.MeshBasicMaterial({
- vertexColors:true,transparent:true,opacity:.63,side:THREE.DoubleSide,
- depthWrite:false,blending:THREE.AdditiveBlending
+// RESONANT TOPOLOGY: Observer sees only the field inferred from the chamber.
+// Isosurfaces and contour-lines share one scalar field. Matter itself is hidden.
+// Survey echoes are a simplified acoustic model, not a full wave solver.
+const topologyGroup=new THREE.Group();world.add(topologyGroup);
+const fieldLevels=[0,.20,-.20];
+const fieldColors=[0xe0edf4,0x5dd1e5,0xbda0e7];
+const surfaceMaterials=fieldColors.map((c,i)=>new THREE.MeshBasicMaterial({
+ color:c,side:THREE.DoubleSide,transparent:true,opacity:i===0?.15:.12,depthWrite:false
 }));
-atlasMesh.position.y=.13;world.add(atlasMesh);
-// The Observer can perceive the 3D energy field as a static volume.
-const volumeGroup=new THREE.Group();world.add(volumeGroup);
-const volumeGeometry=new THREE.BufferGeometry(),nodeGeometry=new THREE.BufferGeometry();
-const fieldCoords=[];
-for(let x=-7.25;x<=7.25;x+=.76){
- for(let y=.25;y<=4.05;y+=.56){
-  for(let z=-3.45;z<=3.45;z+=.76)fieldCoords.push([x,y,z]);
+const surfaceViews=surfaceMaterials.map(material=>{
+ const mesh=new THREE.Mesh(new THREE.BufferGeometry(),material);
+ mesh.frustumCulled=false;topologyGroup.add(mesh);return mesh;
+});
+const lineViews=fieldColors.map((c,i)=>{
+ const lines=new THREE.LineSegments(new THREE.BufferGeometry(),
+  new THREE.LineBasicMaterial({color:c,transparent:true,opacity:i===0?.48:.42,depthWrite:false}));
+ lines.frustumCulled=false;topologyGroup.add(lines);return lines;
+});
+const FIELD_GRID={nx:27,ny:12,nz:17,x0:-7.85,y0:-.10,z0:-4.05,dx:15.7/26,dy:4.75/11,dz:8.1/16};
+const FIELD_CORNERS=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+const FIELD_TETRA=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
+const fieldSamples=new Float32Array(FIELD_GRID.nx*FIELD_GRID.ny*FIELD_GRID.nz);
+const fieldIndex=(x,y,z)=>(x*FIELD_GRID.ny+y)*FIELD_GRID.nz+z;
+let atlasDirty=true,atlasLastBuilt=-1,topologyView='all';
+function bell(x,center,width){return Math.exp(-Math.pow((x-center)/width,2));}
+function surveyEcho(x,y,z){
+ const background=.085*Math.sin(1.15*x+.32*Math.cos(1.38*z))*Math.cos(.72*y);
+ const pool=.16*bell(x,0,3.25)*bell(y,-.28,1.12)*Math.cos(1.7*z+.3*Math.sin(x));
+ const wall=.105*bell(x,5.95,1.5)*Math.cos(1.8*y+1.25*z);
+ // Learning the wall's hollow tone changes how its interior response is perceived.
+ const cavity=(state.foundWallTone?.26:.035)*bell(x,6.2,1.27)*bell(z,0,1.35)
+  *bell(y,1.6,1.55)*Math.cos(3.35*Math.hypot(z,y-1.55)+.3*x);
+ return background+pool+wall+cavity;
+}
+function topologyAt(x,y,z){
+ return surveyEcho(x,y,z)+.94*modalField(x,y,z);
+}
+function interpolateEdge(a,b,va,vb,iso){
+ const t=Math.abs(vb-va)<1e-8?.5:Math.max(0,Math.min(1,(iso-va)/(vb-va)));
+ return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+}
+function tetraSurface(out,p,v,level){
+ const on=[],off=[];
+ for(let i=0;i<4;i++)(v[i]>=level?on:off).push(i);
+ if(!on.length||!off.length)return;
+ const intersect=(a,b)=>interpolateEdge(p[a],p[b],v[a],v[b],level);
+ const triangle=(a,b,c)=>out.push(...a,...b,...c);
+ if(on.length===1){
+  const i=on[0];triangle(intersect(i,off[0]),intersect(i,off[1]),intersect(i,off[2]));
+ }else if(on.length===3){
+  const i=off[0];triangle(intersect(i,on[0]),intersect(i,on[2]),intersect(i,on[1]));
+ }else{
+  const a=intersect(on[0],off[0]),b=intersect(on[0],off[1]);
+  const c=intersect(on[1],off[1]),d=intersect(on[1],off[0]);
+  triangle(a,b,c);triangle(a,c,d);
  }
 }
-const fieldPositions=new Float32Array(fieldCoords.length*3);
-const fieldColors=new Float32Array(fieldCoords.length*3);
-const nodePositions=new Float32Array(fieldCoords.length*3);
-volumeGeometry.setAttribute('position',new THREE.BufferAttribute(fieldPositions,3));
-volumeGeometry.setAttribute('color',new THREE.BufferAttribute(fieldColors,3));
-nodeGeometry.setAttribute('position',new THREE.BufferAttribute(nodePositions,3));
-const amplitudeCloud=new THREE.Points(volumeGeometry,
- new THREE.PointsMaterial({size:3.2,sizeAttenuation:false,vertexColors:true,transparent:true,
- opacity:.58,depthWrite:false,blending:THREE.AdditiveBlending}));
-const nodeCloud=new THREE.Points(nodeGeometry,
- new THREE.PointsMaterial({size:2.0,sizeAttenuation:false,color:0xe9f6ff,transparent:true,
- opacity:.3,depthWrite:false,blending:THREE.AdditiveBlending}));
-volumeGroup.add(amplitudeCloud,nodeCloud);
-amplitudeCloud.frustumCulled=false;nodeCloud.frustumCulled=false;
-const nodalSheets=[];
-function nodeSheet(w,h,x,y,z,axis,color){
- const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
-  new THREE.MeshBasicMaterial({color,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}));
- m.position.set(x,y,z);
- if(axis==='horizontal')m.rotation.x=-Math.PI/2;
- volumeGroup.add(m);nodalSheets.push({mesh:m,kind:color===0x83d7e9?'pool':'wall'});
+function meshAtLevel(level){
+ const out=[],g=FIELD_GRID;
+ for(let x=0;x<g.nx-1;x++)for(let y=0;y<g.ny-1;y++)for(let z=0;z<g.nz-1;z++){
+  const positions=[],values=[];
+  for(const [ox,oy,oz] of FIELD_CORNERS){
+   positions.push([g.x0+(x+ox)*g.dx,g.y0+(y+oy)*g.dy,g.z0+(z+oz)*g.dz]);
+   values.push(fieldSamples[fieldIndex(x+ox,y+oy,z+oz)]);
+  }
+  if(values.every(v=>v>=level)||values.every(v=>v<level))continue;
+  for(const t of FIELD_TETRA){
+   tetraSurface(out,t.map(i=>positions[i]),t.map(i=>values[i]),level);
+  }
+ }
+ const geom=new THREE.BufferGeometry();
+ geom.setAttribute('position',new THREE.Float32BufferAttribute(out,3));
+ return geom;
 }
-nodeSheet(7.4,4.4,0,2.05,-2.1,'vertical',0x83d7e9);
-nodeSheet(7.4,4.4,0,2.05,2.1,'vertical',0x83d7e9);
-nodeSheet(7.4,7.8,0,2.65,0,'horizontal',0x83d7e9);
-nodeSheet(4.5,4.2,5.3,2.05,-1.95,'vertical',0xcc91ee);
-nodeSheet(4.5,4.2,5.3,2.05,1.95,'vertical',0xcc91ee);
-function drawWaveVolume(){
- const positive=new THREE.Color(0x4dd9f3),negative=new THREE.Color(0xd48def);
- const color=new THREE.Color();
- for(let i=0;i<fieldCoords.length;i++){
-  const [x,y,z]=fieldCoords[i],v=modalField(x,y,z),amplitude=Math.abs(v);
-  const j=i*3;
-  if(amplitude>.27){
-   fieldPositions[j]=x;fieldPositions[j+1]=y;fieldPositions[j+2]=z;
-   color.copy(v>=0?positive:negative).multiplyScalar(.38+Math.min(1,amplitude)*.85);
-   fieldColors[j]=color.r;fieldColors[j+1]=color.g;fieldColors[j+2]=color.b;
-  }else{fieldPositions[j]=0;fieldPositions[j+1]=-150;fieldPositions[j+2]=0;}
-  // A pressure node is a 3D surface, sampled here as a pale dot cloud.
-  if((state.poolCoupling>.17||state.wallCoupling>.17)&&amplitude<.10){
-   nodePositions[j]=x;nodePositions[j+1]=y;nodePositions[j+2]=z;
-  }else{nodePositions[j]=0;nodePositions[j+1]=-150;nodePositions[j+2]=0;}
+function contourAtLevel(level){
+ const out=[],g=FIELD_GRID,edges=[[0,1],[1,2],[2,3],[3,0]];
+ // Line contours at several heights expose the topology's depth, like a terrain map.
+ for(const y of [1,3,5,7,9]){
+  for(let x=0;x<g.nx-1;x++)for(let z=0;z<g.nz-1;z++){
+   const xx=[x,x+1,x+1,x],zz=[z,z,z+1,z+1];
+   const values=xx.map((ix,i)=>fieldSamples[fieldIndex(ix,y,zz[i])]);
+   const intersections=[];
+   for(const [a,b] of edges){
+    if((values[a]>=level)===(values[b]>=level))continue;
+    const at=(i)=>[g.x0+xx[i]*g.dx,g.y0+y*g.dy+.014,g.z0+zz[i]*g.dz];
+    intersections.push(interpolateEdge(at(a),at(b),values[a],values[b],level));
+   }
+   for(let i=0;i+1<intersections.length;i+=2)
+    out.push(...intersections[i],...intersections[i+1]);
+  }
  }
- volumeGeometry.attributes.position.needsUpdate=true;
- volumeGeometry.attributes.color.needsUpdate=true;
- nodeGeometry.attributes.position.needsUpdate=true;
- // Mesh nodes show exact zero-pressure sheets of the individual modal functions.
- for(const item of nodalSheets){
-  const energy=item.kind==='pool'?state.poolCoupling:state.wallCoupling;
-  item.mesh.material.opacity=energy>.18?.015+.065*energy:0;
- }
+ const geom=new THREE.BufferGeometry();
+ geom.setAttribute('position',new THREE.Float32BufferAttribute(out,3));
+ return geom;
 }
-const waveProbes=new THREE.Group();world.add(waveProbes);
-const columnProbes=[];
-for(const x of [-7.3,-4,4,7.3])for(const z of [-3.5,3.5]){
- const h=3+Math.abs(x)*.11;
- const halo=new THREE.Mesh(
-  new THREE.TorusGeometry(.38,.03,6,32),
-  new THREE.MeshBasicMaterial({color:0x81d5e7,transparent:true,opacity:.8,depthWrite:false})
- );
- halo.rotation.x=Math.PI/2;halo.position.set(x,h-.27,z);
- waveProbes.add(halo);columnProbes.push({x,z,halo});
-}
-let atlasEnabled=true,atlasDirty=true;
-const atlasColor=new THREE.Color();
-function drawFieldAtlas(){
- const vertices=atlasGeometry.attributes.position,colors=atlasColorAttribute;
- const active=state.poolCoupling>.035||state.wallCoupling>.035;
- for(let i=0;i<vertices.count;i++){
-   const x=vertices.getX(i),z=vertices.getZ(i);
-   const v=active?sampleField(x,z,0):0;
-   const intensity=Math.min(1,Math.abs(v)),node=Math.exp(-v*v*78);
-   atlasColor.setHSL(v<0?.75:.52,.79,active?(.09+.30*intensity+.38*node):.008);
-   colors.setXYZ(i,atlasColor.r,atlasColor.g,atlasColor.b);
- }
- colors.needsUpdate=true;
- drawWaveVolume();
- for(const p of columnProbes){
-   const v=active?sampleField(p.x,p.z,0):0,intensity=Math.min(1,Math.abs(v));
-   p.halo.material.color.setHSL(v<0?.75:.52,.75,.22+.42*intensity);
-   p.halo.material.opacity=active?.3+.6*intensity:.05;
-   p.halo.scale.setScalar(.74+.35*intensity);
- }
+function rebuildField(){
+ const g=FIELD_GRID;
+ for(let x=0;x<g.nx;x++)for(let y=0;y<g.ny;y++)for(let z=0;z<g.nz;z++)
+  fieldSamples[fieldIndex(x,y,z)]=topologyAt(
+   g.x0+x*g.dx,g.y0+y*g.dy,g.z0+z*g.dz);
+ fieldLevels.forEach((level,i)=>{
+  const surf=meshAtLevel(level),lines=contourAtLevel(level);
+  surfaceViews[i].geometry.dispose();surfaceViews[i].geometry=surf;
+  lineViews[i].geometry.dispose();lineViews[i].geometry=lines;
+ });
+ const energy=Math.max(state.poolCoupling,state.wallCoupling);
+ surfaceMaterials[0].opacity=.105+.055*energy;
+ surfaceMaterials[1].opacity=.105+.12*energy;
+ surfaceMaterials[2].opacity=.095+.12*energy;
 }
 function syncAtlasVisibility(){
- const visible=atlasEnabled&&state.mode==='observer';
- atlasMesh.visible=visible;waveProbes.visible=visible;volumeGroup.visible=visible;emitterMarkers.visible=state.mode==='observer';
+ const visible=state.mode==='observer';
+ topologyGroup.visible=visible;
+ surfaceViews[0].visible=lineViews[0].visible=visible&&(topologyView==='all'||topologyView==='nodes');
+ for(const i of [1,2])
+  surfaceViews[i].visible=lineViews[i].visible=visible&&(topologyView==='all'||topologyView==='energy');
+ emitterMarkers.visible=visible;
 }
 $('atlasToggle').addEventListener('click',()=>{
- atlasEnabled=!atlasEnabled;
- $('atlasToggle').textContent=atlasEnabled?'3D field: On':'3D field: Off';
- $('atlasToggle').setAttribute('aria-pressed',String(atlasEnabled));
- atlasDirty=true;syncAtlasVisibility();
- toast(atlasEnabled?'3D standing modes visible':'3D field hidden');
+ topologyView=topologyView==='all'?'nodes':topologyView==='nodes'?'energy':'all';
+ $('atlasToggle').textContent='View: '+(topologyView==='all'?'All':topologyView==='nodes'?'Nodes':'Energy');
+ syncAtlasVisibility();
+ toast(topologyView==='all'?'All resonant contours':topologyView==='nodes'?'Nodal membranes':'Resonant energy volumes');
 });
+function drawFieldAtlas(){rebuildField();syncAtlasVisibility();}
 // Each emitter occupies a real location and its distance affects mode coupling.
 const EMITTERS=[
  {x:-4.35,z:0,label:'Pool side',color:0x67cde7},
@@ -339,7 +351,11 @@ function sampleField(x,z,time=0){
 function renderField(time=0){
  updateCouplings();
  if(state.mode==='observer'){
-  time=0;if(atlasDirty){drawFieldAtlas();atlasDirty=false;}
+  time=0;
+   const now=performance.now();
+   if(atlasDirty&&(atlasLastBuilt<0||now-atlasLastBuilt>110)){
+     drawFieldAtlas();atlasDirty=false;atlasLastBuilt=now;
+   }
  }
  // Material memory: the world holds its recent state for a limited immersed time.
  const crossingActive=state.waterRaisedUntil>immersionTime;
@@ -583,8 +599,9 @@ for(const kind of ['knock','chime','pulse'])$(kind).addEventListener('click',()=
 function changeMode(mode){
  stopJoystick(null);stopLookJoystick(null);
  state.mode=mode;
+ physicalWorld.visible=mode==='immersion';
  $('objective').textContent=mode==='observer'
-   ?'OBSERVER · Timeless standing-field atlas'
+   ?'OBSERVER · A world perceived through resonance'
    :'IMMERSION · Time flows · Waves travel · Reach the gate';
  for(const p of state.pulses)if(p.visual)p.visual.visible=mode==='immersion';
  $('observer').classList.toggle('active',mode==='observer');
@@ -596,7 +613,7 @@ function changeMode(mode){
  $('viewControls').classList.toggle('hidden',mode!=='observer');
  world.scale.setScalar(mode==='observer'?.23:1);world.position.set(0,0,0);
  atlasDirty=true;syncAtlasVisibility();
- toast(mode==='observer'?'Observer: all waves at once':'Immersion: traveling waves in time');
+ toast(mode==='observer'?'Matter disappears · Only resonance remains':'Matter visible · Time resumes');
 }
 $('observer').addEventListener('click',()=>changeMode('observer'));
 $('immerse').addEventListener('click',()=>changeMode('immersion'));
