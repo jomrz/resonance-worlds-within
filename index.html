@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.6</title>
+<title>Resonance: Worlds Within | Prototype 1.6.1</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -77,14 +77,14 @@ body.in-immersion #status{top:calc(env(safe-area-inset-top,0px) + 65px)}
 body.in-immersion #objective{display:none}
 @media(max-height:690px){#controls{max-height:none}#move{bottom:calc(17px + env(safe-area-inset-bottom,0px))}.joystick{width:91px!important;height:91px!important}}
 #beatReadout{display:flex;justify-content:space-between;gap:7px;align-items:center;margin-top:6px;font-size:10px;color:#a9c0d2}#beatReadout strong{color:#e9c0eb}#beatInfo{color:#bfa6e0;font-variant-numeric:tabular-nums}#aimTip{color:#839eaf;max-width:33%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-#freqMode{min-width:38px;font-size:11px!important;color:#b8e9e9;border-color:#4f93ac!important}
+#freqMode{min-width:49px;font-size:11px!important;color:#b8e9e9;border-color:#4f93ac!important}
 </style>
 </head>
 <body>
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.6</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · Reflection Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.6.1</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · Reflection Chamber</div></div>
     <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER 01 · Water crossing and the hidden wall</div>
@@ -100,7 +100,7 @@ body.in-immersion #objective{display:none}
       <div id="dockSettingActions"><button id="audio">🔈 Sound off</button><button id="soundTest">♪ Test</button><button id="tilt">Enable tilt</button><button id="save">Save</button><button id="restore">Restore</button></div>
       <div id="viewControls"><button id="panToggle" aria-label="Switch between rotating and panning the world" aria-pressed="false">Pan</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div>
       <div id="powerHint">Emitters share a limited energy supply.</div><small id="modeHint">Thump materials inside to discover natural tones.</small>
-      <p id="help">Expanded reflection chamber: more pillars, a blocking baffle, an angled stone reflector and a suspended disc on the north end of the left platform. Select an emitter and tap Hz to switch its slider to Aim. Both beams must reach the disc with a 4 Hz difference. The second beam can reflect off the actual angled slab. The resulting disc vibrates in Immersion, where Chime can open the northern vault. In Observer the beat potential is timeless. This uses direct and approximate one-bounce acoustic paths, not a complete room-mode solver.</p>
+      <p id="help">To aim: tap Source 1, 2 or 3, tap Aim ↗ beside the slider, then drag the bearing (0° points right, 90° toward +Z, 180° left, 270° toward −Z). Use the slider while watching the source's beam ray move around the chamber. Tap Hz to tune frequency again. Turn sources Off to remove their waves completely. The beat disc responds when two beams overlap and differ by 4 Hz. Reflection paths are approximate, not a full acoustic wave solver.</p>
     </div>
   </section>
   <div id="crosshair" aria-hidden="true">·</div>
@@ -337,10 +337,13 @@ function rebuildField(){
 }
 function syncAtlasVisibility(){
  const visible=state.mode==='observer';
+ const emitting=state.osc.some(o=>o.on);
  topologyGroup.visible=visible;
- surfaceViews[0].visible=lineViews[0].visible=visible&&(topologyView==='all'||topologyView==='nodes');
+ // Still show the player's location and emitter markers in a silent chamber.
+ // Hide ALL acoustic surfaces and contours until a real source emits energy.
+ surfaceViews[0].visible=lineViews[0].visible=visible&&emitting&&(topologyView==='all'||topologyView==='nodes');
  for(const i of [1,2])
-  surfaceViews[i].visible=lineViews[i].visible=visible&&(topologyView==='all'||topologyView==='energy');
+  surfaceViews[i].visible=lineViews[i].visible=visible&&emitting&&(topologyView==='all'||topologyView==='energy');
  emitterMarkers.visible=visible;
 }
 $('atlasToggle').addEventListener('click',()=>{
@@ -449,9 +452,9 @@ function reflectionLength(source,point,face){
 function makeAcousticCache(){
  const sceneGeometry=extractAcousticSurfaces(),g=FIELD_GRID;
  const total=g.nx*g.ny*g.nz,nFaces=sceneGeometry.faces.length;
- // Three tunable emitters plus a faint fixed diagnostic probe to perceive
- // the environment even before any strong mode is excited.
- const sources=[...EMITTERS.map(p=>[p.x,1.04,p.z]),[-6.7,1.3,-2.7]];
+ // Only actual user-controlled sources generate standing waves.
+ // The earlier hidden diagnostic probe was effectively always on.
+ const sources=EMITTERS.map(p=>[p.x,1.04,p.z]);
  const paths=sources.map(()=>new Float32Array(total*(1+nFaces)));
  const opaque=new Uint8Array(total);
  for(let x=0;x<g.nx;x++)for(let y=0;y<g.ny;y++)for(let z=0;z<g.nz;z++){
@@ -488,6 +491,8 @@ function pressureFromPaths(paths,index,frequency,phase,reflectors){
  return real;
 }
 function acousticFieldAtGrid(index){
+ // Silence is true zero pressure, not a background survey wave.
+ if(!state.osc.some(o=>o.on))return 0;
  const cache=ensureAcousticCache();
  if(cache.opaque[index])return 0;
  let energy=0;
@@ -507,9 +512,6 @@ function acousticFieldAtGrid(index){
   }
   energy+=pressure*.73/enabled;
  }
- // A subdued stationary diagnostic probe reveals the chamber's boundaries
- // even when all tunable sources are disabled.
- energy+=.13*pressureFromPaths(cache.paths[3],index,87,0,cache.faces);
  return energy;
 }
 function reflectedMagnitude(source,point,freq){
@@ -678,7 +680,9 @@ function updateEmitterDock(){
  $('freqEditor').classList.toggle('expanded',selected);
  if(!selected){$('selectedEmitter').textContent='Choose source';}
  const current=selected?state.osc[selectedEmitterIndex]:null;
- $('freqMode').textContent=editorMode==='frequency'?'Hz':'Aim';
+ // The button names the mode you can SWITCH TO, instead of being a cryptic label.
+ $('freqMode').textContent=editorMode==='frequency'?'Aim ↗':'Hz';
+ $('freqMode').setAttribute('aria-label',editorMode==='frequency'?'Switch to aim direction':'Switch to frequency');
  $('freqMode').setAttribute('aria-pressed',String(editorMode==='aim'));
  emitterButtons.forEach((button,i)=>{
   const active=i===selectedEmitterIndex;
@@ -688,7 +692,8 @@ function updateEmitterDock(){
   button.setAttribute('aria-pressed',String(active));
  });
  if(!selected)return;
- $('selectedEmitter').textContent=EMITTERS[selectedEmitterIndex].label;
+ $('selectedEmitter').textContent=EMITTERS[selectedEmitterIndex].label+
+   (editorMode==='aim'?' · Bearing':' · Frequency');
  const value=editorMode==='aim'?(current.aim||0):current.freq;
  $('frequencyRange').min=editorMode==='aim'?'0':'60';
  $('frequencyRange').max=editorMode==='aim'?'359':'420';
@@ -821,8 +826,12 @@ function renderField(time=0){
  $('beatMeter').textContent=Math.round(state.beatCharge*100)+'%'+(state.beatCharge>.56?' READY':'');
  $('beatInfo').textContent=(state.osc[0].on&&state.osc[1].on)
    ?state.beatRate+' Hz beat':'Two sources needed';
- $('aimTip').textContent=state.beatOverlap>.35?'Beams overlap':'Aim toward the disc';
- beatHalo.material.opacity=.10+.70*state.beatCharge;
+ $('aimTip').textContent=selectedEmitterIndex>=0&&editorMode==='aim'
+   ?'0° right · 90° north'
+   :state.activeEmitters===0?'No active waves'
+   :state.beatOverlap>.35?'Beams overlap':'Tap Aim ↗ to turn a source';
+ beatHalo.visible=state.activeEmitters>0;
+ beatHalo.material.opacity=state.activeEmitters>0?.10+.70*state.beatCharge:0;
  beatHalo.scale.setScalar(.8+.45*state.beatCharge);
  $('powerHint').textContent=state.activeEmitters===0
   ?'No active sources. Enable one emitter.'
@@ -833,7 +842,9 @@ function renderField(time=0){
      (state.foundWallTone?'Hollow wall: '+WALL_MODE_HZ+' Hz':null)].filter(Boolean).join(' · ')
    :'Thump near a material in Immersion to learn its tone';
  if(state.mode==='observer'){
-  $('fieldStatus').textContent=state.beatCharge>.56
+  $('fieldStatus').textContent=state.activeEmitters===0
+   ?'NO EMITTERS ACTIVE · Acoustic field is silent'
+   :state.beatCharge>.56
    ?'DISC POTENTIAL · Shift inside and CHIME near the disc'
    :state.poolCoupling>.78
    ?'POOL RESONATES · Go inside and PULSE near the rim'
