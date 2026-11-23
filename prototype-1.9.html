@@ -277,6 +277,17 @@ const tiltNeutral={beta:null,gamma:null};
 // Removed the decorative orbit ring: it looked like an unexplained wave reflection.
 // Observer focuses on the acoustic landscape rather than decorative stars.
 const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,wallProbeAt:-100,wallProbeZ:0,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false,beatProbeAt:-100};
+// Remember the far-shore checkpoint across refreshes. A direct testing link
+// with ?start=stone also resumes this stage without replaying the pond.
+const WALL_PROGRESS_KEY='resonance19FarShore';
+try{
+ const params=new URLSearchParams(window.location.search);
+ if(params.get('reset')==='1')localStorage.removeItem(WALL_PROGRESS_KEY);
+ if(params.get('start')==='stone'||localStorage.getItem(WALL_PROGRESS_KEY)==='1'){
+  state.hasCrossedGap=true;state.playerX=4.25;state.playerZ=0;
+  localStorage.setItem(WALL_PROGRESS_KEY,'1');
+ }
+}catch(e){}
 const observerPan=new THREE.Vector2(0,0); // Camera-space pan; globe pivot stays at origin.
 let invertLookY=false;
 try{invertLookY=localStorage.getItem('resonanceInvertY')==='1'}catch(e){}
@@ -1686,11 +1697,12 @@ $('keepExploring').addEventListener('click',()=>$('discovery').classList.add('hi
 $('anotherRoute').addEventListener('click',()=>{
  $('discovery').classList.add('hidden');
  state.finished=false;state.hasCrossedGap=false;
+ try{localStorage.removeItem(WALL_PROGRESS_KEY)}catch(e){}
  state.playerX=-5.5;state.playerZ=0;state.yaw=0;state.pitch=-.07;
  state.waterRaisedUntil=-1;state.wallOpenUntil=-1;state.beatOpenUntil=-1;
  state.lampLit=false;state.urnCharge=0;state.urnStage=0;state.urnReady=false;
  state.activeChamber=0;$('previewRoom').textContent='Test Room II';
- updateRailGraphics();planeDirty=true;
+ updateRailGraphics();planeDirty=true;updateObjective();
  renderField();toast('Both chambers reset · Discover another arrangement');
 });
 let audioCtx=null,voices=[],soundOn=false,masterGain=null;
@@ -2099,7 +2111,7 @@ canvas.addEventListener('wheel',e=>{
 $('save').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonancePlane19Discoveries')||'[]');notes.push({saved:new Date().toISOString(),osc:state.osc.map(o=>({...o}))});localStorage.setItem('resonancePlane19Discoveries',JSON.stringify(notes.slice(-20)));toast(`Discovery saved (${Math.min(notes.length,20)})`)});
 $('previewRoom').addEventListener('click',()=>{
  const next=state.activeChamber===0?1:0;
- state.activeChamber=next;state.playerX=next?11:-5.5;state.playerZ=0;
+ state.activeChamber=next;state.playerX=next?11:(state.hasCrossedGap?4.25:-5.5);state.playerZ=0;
  state.yaw=next?0:0;state.pitch=-.07;
  $('previewRoom').textContent=next?'Test Room I':'Test Room II';
  updateObjective();
@@ -2146,6 +2158,7 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
    }
    if(state.activeChamber===0&&!state.hasCrossedGap&&state.playerX>3.33&&state.playerX<7.6){
      state.hasCrossedGap=true;
+     try{localStorage.setItem(WALL_PROGRESS_KEY,'1')}catch(e){}
      setPlaneDirty();updateObjective();
      toast('CROSSING COMPLETE · The hidden stone is next');
    }
