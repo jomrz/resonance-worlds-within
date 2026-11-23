@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.9.2</title>
+<title>Resonance: Worlds Within | Prototype 1.9.3</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -81,13 +81,22 @@ body.in-immersion #objective{display:none}
 #planeStats{font-size:10px;color:#a2c9d5;margin-top:6px}
 #immersionTools #actionButton{width:79px;height:79px}
 #dockSettings #viewControls{justify-content:center}
+#stoneBeacon{position:absolute;left:50%;top:50%;width:118px;height:118px;transform:translate(-50%,-50%);display:none;pointer-events:none;z-index:7;overflow:visible;filter:drop-shadow(0 0 5px rgba(89,210,243,.58))}
+#stoneBeacon .stoneWave{position:absolute;left:50%;top:50%;width:64px;height:64px;margin-left:-32px;margin-top:-32px;border:2.5px solid #90ebff;border-radius:50%;opacity:0;will-change:transform,opacity}
+#stoneBeacon .stoneTarget{position:absolute;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%);border:2px dashed #a2edff;border-radius:50%;box-shadow:0 0 10px rgba(142,229,252,.6);background:rgba(24,88,112,.18)}
+#stoneBeacon .stoneTarget:after{content:"";position:absolute;left:50%;top:50%;width:5px;height:5px;transform:translate(-50%,-50%);border-radius:50%;background:#c9f8ff}
+#stoneBeacon .stoneLabel{position:absolute;left:50%;top:84px;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:700;letter-spacing:.05em;color:#d5f6ff;text-shadow:0 1px 4px #06101b,0 0 10px #0a344c;background:rgba(9,29,45,.75);padding:3px 6px;border-radius:6px}
 </style>
 </head>
 <body>
 <canvas id="world"></canvas>
 <div id="hud">
+  <div id="stoneBeacon" aria-hidden="true">
+    <span class="stoneWave"></span><span class="stoneWave"></span><span class="stoneWave"></span>
+    <span class="stoneTarget"></span><span class="stoneLabel" id="stoneSignalLabel"></span>
+  </div>
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.9.2</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.9.3</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
     <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER I · The submerged path</div>
@@ -2138,6 +2147,45 @@ $('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.g
 let toastTimer=0;function toast(txt){$('toast').textContent=txt;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),1750)}
 const clock=new THREE.Clock();let frame=0,immersionTime=0;
 let previousFrame=0;
+// Screen-space wall signal is projected from the SAME world coordinate as
+// the hidden stone seam. This avoids rings getting lost under the 2D surface,
+// and makes it obvious which landmark is (or isn't) resonating.
+const stoneBeacon=$('stoneBeacon');
+const stoneBeaconWaves=[...stoneBeacon.querySelectorAll('.stoneWave')];
+const stoneSignalLabel=$('stoneSignalLabel');
+const stoneBeaconPoint=new THREE.Vector3(5.78,1.4,0);
+function updateStoneBeacon(t){
+ // The player's actual location also identifies the far shore, including
+ // pre-checkpoint saves from an already-running gameplay session.
+ const atStone=state.activeChamber===0&&
+  (state.hasCrossedGap||state.playerX>3.3);
+ if(state.mode!=='observer'||!atStone){
+  stoneBeacon.style.display='none';return;
+ }
+ // Use the physical chamber origin, rather than an assumed screen position.
+ world.updateWorldMatrix(true,false);
+ camera.updateMatrixWorld();
+ const screen=world.localToWorld(stoneBeaconPoint.clone()).project(camera);
+ if(!Number.isFinite(screen.x)||screen.z < -1||screen.z>1){
+  stoneBeacon.style.display='none';return;
+ }
+ const rect=canvas.getBoundingClientRect();
+ stoneBeacon.style.left=(rect.left+(screen.x+1)*.5*rect.width)+'px';
+ stoneBeacon.style.top=(rect.top+(1-screen.y)*.5*rect.height)+'px';
+ stoneBeacon.style.display='block';
+ const elapsed=performance.now()*.001-state.wallProbeRealAt;
+ const probe=elapsed>=0&&elapsed<8?Math.exp(-elapsed*.52):0;
+ const energy=Math.min(1,Math.max(state.wallCoupling,probe*.88));
+ stoneSignalLabel.textContent='STONE '+Math.round(state.wallCoupling*100)+'%';
+ // A quiet stone gets a stationary locator. Driven or freshly struck stone
+ // has wavefronts that expand from its own position.
+ stoneBeaconWaves.forEach((wave,i)=>{
+  const phase=(t*.82+i/3)%1;
+  wave.style.transform='scale('+(.30+1.90*phase).toFixed(3)+')';
+  wave.style.opacity=energy>.012?
+   String(Math.min(.94,(.2+.82*energy)*(1-phase))):'0';
+ });
+}
 function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();
  const dt=Math.min(.06,Math.max(0,t-previousFrame));previousFrame=t;
  if(state.mode==='immersion')immersionTime+=dt;
@@ -2204,6 +2252,7 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
     const direction=new THREE.Vector3(Math.cos(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),Math.sin(state.yaw)*Math.cos(state.pitch));
     camera.lookAt(camera.position.clone().add(direction));
   }
+  updateStoneBeacon(t);
   const perceivedTime=state.mode==='immersion'?immersionTime:0;
   // Visual scintillation expresses possible resonance, without advancing
   // physical simulation time in Observer.
