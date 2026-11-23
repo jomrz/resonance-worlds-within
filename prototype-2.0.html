@@ -1,0 +1,2625 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#09101b" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Resonance" />
+<title>Resonance: Worlds Within | Prototype 2.0.0</title>
+<style>
+:root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
+* {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
+#world {position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#hud {position:fixed;inset:0;pointer-events:none}
+#top {position:absolute;top:env(safe-area-inset-top,0px);left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:15px;gap:10px}
+#identity .kicker {font-size:10px;color:#90c6e7;letter-spacing:.21em;font-weight:650} #identity .name {font-size:21px;font-weight:750;letter-spacing:.02em;margin-top:3px} #identity .sub {font-size:11px;color:var(--muted);margin-top:4px}
+button,input {font:inherit}button {border:1px solid var(--edge);border-radius:10px;background:rgba(21,38,59,.9);color:var(--ink);padding:10px 12px;cursor:pointer;touch-action:manipulation;font-size:13px}button:active{background:#31526d}button.active{background:rgba(55,106,133,.85);border-color:#6cb7db}button.secondary{background:rgba(11,25,43,.88)}
+#mode {display:flex;gap:5px;pointer-events:auto}#mode button{font-size:12px;padding:10px 9px}
+#status {position:absolute;top:calc(env(safe-area-inset-top,0px) + 89px);left:15px;right:15px;pointer-events:none;display:flex;justify-content:center}#status span{max-width:340px;text-align:center;color:#b1cbdd;background:rgba(8,19,31,.64);padding:6px 11px;border-radius:999px;font-size:11px}
+#controls {position:absolute;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-width:540px;margin:auto;background:rgba(9,21,36,.93);border:1px solid var(--edge);border-radius:18px;box-shadow:0 12px 45px rgba(0,0,0,.35);pointer-events:auto;backdrop-filter:blur(15px);overflow:hidden}
+#controlHeading{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;gap:8px}#controlHeading strong{font-size:13px;letter-spacing:.04em}#controlHeading small{font-size:10px;color:var(--muted)}#controlHeading button{padding:8px 9px;font-size:12px}#controlTools{display:flex;align-items:center;gap:6px;flex-shrink:0}#soundTest{padding:8px 7px;font-size:11px;color:#d0f5ff}#audio{min-width:89px}#audio{background:rgba(44,90,111,.86);border-color:#528eae;color:#e7f8ff}#audio.active{background:#285e6e}#viewControls{position:absolute;top:calc(env(safe-area-inset-top,0px) + 146px);right:12px;display:flex;flex-direction:column;gap:7px;pointer-events:auto}#viewControls.hidden{display:none}#viewControls button{width:42px;height:42px;padding:0;font-size:22px;background:rgba(12,29,46,.84);border-color:rgba(137,185,208,.34);border-radius:14px}#viewControls button:last-child{font-size:19px}#viewControls{align-items:flex-end}#viewControls #panToggle{width:70px;font-size:13px;font-weight:650}#viewControls #panToggle.active{background:rgba(55,106,133,.9);border-color:#86d5e6}
+#responseReadout{margin-top:8px;padding:9px 10px;border:1px solid rgba(95,169,198,.23);border-radius:11px;background:rgba(36,73,94,.20)}#responseReadout .measurement{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 0;font-size:11px;color:#b9dfef}#responseReadout strong{font-size:12px;color:#e7f4ff;font-variant-numeric:tabular-nums}#responseReadout small{color:#a4bfcd;font-size:10px;line-height:1.4;display:block;margin-top:6px}#controlBody{padding:0 13px 13px;}#controls.collapsed #controlBody{display:none}
+.osc{display:grid;grid-template-columns:22px minmax(82px,95px) minmax(75px,1fr) 52px;align-items:center;gap:7px;margin:10px 0}.osc label{font-size:12px;color:#bed2df}.osc label small{display:block;font-size:10px;color:#79aabc;margin-top:3px}.potentialTrack{height:5px;border-radius:6px;background:#233a4d;overflow:hidden;margin:3px 0 8px}.potentialTrack span{display:block;width:0%;height:100%;background:linear-gradient(90deg,#315f83,#82cddf);border-radius:6px;transition:width .1s}.potentialTrack.wall span{background:linear-gradient(90deg,#65517d,#dbb1ef)}#powerHint{font-size:10px;line-height:1.4;color:#e4c8a4;margin-top:7px} .osc output{font-size:12px;text-align:right;color:#d4eefa;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:#7dcee3;height:22px;touch-action:pan-y}.osc input[type=checkbox]{width:17px;height:17px;accent-color:#86cbe7;margin:0}
+#extras{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}#extras button{flex:1;font-size:12px;padding:9px 5px}#actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}#actions button{flex:1;font-size:11px;padding:9px 5px}
+#help{font-size:10px;color:#9db4c7;line-height:1.5;margin:10px 0 0}
+#controls.immersed{display:none}
+#immersionTools{position:absolute;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));display:none;gap:5px;align-items:center;max-width:540px;margin:auto;padding:8px;background:rgba(9,21,36,.89);border:1px solid var(--edge);border-radius:17px;pointer-events:auto;backdrop-filter:blur(12px)}
+#immersionTools.show{display:flex}
+#immersionTools button{min-width:0;flex:1;padding:11px 4px;font-size:12px}
+#immersionTools .localAction{background:rgba(37,71,86,.85);border-color:rgba(137,186,202,.45)}
+#immersiveAudio{flex:.85!important;font-size:11px!important;white-space:nowrap}
+#immersiveAudio.active{background:rgba(38,102,118,.9);border-color:#7ed5e7}
+#move{position:absolute;left:12px;right:12px;bottom:calc(85px + env(safe-area-inset-bottom,0px));display:none;pointer-events:none;align-items:flex-end;justify-content:space-between;gap:12px;user-select:none;-webkit-user-select:none}#move.show{display:flex}.stickColumn{display:flex;flex-direction:column;align-items:center;gap:6px}.stickLabel{font-size:10px;font-weight:700;letter-spacing:.18em;color:#abd2e8;text-shadow:0 1px 4px #09101b}.joystick{position:relative;width:108px;height:108px;border-radius:56px;background:rgba(14,39,57,.67);border:1px solid rgba(153,208,231,.46);touch-action:none;display:grid;place-items:center;overscroll-behavior:none;pointer-events:auto}.joystick::after{content:'+';color:rgba(145,206,231,.42);font-size:34px;line-height:1}.stick{position:absolute;width:43px;height:43px;border-radius:50%;border:2px solid #95d5ed;background:rgba(62,139,168,.78);box-shadow:0 0 15px rgba(88,164,202,.28);pointer-events:none;z-index:1;transform:translate(0px,0px)}#lookStick{border-color:#ebc58d;background:rgba(173,112,55,.7)}#invertLook{font-size:10px;padding:5px 10px;border-radius:999px;background:rgba(28,54,68,.86);border-color:#668796;color:#cbe8f1;pointer-events:auto}#invertLook.active{background:rgba(117,77,37,.86);border-color:#e9b877}
+#toast{position:absolute;top:calc(env(safe-area-inset-top,0px) + 125px);left:50%;transform:translateX(-50%);background:rgba(17,39,56,.9);border:1px solid var(--edge);border-radius:12px;padding:9px 13px;min-width:180px;text-align:center;color:#d4edfb;font-size:12px;opacity:0;transition:opacity .2s}#toast.show{opacity:1}#discovery{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:25px;pointer-events:auto;background:rgba(3,11,22,.72);backdrop-filter:blur(6px)}#discovery.hidden{display:none}#discoveryBox{width:min(100%,390px);background:#10263a;border:1px solid #7aa3b8;border-radius:22px;padding:22px;box-shadow:0 16px 75px #0009;text-align:center}#discoveryBox .spark{font-size:30px;color:#efc78b;margin-bottom:10px}#discoveryBox h2{font-size:21px;margin:5px 0 10px}#discoveryBox p{font-size:13px;line-height:1.6;color:#c4d8e8}#discoveryBox button{margin:5px;padding:11px 14px}#discoveryBox .primary{background:#296482;border-color:#6ac2e4}#objective{position:absolute;top:calc(env(safe-area-inset-top,0px) + 119px);left:15px;right:15px;pointer-events:none;text-align:center;font-size:11px;line-height:1.45;color:#dce3ec;text-shadow:0 2px 5px #07131b}
+@media(min-width:700px){#controls{right:18px;left:auto;width:385px;bottom:18px}#move{bottom:55px}}
+@media(max-height:690px){#controlBody{max-height:45vh;overflow:auto}#move{bottom:calc(72px + env(safe-area-inset-bottom,0px))}.joystick{width:95px;height:95px}}
+/* Compact instrument dock and minimal Immersion controls. */
+#mode{display:none!important}#shiftMode{pointer-events:auto;white-space:nowrap;border-radius:999px;background:rgba(32,73,92,.86);border-color:rgba(134,213,232,.55);font-size:12px;font-weight:650;padding:9px 12px}
+#controls{left:8px;right:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));max-width:510px;padding:8px 10px 9px;background:rgba(7,20,34,.86);border-radius:16px;overflow:visible;box-shadow:0 6px 22px rgba(0,0,0,.26)}
+#dockTop{height:23px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.dockTitle{font-size:10px;font-weight:750;letter-spacing:.11em;color:#b1d6e8}.dockTitle small{font-weight:450;color:#799aab;letter-spacing:.06em;margin-left:5px}
+.dockRight{display:flex;align-items:center;gap:6px;min-width:0}.dockRight #selectedEmitter{font-size:10px;color:#9fb9c8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#dockTop button{padding:4px 8px;font-size:10px;border-radius:8px}#dockOptions{min-width:30px;font-size:17px!important;line-height:1}
+.emitterTabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}
+.emitterTab{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 2px;border-radius:9px;min-width:0;background:rgba(22,46,64,.63);font-size:11px;color:#b9d1df}
+.emitterTab.selected{border-color:#87cfdf;background:rgba(49,93,111,.72);color:#f1fbff}.emitterTab.off{opacity:.63}.emitterTab .dot{width:6px;height:6px;border-radius:50%;background:#477083;flex-shrink:0}.emitterTab.powered .dot{background:#91dddf;box-shadow:0 0 7px #6cd5f2}
+#freqEditor{display:none;align-items:center;gap:5px;margin-top:5px}#freqEditor.expanded{display:flex}
+#freqEditor input[type=range]{flex:1;min-width:20px;height:27px;touch-action:none}
+#freqEditor button{border-radius:8px;padding:6px 7px;font-size:13px}
+#freqDown,#freqUp{min-width:31px}#powerToggle{font-size:11px!important;min-width:38px}#powerToggle.active{background:rgba(44,103,108,.85);border-color:#7ed3cc}
+#freqValue{min-width:52px;text-align:center;font-size:12px;font-variant-numeric:tabular-nums;color:#dcf1fa}
+#dockReadout{display:grid;grid-template-columns:auto minmax(25px,1fr) auto minmax(25px,1fr);align-items:center;gap:8px;margin-top:2px;font-size:10px;color:#9db7c7}
+#dockReadout strong{color:#cfeef6;font-weight:650;font-variant-numeric:tabular-nums}#dockReadout .potentialTrack{margin:0;height:4px}
+#dockSettings.hidden,#actionChoices.hidden{display:none!important}
+#dockSettings{position:absolute;bottom:calc(100% + 8px);left:0;right:0;border:1px solid var(--edge);background:rgba(8,24,39,.96);border-radius:15px;padding:10px;box-shadow:0 8px 30px #0008}
+#dockSettings #viewControls{position:static;display:flex;flex-direction:row;justify-content:flex-end;align-items:center;gap:6px;margin-top:8px}
+#dockSettings #viewControls button{width:auto;min-width:36px;height:32px;padding:3px 8px;font-size:15px;border-radius:9px}
+#dockSettings #viewControls #panToggle{width:auto;font-size:11px}
+#dockSettingActions{display:flex;gap:5px;flex-wrap:wrap}#dockSettingActions button{font-size:11px;padding:7px;flex:1;white-space:nowrap}
+#modeHint,#powerHint{display:block;margin-top:7px;font-size:10px;color:#a7bdc9;line-height:1.4}#dockSettings #help{margin-top:6px}
+#move{left:12px;right:auto;bottom:calc(19px + env(safe-area-inset-bottom,0px));gap:0}
+#move .stickColumn:nth-child(2){display:none}#move .stickLabel{display:none}
+#move .joystick{width:99px;height:99px;border-radius:50%;background:rgba(14,39,57,.23);border:1px solid rgba(153,208,231,.24)}
+#move .stick{width:39px;height:39px;background:rgba(55,128,153,.45);border-color:rgba(149,213,237,.62);box-shadow:none}
+#immersionTools{left:auto;right:12px;bottom:calc(24px + env(safe-area-inset-bottom,0px));width:auto;max-width:none;margin:0;padding:0;gap:7px;background:transparent;border:0;backdrop-filter:none;align-items:center;overflow:visible;pointer-events:none}
+#immersionTools.show{display:flex}#immersionTools>button{pointer-events:auto;flex:none;min-width:0}
+#actionButton{width:71px;height:71px;border-radius:50%;background:rgba(32,77,96,.63);border:1px solid rgba(130,213,229,.53);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:7px;backdrop-filter:blur(8px)}
+#actionButton #actionGlyph{font-size:22px;line-height:1}#actionButton #actionName{font-size:10px;color:#d7e8ee}
+#toolPicker{width:30px;height:36px;border-radius:999px;padding:0!important;font-size:20px!important;background:rgba(13,38,56,.6)}
+#actionChoices{position:absolute;right:0;bottom:calc(100% + 13px);min-width:142px;display:flex;flex-direction:column;gap:5px;background:rgba(8,27,43,.95);border:1px solid var(--edge);border-radius:14px;padding:8px;pointer-events:auto;box-shadow:0 8px 28px #0007}
+#immersionTools #actionChoices button{flex:none;width:100%;text-align:left;padding:9px 10px;font-size:12px}
+#crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:32px;line-height:.1;color:rgba(195,222,236,.48);display:none;text-shadow:0 1px 9px #000;pointer-events:none}
+body.in-immersion #crosshair{display:block}
+body.in-immersion #identity .sub,body.in-immersion #identity .kicker{display:none}
+body.in-immersion #identity .name{font-size:13px;color:#b0c8d8;margin-top:0}
+body.in-immersion #status{top:calc(env(safe-area-inset-top,0px) + 65px)}
+body.in-immersion #objective{display:none}
+@media(max-height:690px){#controls{max-height:none}#move{bottom:calc(17px + env(safe-area-inset-bottom,0px))}.joystick{width:91px!important;height:91px!important}}
+#beatReadout{display:flex;justify-content:space-between;gap:7px;align-items:center;margin-top:6px;font-size:10px;color:#a9c0d2}#beatReadout strong{color:#e9c0eb}#beatInfo{color:#bfa6e0;font-variant-numeric:tabular-nums}#aimTip{color:#839eaf;max-width:33%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#railHint{font-size:10px;color:#9ac8d8;text-align:center;margin-top:7px;line-height:1.35}
+#planeStats{font-size:10px;color:#a2c9d5;margin-top:6px}
+#immersionTools #actionButton{width:79px;height:79px}
+#dockSettings #viewControls{justify-content:center}
+body.wave-guided #freqValue,body.wave-guided #dockReadout,body.wave-guided #beatReadout{display:none!important}
+body.wave-guided #railHint{margin-top:9px}
+/* Version 2: atmospheric Immersion and a classic elevated adventure camera. */
+#cameraMode{display:none;pointer-events:auto;padding:9px 9px;border-radius:999px;
+  font-size:11px;font-weight:650;background:rgba(71,83,68,.88);border-color:rgba(182,208,168,.45);
+  color:#e6efd8;white-space:nowrap}
+body.in-immersion #cameraMode{display:inline-block}
+body.in-immersion #shiftMode{background:rgba(42,72,66,.93);border-color:#85bba8}
+body.in-immersion #identity .name{color:#e6e9d8}
+@media(max-width:385px){body.in-immersion #identity .name{font-size:11px}
+ body.in-immersion #shiftMode{font-size:10px;padding:9px 7px}
+ #cameraMode{font-size:10px;padding:9px 7px}}
+</style>
+</head>
+<body>
+<canvas id="world"></canvas>
+<div id="hud">
+  <div id="top">
+    <div id="identity"><div class="kicker">PROTOTYPE 2.0.0</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
+    <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button><button id="cameraMode" aria-label="Switch Immersion perspective" aria-pressed="false">Eye view</button>
+  </div>
+  <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER I · The submerged path</div>
+  <div id="move"><div class="stickColumn"><div class="joystick" id="joystick" aria-label="Move joystick"><div class="stick" id="stick"></div></div><span class="stickLabel">MOVE</span></div><div class="stickColumn"><div class="joystick" id="lookJoystick" aria-label="Look joystick"><div class="stick" id="lookStick"></div></div><span class="stickLabel">LOOK</span><button id="invertLook" aria-pressed="false" aria-label="Reverse vertical look direction">Y: Normal</button></div></div>
+  <div id="toast"></div><div id="discovery" class="hidden" role="dialog" aria-modal="true" aria-labelledby="discoveryTitle"><div id="discoveryBox"><div class="spark">✦</div><h2 id="discoveryTitle">Passage discovered</h2><p id="discoveryText">You crossed using a resonance configuration. Your discovery has been recorded.</p><button id="anotherRoute" class="primary">Try another solution</button><button id="keepExploring">Keep exploring</button></div></div>
+  <section id="controls" aria-label="Observer resonance instrument">
+    <div id="dockTop"><span class="dockTitle">OBSERVER <small>RESONANCE</small></span><div class="dockRight"><span id="selectedEmitter">Choose source</span><button id="atlasToggle" aria-label="Change diagnostic view">Field</button><button id="dockOptions" aria-expanded="false" aria-controls="dockSettings" aria-label="Instrument settings">⋯</button></div></div>
+    <div id="oscillators" class="emitterTabs" aria-label="Select an emitter"></div>
+    <div id="freqEditor"><button id="freqDown" aria-label="Decrease frequency">−</button><input id="frequencyRange" type="range" min="60" max="420" step="1" value="110" aria-label="Selected emitter frequency"><button id="freqUp" aria-label="Increase frequency">+</button><output id="freqValue">110 Hz</output><button id="powerToggle" aria-pressed="true">On</button></div>
+    <div id="railHint">Select a source · Drag its marker on the rail · Drag its arrow to aim</div>
+    <div id="dockReadout"><span>Pool <strong id="poolLevel">0%</strong></span><div class="potentialTrack"><span id="poolBar"></span></div><span>Stone <strong id="wallLevel">0%</strong></span><div class="potentialTrack wall"><span id="wallBar"></span></div></div>
+    <div id="beatReadout"><span id="targetLabel">Disc <strong id="beatMeter">0%</strong></span><span id="beatInfo">2 horns · 4 Hz beat</span><span id="aimTip">Select a horn to aim it</span></div>
+    <div id="dockSettings" class="hidden" aria-label="Instrument settings">
+      <div id="dockSettingActions"><button id="audio">🔈 Sound off</button><button id="soundTest">♪ Test</button><button id="save">Save</button><button id="restore">Restore</button><button id="previewRoom">Test Room II</button><button id="numbersToggle" aria-pressed="true">Numbers on</button></div>
+      <div id="viewControls"><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div>
+      <div id="powerHint">Perimeter emitters can move and aim toward the chamber.</div><div id="planeStats">2D field · waiting for source</div><small id="modeHint">Pulse nearby materials to hear their resonances.</small>
+      <p id="help">Observer uses one horizontal acoustic plane, approximately 33 degrees below an orbiting camera. Tap a source, drag its marker along the conceptual rail or drag the direction handle, which turns only through the inward-facing 180 degrees. Frequency and power remain in the dock. Floors and decorations are excluded from the field model. In Immersion, tap Pulse to probe an object or hold to provide sustained impulses. This is an approximate 2D acoustic model, not a full wave-equation solver.</p>
+    </div>
+  </section>
+  <div id="crosshair" aria-hidden="true">·</div>
+  <section id="immersionTools" aria-label="Local physical instruments">
+    <button id="actionButton" aria-label="Pulse, hold for sustained waves"><span id="actionGlyph">◎</span><small id="actionName">Pulse</small></button>
+    
+    </section>
+</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+const $=id=>document.getElementById(id);
+const canvas=$('world');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));
+renderer.setSize(canvas.clientWidth||window.innerWidth,canvas.clientHeight||window.innerHeight,false);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+const scene=new THREE.Scene();scene.background=new THREE.Color('#09101b');scene.fog=new THREE.FogExp2('#09101b',.018);
+const camera=new THREE.PerspectiveCamera(56,(canvas.clientWidth||window.innerWidth)/(canvas.clientHeight||window.innerHeight),.035,180);
+scene.add(new THREE.HemisphereLight(0x90bde1,0x132138,2.1));
+const sun=new THREE.DirectionalLight(0xa8dfff,2.3);sun.position.set(4,13,8);scene.add(sun);
+const amber=new THREE.PointLight(0xe9a96a,18,30);amber.position.set(5,6,-1);scene.add(amber);
+const crystalMat=new THREE.MeshPhysicalMaterial({color:0x7acbdc,metalness:.25,roughness:.27,transparent:true,opacity:.35,side:THREE.DoubleSide,depthWrite:false});
+const stoneMat=new THREE.MeshStandardMaterial({color:0x6b91a1,roughness:.72,metalness:.12});
+const ACOUSTIC_MATERIALS={
+ water:{reflection:.32,absorption:.22,damping:.24,sparkColor:0xa2eefe},
+ stone:{reflection:.66,absorption:.12,damping:.10,sparkColor:0xffe1ad},
+ bronze:{reflection:.73,absorption:.08,damping:.07,sparkColor:0xffd6a0},
+ crystal:{reflection:.28,absorption:.09,damping:.04,sparkColor:0xe0faff}
+};
+const goldMat=new THREE.MeshStandardMaterial({color:0xf3c47e,emissive:0x886027,emissiveIntensity:.45,roughness:.3});
+const world=new THREE.Group();scene.add(world);
+function makeBox(parent,w,h,d,x,y,z,material){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);parent.add(m);return m}
+function makeColumn(x,z,h){makeBox(world,.42,h,.42,x,h/2-.6,z,stoneMat);makeBox(world,.75,.27,.75,x,h-.6,z,stoneMat)}
+// The fixed landmarks are authored; the crossing is derived from an interfering spatial field.
+makeBox(world,4.5,.6,13.8,-5.55,-.45,0,stoneMat);
+makeBox(world,4.5,.6,13.8,5.55,-.45,0,stoneMat);
+makeBox(world,1.7,.1,6,-5.25,-.08,0,crystalMat);
+makeBox(world,1.7,.1,6,5.25,-.08,0,crystalMat);
+for(const x of [-7.3,-4,4,7.3])for(const z of [-3.5,3.5])makeColumn(x,z,3+(Math.abs(x)*.11));
+for(const x of [-7.3,-4,4,7.3])for(const z of [-5.7,5.7])makeColumn(x,z,2.8+(Math.abs(x)*.12));
+// Additional obstructions are true meshes that participate in acoustic boundaries.
+const acousticBaffle=makeBox(world,.9,3.4,1.4,0,1.18,2.35,stoneMat);
+const northMonolith=makeBox(world,.82,3.2,1.1,6.75,1.15,-5.4,stoneMat);
+const sideMonolith=makeBox(world,.85,2.7,.95,-6.75,.95,-5.15,stoneMat);
+// The angled mirror is a genuine wall mesh, not an invisible ray endpoint.
+const acousticMirror=makeBox(world,3.35,3.2,.24,-3.58,1.4,6.12,stoneMat);
+acousticMirror.rotation.y=.12;acousticMirror.userData.acousticMirror=true;
+const discMaterial=new THREE.MeshStandardMaterial({color:0xb8a2cd,metalness:.85,roughness:.22,emissive:0x33223b,emissiveIntensity:.1});
+const beatDisc=new THREE.Mesh(new THREE.CylinderGeometry(.76,.76,.13,36),discMaterial);
+beatDisc.rotation.x=Math.PI/2;beatDisc.position.set(-5.42,2.25,4.62);world.add(beatDisc);
+makeBox(world,.045,1.0,.045,-5.42,3.2,4.62,stoneMat);
+const discRim=new THREE.Mesh(new THREE.TorusGeometry(.82,.055,8,48),
+ new THREE.MeshBasicMaterial({color:0xd8b5f2,transparent:true,opacity:.16}));
+discRim.position.set(-5.42,2.25,4.55);world.add(discRim);
+const beatVault=makeBox(world,1.9,2.7,.25,-5.45,1.2,6.49,stoneMat);
+const beatVaultSeam=new THREE.Mesh(new THREE.TorusGeometry(.83,.018,6,48),
+ new THREE.MeshBasicMaterial({color:0xb5a2db,transparent:true,opacity:.10}));
+beatVaultSeam.position.set(-5.45,1.6,6.25);world.add(beatVaultSeam);
+// Fictional mineral-rich water responds to a coupled standing mode and a physical pulse.
+const poolSurface=new THREE.Mesh(new THREE.PlaneGeometry(7.15,13.85),
+ new THREE.MeshPhysicalMaterial({color:0x287b9f,emissive:0x0b354b,metalness:.36,roughness:.16,transparent:true,opacity:.68,side:THREE.DoubleSide,depthWrite:false}));
+poolSurface.rotation.x=-Math.PI/2;poolSurface.position.set(0,-.36,0);world.add(poolSurface);
+const poolRim=new THREE.Mesh(new THREE.TorusGeometry(.78,.07,7,48),
+ new THREE.MeshStandardMaterial({color:0xb8d9e5,emissive:0x3c8599,emissiveIntensity:.3}));
+poolRim.rotation.x=Math.PI/2;poolRim.position.set(-4.12,.02,0);world.add(poolRim);
+// Stone spans the far platform. The center section is a concealed movable door.
+const hiddenDoorMaterial=stoneMat.clone();hiddenDoorMaterial.transparent=true;
+makeBox(world,.48,3.8,5.75,6.03,1.75,-3.995,stoneMat);
+makeBox(world,.48,3.8,5.75,6.03,1.75, 3.995,stoneMat);
+const hiddenDoor=makeBox(world,.48,3.8,2.24,6.03,1.75,0,hiddenDoorMaterial);
+// Subdivide only this panel to let the wall's own surface deform on impact.
+// The box's dimensions remain unchanged for collision and acoustic geometry.
+hiddenDoor.geometry.dispose();
+hiddenDoor.geometry=new THREE.BoxGeometry(.48,3.8,2.24,1,20,20);
+const hiddenDoorBase=Float32Array.from(hiddenDoor.geometry.attributes.position.array);
+const doorSeam=new THREE.Mesh(new THREE.BoxGeometry(.505,3.63,.045),
+ new THREE.MeshBasicMaterial({color:0x7ed0e6,transparent:true,opacity:.07,depthWrite:false}));
+doorSeam.position.set(5.76,1.75,1.09);world.add(doorSeam);
+const portal=new THREE.Mesh(new THREE.TorusGeometry(1.4,.15,12,64),goldMat);portal.rotation.y=Math.PI/2;portal.position.set(7.2,1.6,0);world.add(portal);
+const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.65,1),new THREE.MeshStandardMaterial({color:0x7acdea,emissive:0x2d7794,emissiveIntensity:1,metalness:.2,roughness:.2}));core.position.set(-6.6,1.05,0);world.add(core);
+// Spatially sampled bridge tiles. A tile is supported wherever interference remains near a node.
+const NX=11,NZ=7,tiles=[];
+const tileGeom=new THREE.BoxGeometry(.72,.16,.83);
+for(let ix=0;ix<NX;ix++)for(let iz=0;iz<NZ;iz++){
+  const x=-3.45+ix*.69,z=-2.4+iz*.8;
+  const material=new THREE.MeshStandardMaterial({color:0x61cbe3,emissive:0x216987,transparent:true,opacity:.6,metalness:.4,roughness:.2});
+  const mesh=new THREE.Mesh(tileGeom,material);mesh.position.set(x,-.1,z);world.add(mesh);
+  tiles.push({ix,iz,x,z,mesh,stable:false});
+}
+// World contour rings visibly respond to the current field energy.
+const rings=[];
+for(let i=0;i<6;i++){
+  const r=new THREE.Mesh(new THREE.TorusGeometry(1.5+i*.55,.008,5,96),new THREE.MeshBasicMaterial({color:i%2?0x65bce1:0xc89dd8,transparent:true,opacity:.16}));
+  r.rotation.x=Math.PI/2;r.position.set(0,-1.4-i*.1,0);world.add(r);rings.push(r);
+}
+// All physical objects belong to the Immersion view, not the Observer.
+const physicalWorld=new THREE.Group();
+for(const object of [...world.children])physicalWorld.add(object);
+world.add(physicalWorld);
+// Stone impact is visibly attached to the wall, not to the distant disc or pool.
+// The rings appear after any nearby Pulse, with amplitude indicating resonance.
+hiddenDoorMaterial.emissive.setHex(0x377f9e);
+hiddenDoorMaterial.emissiveIntensity=0;
+// CHAMBER II: Beyond the stone door waits an urn and a lamp.
+const URN={x:16,z:0},URN_HZ=208,SECOND_START=8.15,SECOND_END=23.65;
+const secondRoom=new THREE.Group();physicalWorld.add(secondRoom);
+function roomBox(w,h,d,x,y,z,material){return makeBox(secondRoom,w,h,d,x,y,z,material)}
+roomBox(15.9,.66,12.65,15.92,-.53,0,stoneMat);
+roomBox(15.75,3.9,.38,15.95,1.35,-6.23,stoneMat);
+roomBox(15.75,3.9,.38,15.95,1.35,6.23,stoneMat);
+roomBox(.40,4.4,12.75,23.85,1.58,0,stoneMat);
+roomBox(.37,3.4,4.45,8.04,1.26,-4.12,stoneMat);
+roomBox(.37,3.4,4.45,8.04,1.26,4.12,stoneMat);
+for(const x of [10.3,21.55])for(const z of [-5.3,5.3]){
+ roomBox(.60,3.4,.60,x,1.15,z,stoneMat);
+ roomBox(1.0,.22,1.0,x,2.9,z,stoneMat);
+}
+// One interior acoustic reflector and scattering columns. Perimeter walls
+// remain visual boundaries so the external horns can excite the chamber.
+const urnReflector=roomBox(2.75,2.65,.22,19.65,1.08,3.45,stoneMat);
+urnReflector.rotation.y=-.38;
+const urnBronze=new THREE.MeshStandardMaterial({color:0x8b7982,metalness:.77,roughness:.29,
+ emissive:0x271f36,emissiveIntensity:.06});
+const urnGlowMat=new THREE.MeshBasicMaterial({color:0xa6edff,transparent:true,opacity:.08,depthWrite:false});
+roomBox(2.85,.55,2.85,URN.x,.1,URN.z,stoneMat);
+const urnFoot=new THREE.Mesh(new THREE.CylinderGeometry(.68,.92,.80,28),urnBronze);
+urnFoot.position.set(URN.x,.87,URN.z);secondRoom.add(urnFoot);
+const urnVessel=new THREE.Mesh(new THREE.SphereGeometry(.92,30,18),urnBronze);
+urnVessel.scale.y=.74;urnVessel.position.set(URN.x,1.55,URN.z);secondRoom.add(urnVessel);
+const urnRim=new THREE.Mesh(new THREE.TorusGeometry(.77,.095,10,40),urnBronze);
+urnRim.rotation.x=Math.PI/2;urnRim.position.set(URN.x,2.13,URN.z);secondRoom.add(urnRim);
+const urnChannels=[];
+for(let i=0;i<3;i++){
+ const m=new THREE.MeshBasicMaterial({color:[0x6ecfe4,0xe2bc93,0xc6a1e5][i],
+  transparent:true,opacity:.06,depthWrite:false,side:THREE.DoubleSide});
+ const band=new THREE.Mesh(new THREE.TorusGeometry(1.25+i*.23,.018,6,70),m);
+ band.rotation.x=Math.PI/2;band.position.set(URN.x,1.13+i*.29,URN.z);
+ secondRoom.add(band);urnChannels.push(band);
+}
+roomBox(.07,1.55,.07,URN.x,4.43,URN.z,stoneMat);
+const chamberFill=new THREE.PointLight(0x89b4df,4.5,24);
+chamberFill.position.set(URN.x,4.7,URN.z+3);secondRoom.add(chamberFill);
+const lampFrame=new THREE.Mesh(new THREE.TorusGeometry(.69,.09,10,48),urnBronze);
+lampFrame.rotation.x=Math.PI/2;lampFrame.position.set(URN.x,3.7,URN.z);secondRoom.add(lampFrame);
+const lampCrystal=new THREE.Mesh(new THREE.OctahedronGeometry(.60,1),
+ new THREE.MeshStandardMaterial({color:0x6b8eaa,emissive:0x224b70,emissiveIntensity:.1,
+  metalness:.12,roughness:.18}));
+lampCrystal.position.set(URN.x,3.65,URN.z);secondRoom.add(lampCrystal);
+const lampLight=new THREE.PointLight(0xffdb99,0,12);
+lampLight.position.set(URN.x,3.65,URN.z);secondRoom.add(lampLight);
+const lampHalo=new THREE.Mesh(new THREE.SphereGeometry(.98,24,16),
+ new THREE.MeshBasicMaterial({color:0xffe3a2,transparent:true,opacity:0,
+  blending:THREE.AdditiveBlending,depthWrite:false}));
+lampHalo.position.copy(lampCrystal.position);secondRoom.add(lampHalo);
+const urnFlowRing=new THREE.Mesh(new THREE.TorusGeometry(1.55,.03,6,72),urnGlowMat);
+urnFlowRing.rotation.x=Math.PI/2;urnFlowRing.position.set(URN.x,1.95,URN.z);secondRoom.add(urnFlowRing);
+const secondStoneSegments=[urnReflector];
+const secondColumns=[...secondRoom.children].filter(m=>
+ m.isMesh&&m.geometry.type==='BoxGeometry'&&m.material===stoneMat&&
+ m.geometry.parameters.height>2&&m.geometry.parameters.width<1.1&&
+ m.geometry.parameters.depth<1.1);
+
+// Larger-on-the-inside illusion: outer shell shows the same world at miniature scale.
+const shellGroup=new THREE.Group();
+const globe=new THREE.Group();scene.add(globe);
+globe.add(shellGroup);globe.add(world);
+const globeRotation=new THREE.Quaternion();
+const tiltRotation=new THREE.Quaternion();
+const tiltNeutral={beta:null,gamma:null};
+// No visible sphere in the plane Observer experiment.
+// Removed the decorative orbit ring: it looked like an unexplained wave reflection.
+// Observer focuses on the acoustic landscape rather than decorative stars.
+const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,wallSolved:false,wallProbeAt:-100,wallProbeRealAt:-100,wallProbeZ:0,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,wallBeatStrength:0,wallBeatRate:0,wallBeatPair:null,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false,beatProbeAt:-100};
+// Remember the far-shore checkpoint across refreshes. A direct testing link
+// with ?start=stone also resumes this stage without replaying the pond.
+const WALL_PROGRESS_KEY='resonance19FarShore';
+const WALL_SOLVED_KEY='resonance19StoneSolved';
+const CHAMBER_TWO_KEY='resonance19ChamberTwoReached';
+try{
+ const params=new URLSearchParams(window.location.search);
+ if(params.get('reset')==='1'){
+  for(const key of [WALL_PROGRESS_KEY,WALL_SOLVED_KEY,CHAMBER_TWO_KEY])
+   localStorage.removeItem(key);
+ }
+ const resume=params.get('start');
+ if(resume==='stone'||localStorage.getItem(WALL_PROGRESS_KEY)==='1'){
+  state.hasCrossedGap=true;state.playerX=4.25;state.playerZ=0;
+ }
+ if(localStorage.getItem(WALL_SOLVED_KEY)==='1'){
+  state.wallSolved=true;state.hasCrossedGap=true;
+ }
+ if(resume==='lamp'||localStorage.getItem(CHAMBER_TWO_KEY)==='1'){
+  state.hasCrossedGap=true;state.wallSolved=true;
+  state.activeChamber=1;state.playerX=10.3;state.playerZ=0;
+ }
+ if(resume==='lamp'){
+  localStorage.setItem(WALL_PROGRESS_KEY,'1');
+  localStorage.setItem(WALL_SOLVED_KEY,'1');
+  localStorage.setItem(CHAMBER_TWO_KEY,'1');
+ }
+}catch(e){}
+const observerPan=new THREE.Vector2(0,0); // Camera-space pan; globe pivot stays at origin.
+let invertLookY=false;
+try{invertLookY=localStorage.getItem('resonanceInvertY')==='1'}catch(e){}
+function syncLookSetting(){
+ $('invertLook').textContent=invertLookY?'Y: Flight':'Y: Normal';
+ $('invertLook').classList.toggle('active',invertLookY);
+ $('invertLook').setAttribute('aria-pressed',String(invertLookY));
+}
+syncLookSetting();
+$('invertLook').addEventListener('click',()=>{
+ invertLookY=!invertLookY;syncLookSetting();
+ try{localStorage.setItem('resonanceInvertY',invertLookY?'1':'0')}catch(e){}
+ toast(invertLookY?'Flight: down looks up':'Normal: up looks up');
+});
+// RESONANT TOPOLOGY: Observer sees only the field inferred from the chamber.
+// Isosurfaces and contour-lines share one scalar field. Matter itself is hidden.
+// Survey echoes are a simplified acoustic model, not a full wave solver.
+const topologyGroup=new THREE.Group();world.add(topologyGroup);
+// Field mode uses ONE mesh, with cyan and violet vertices for opposite
+// pressure signs. Nodal geometry is allocated only when diagnostic mode is open.
+const fieldMaterial=new THREE.MeshBasicMaterial({
+ vertexColors:true,side:THREE.DoubleSide,transparent:true,opacity:.27,depthWrite:false
+});
+const fieldSurface=new THREE.Mesh(new THREE.BufferGeometry(),fieldMaterial);
+fieldSurface.frustumCulled=false;topologyGroup.add(fieldSurface);
+const nodeMaterial=new THREE.MeshBasicMaterial({
+ color:0xd7edf6,side:THREE.DoubleSide,transparent:true,opacity:.11,depthWrite:false
+});
+const nodeSurface=new THREE.Mesh(new THREE.BufferGeometry(),nodeMaterial);
+nodeSurface.frustumCulled=false;topologyGroup.add(nodeSurface);
+const nodeLines=new THREE.LineSegments(new THREE.BufferGeometry(),
+ new THREE.LineBasicMaterial({color:0xc4dfe9,transparent:true,opacity:.29,depthWrite:false}));
+nodeLines.frustumCulled=false;topologyGroup.add(nodeLines);
+const FIELD_GRID={nx:27,ny:12,nz:27,x0:-7.85,y0:-.10,z0:-6.99,dx:15.7/26,dy:4.75/11,dz:13.98/26};
+const FIELD_CORNERS=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+const FIELD_TETRA=[[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
+const fieldSamples=new Float32Array(FIELD_GRID.nx*FIELD_GRID.ny*FIELD_GRID.nz);
+const fieldIndex=(x,y,z)=>(x*FIELD_GRID.ny+y)*FIELD_GRID.nz+z;
+// Display transitions are visual smoothing only: no time passes in Observer.
+const fieldTargets=new Float32Array(fieldSamples.length);
+let fieldInitialized=false,fieldTransitionActive=false,fieldLastStep=-1;
+let atlasDirty=true,atlasLastBuilt=-1,topologyView='field',viewDirty=true;
+const displayFieldSamples=new Float32Array(fieldSamples.length);
+function bell(x,center,width){return Math.exp(-Math.pow((x-center)/width,2));}
+function topologyAt(x,y,z,index){
+ // The visible topology is driven primarily by pressure reflected from the
+ // real stone and water meshes. The approximate tuned modal fields represent
+ // energy stored in resonant materials, blending with the geometric response.
+ return .90*acousticFieldAtGrid(index)+.30*modalField(x,y,z);
+}
+function interpolateEdge(a,b,va,vb,iso){
+ const t=Math.abs(vb-va)<1e-8?.5:Math.max(0,Math.min(1,(iso-va)/(vb-va)));
+ return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+}
+function tetraSurface(out,p,v,level){
+ const on=[],off=[];
+ for(let i=0;i<4;i++)(v[i]>=level?on:off).push(i);
+ if(!on.length||!off.length)return;
+ const intersect=(a,b)=>interpolateEdge(p[a],p[b],v[a],v[b],level);
+ const triangle=(a,b,c)=>out.push(...a,...b,...c);
+ if(on.length===1){
+  const i=on[0];triangle(intersect(i,off[0]),intersect(i,off[1]),intersect(i,off[2]));
+ }else if(on.length===3){
+  const i=off[0];triangle(intersect(i,on[0]),intersect(i,on[2]),intersect(i,on[1]));
+ }else{
+  const a=intersect(on[0],off[0]),b=intersect(on[0],off[1]);
+  const c=intersect(on[1],off[1]),d=intersect(on[1],off[0]);
+  triangle(a,b,c);triangle(a,c,d);
+ }
+}
+function meshAtLevel(level){
+ const out=[],g=FIELD_GRID;
+ for(let x=0;x<g.nx-1;x++)for(let y=0;y<g.ny-1;y++)for(let z=0;z<g.nz-1;z++){
+  const positions=[],values=[];
+  for(const [ox,oy,oz] of FIELD_CORNERS){
+   positions.push([g.x0+(x+ox)*g.dx,g.y0+(y+oy)*g.dy,g.z0+(z+oz)*g.dz]);
+   values.push(fieldSamples[fieldIndex(x+ox,y+oy,z+oz)]);
+  }
+  if(values.every(v=>v>=level)||values.every(v=>v<level))continue;
+  for(const t of FIELD_TETRA){
+   tetraSurface(out,t.map(i=>positions[i]),t.map(i=>values[i]),level);
+  }
+ }
+ const geom=new THREE.BufferGeometry();
+ geom.setAttribute('position',new THREE.Float32BufferAttribute(out,3));
+ return geom;
+}
+function contourAtLevel(level){
+ // Diagnostic contour slices are built only while Node view is selected.
+ const out=[],g=FIELD_GRID,edges=[[0,1],[1,2],[2,3],[3,0]];
+ for(const y of [2,5,8]){
+  for(let x=0;x<g.nx-1;x++)for(let z=0;z<g.nz-1;z++){
+   const xx=[x,x+1,x+1,x],zz=[z,z,z+1,z+1];
+   const values=xx.map((ix,i)=>fieldSamples[fieldIndex(ix,y,zz[i])]);
+   const intersections=[];
+   for(const [a,b] of edges){
+    if((values[a]>=level)===(values[b]>=level))continue;
+    const at=i=>[g.x0+xx[i]*g.dx,g.y0+y*g.dy+.014,g.z0+zz[i]*g.dz];
+    intersections.push(interpolateEdge(at(a),at(b),values[a],values[b],level));
+   }
+   for(let i=0;i+1<intersections.length;i+=2)
+    out.push(...intersections[i],...intersections[i+1]);
+  }
+ }
+ const geom=new THREE.BufferGeometry();
+ geom.setAttribute('position',new THREE.Float32BufferAttribute(out,3));
+ return geom;
+}
+const DISPLAY_NEIGHBORS=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+function updateDisplayField(){
+ // Small spatial filter removes pixel-grid terraces while retaining the
+ // acoustic layout and real surface-driven reflections.
+ const g=FIELD_GRID;
+ let maxAmplitude=0;
+ for(let x=0;x<g.nx;x++)for(let y=0;y<g.ny;y++)for(let z=0;z<g.nz;z++){
+  const j=fieldIndex(x,y,z);
+  let sum=fieldSamples[j]*4,weight=4;
+  for(const [dx,dy,dz] of DISPLAY_NEIGHBORS){
+   const xx=x+dx,yy=y+dy,zz=z+dz;
+   if(xx<0||xx>=g.nx||yy<0||yy>=g.ny||zz<0||zz>=g.nz)continue;
+   sum+=fieldSamples[fieldIndex(xx,yy,zz)];weight++;
+  }
+  const value=sum/weight;
+  displayFieldSamples[j]=value;
+  maxAmplitude=Math.max(maxAmplitude,Math.abs(value));
+ }
+ return maxAmplitude;
+}
+function amplitudeSurfaceGeometry(){
+ // One traversal assembles the positive and negative signed-pressure lobes
+ // into a single render mesh, instead of three meshes plus contour layers.
+ const maxAmplitude=updateDisplayField();
+ const level=Math.max(.055,Math.min(.19,maxAmplitude*.30));
+ const positive=[],negative=[],g=FIELD_GRID;
+ if(maxAmplitude<level){
+  const empty=new THREE.BufferGeometry();
+  empty.setAttribute('position',new THREE.Float32BufferAttribute([],3));
+  empty.setAttribute('color',new THREE.Float32BufferAttribute([],3));
+  return empty;
+ }
+ for(let x=0;x<g.nx-1;x++)for(let y=0;y<g.ny-1;y++)for(let z=0;z<g.nz-1;z++){
+  const pts=[],values=[];
+  for(const [ox,oy,oz] of FIELD_CORNERS){
+   pts.push([g.x0+(x+ox)*g.dx,g.y0+(y+oy)*g.dy,g.z0+(z+oz)*g.dz]);
+   values.push(displayFieldSamples[fieldIndex(x+ox,y+oy,z+oz)]);
+  }
+  const hasPositive=Math.max(...values)>=level && Math.min(...values)<level;
+  const hasNegative=Math.min(...values)<=-level && Math.max(...values)>-level;
+  if(!hasPositive&&!hasNegative)continue;
+  for(const tet of FIELD_TETRA){
+   const corners=tet.map(i=>pts[i]),signed=tet.map(i=>values[i]);
+   if(hasPositive)tetraSurface(positive,corners,signed,level);
+   if(hasNegative)tetraSurface(negative,corners,signed.map(v=>-v),level);
+  }
+ }
+ const vertexPositions=new Float32Array(positive.length+negative.length);
+ vertexPositions.set(positive,0);vertexPositions.set(negative,positive.length);
+ const vertexColors=new Float32Array(vertexPositions.length);
+ const cyan=new THREE.Color(0x57c5db),violet=new THREE.Color(0xb394db);
+ for(let k=0;k<positive.length;k+=3){
+  vertexColors[k]=cyan.r;vertexColors[k+1]=cyan.g;vertexColors[k+2]=cyan.b;
+ }
+ for(let k=positive.length;k<vertexColors.length;k+=3){
+  vertexColors[k]=violet.r;vertexColors[k+1]=violet.g;vertexColors[k+2]=violet.b;
+ }
+ const geom=new THREE.BufferGeometry();
+ geom.setAttribute('position',new THREE.BufferAttribute(vertexPositions,3));
+ geom.setAttribute('color',new THREE.BufferAttribute(vertexColors,3));
+ return geom;
+}
+function refreshFieldTarget(){
+ const g=FIELD_GRID;
+ for(let x=0;x<g.nx;x++)for(let y=0;y<g.ny;y++)for(let z=0;z<g.nz;z++)
+  fieldTargets[fieldIndex(x,y,z)]=topologyAt(
+   g.x0+x*g.dx,g.y0+y*g.dy,g.z0+z*g.dz,fieldIndex(x,y,z));
+ if(!fieldInitialized){
+  fieldSamples.set(fieldTargets);
+  fieldInitialized=true;
+ }else fieldTransitionActive=true;
+}
+function rebuildField(){
+ if(!state.osc.some(o=>o.on))return; // Nothing to tessellate during silence.
+ if(topologyView==='field'){
+  const next=amplitudeSurfaceGeometry();
+  fieldSurface.geometry.dispose();fieldSurface.geometry=next;
+  fieldMaterial.opacity=.21+.085*Math.max(state.poolCoupling,state.wallCoupling,state.beatCharge);
+ }else{
+  // Expensive zero-crossing surfaces and contours only exist when requested.
+  const surface=meshAtLevel(0),contours=contourAtLevel(0);
+  nodeSurface.geometry.dispose();nodeSurface.geometry=surface;
+  nodeLines.geometry.dispose();nodeLines.geometry=contours;
+ }
+}
+function syncAtlasVisibility(){
+ topologyGroup.visible=false;
+ observer2D.visible=state.mode==='observer';
+ emitterMarkers.visible=false;
+}
+$('atlasToggle').addEventListener('click',()=>{
+ selectedFieldView=selectedFieldView==='field'?'nodes':'field';
+ $('atlasToggle').textContent=selectedFieldView==='field'?'Field':'Nodes';
+ setPlaneDirty();syncAtlasVisibility();
+ toast(selectedFieldView==='field'?'2D field intensity landscape':'Optional 2D zero-pressure contours');
+ renderField();
+});
+function drawFieldAtlas(now){
+ if(atlasDirty){
+  refreshFieldTarget();
+  atlasDirty=false;
+ }
+ // Only rebuild geometry while needed. During a slider drag, the old field
+ // approaches the new sampled shape gradually instead of jumping between meshes.
+ if(atlasLastBuilt>=0 && now-atlasLastBuilt<82)return;
+ if(fieldTransitionActive){
+  const dt=fieldLastStep<0?.08:Math.min(.16,Math.max(.016,(now-fieldLastStep)/1000));
+  const alpha=1-Math.exp(-dt/.16);
+  let maxError=0;
+  for(let i=0;i<fieldSamples.length;i++){
+   const delta=fieldTargets[i]-fieldSamples[i];
+   fieldSamples[i]+=delta*alpha;
+   maxError=Math.max(maxError,Math.abs(delta));
+  }
+  if(maxError<.0016){
+   fieldSamples.set(fieldTargets);
+   fieldTransitionActive=false;
+  }
+ }
+ fieldLastStep=now;
+ rebuildField();
+ viewDirty=false;
+ atlasLastBuilt=now;
+ syncAtlasVisibility();
+}
+// Each emitter occupies a real location and its distance affects mode coupling.
+const EMITTERS=[
+ {x:-4.35,z:0,label:'Pool side',color:0x67cde7},
+ {x:5.35,z:0,label:'Far wall',color:0xe1af7e},
+ {x:0,z:0,label:'Midpoint',color:0xb896de}
+];
+// GEOMETRY-AWARE ACOUSTIC FIELD 0.1
+// Instead of scripted echoes around imagined surfaces, inspect the actual
+// rendered stone meshes and water plane, and compute direct + one-bounce
+// image-source reflections from their finite physical faces.
+// This is NOT a full wave-equation or eigenmode solver; it is a real geometry
+// interrogation with simplified material reflection and no higher-order bounces.
+const SOUND_SPEED=343;
+const REFLECTION_CAP=52;
+let acousticCache=null;
+function extractAcousticSurfaces(){
+ const solids=[],faces=[],extraFaces=[];
+ for(const mesh of physicalWorld.children){
+  if(!mesh.isMesh||mesh.geometry.type!=='BoxGeometry')continue;
+  if(mesh.material!==stoneMat&&mesh.material!==hiddenDoorMaterial)continue;
+  if(mesh===acousticMirror)continue; // Rotated mirror is traced explicitly.
+  const par=mesh.geometry.parameters;
+  const c=[mesh.position.x,mesh.position.y,mesh.position.z];
+  const half=[par.width*mesh.scale.x/2,par.height*mesh.scale.y/2,par.depth*mesh.scale.z/2];
+  const low=c.map((v,i)=>v-half[i]),high=c.map((v,i)=>v+half[i]);
+  solids.push({low,high});
+  const meshFaces=[];
+  for(let axis=0;axis<3;axis++){
+   const tangent=[0,1,2].filter(i=>i!==axis);
+   const area=(high[tangent[0]]-low[tangent[0]])*(high[tangent[1]]-low[tangent[1]]);
+   if(area<.5)continue;
+   for(const at of [low[axis],high[axis]])
+    meshFaces.push({axis,at,tangent,low,high,area,reflection:.66,material:'stone'});
+  }
+  // Preserve at least two representative faces from EVERY physical box,
+  // rather than dropping small but significant columns behind large walls.
+  meshFaces.sort((a,b)=>b.area-a.area);
+  faces.push(...meshFaces.slice(0,2));
+  extraFaces.push(...meshFaces.slice(2));
+ }
+ // Acoustic boundary obtained directly from the actual visual water plane.
+ const water=poolSurface.geometry.parameters;
+ const low=[poolSurface.position.x-water.width/2,poolSurface.position.y,
+  poolSurface.position.z-water.height/2];
+ const high=[poolSurface.position.x+water.width/2,poolSurface.position.y,
+  poolSurface.position.z+water.height/2];
+ faces.push({axis:1,at:poolSurface.position.y,tangent:[0,2],
+  low,high,area:water.width*water.height,reflection:-.42,material:'water'});
+ extraFaces.sort((a,b)=>b.area-a.area);
+ const selected=faces.slice(0,REFLECTION_CAP);
+ selected.push(...extraFaces.slice(0,Math.max(0,REFLECTION_CAP-selected.length)));
+ return {solids,faces:selected};
+}
+function reflectionLength(source,point,face){
+ const axis=face.axis,at=face.at;
+ // An acoustic reflection requires source and listener on the same side.
+ const ds=source[axis]-at,dp=point[axis]-at;
+ if(ds*dp<=.005)return 0;
+ const image=[source[0],source[1],source[2]];
+ image[axis]=2*at-source[axis];
+ const delta=point[axis]-image[axis];
+ if(Math.abs(delta)<1e-8)return 0;
+ const t=(at-image[axis])/delta;
+ if(t<=0||t>=1)return 0;
+ for(const ax of face.tangent){
+  const hit=image[ax]+t*(point[ax]-image[ax]);
+  if(hit<face.low[ax]-.02||hit>face.high[ax]+.02)return 0;
+ }
+ return Math.hypot(point[0]-image[0],point[1]-image[1],point[2]-image[2]);
+}
+function makeAcousticCache(){
+ const sceneGeometry=extractAcousticSurfaces(),g=FIELD_GRID;
+ const total=g.nx*g.ny*g.nz,nFaces=sceneGeometry.faces.length;
+ // Only actual user-controlled sources generate standing waves.
+ // The earlier hidden diagnostic probe was effectively always on.
+ const sources=EMITTERS.map(p=>[p.x,1.04,p.z]);
+ const paths=sources.map(()=>new Float32Array(total*(1+nFaces)));
+ const opaque=new Uint8Array(total);
+ for(let x=0;x<g.nx;x++)for(let y=0;y<g.ny;y++)for(let z=0;z<g.nz;z++){
+  const j=fieldIndex(x,y,z),p=[g.x0+x*g.dx,g.y0+y*g.dy,g.z0+z*g.dz];
+  if(sceneGeometry.solids.some(b=>
+   p.every((v,k)=>v>b.low[k]+.01&&v<b.high[k]-.01)))opaque[j]=1;
+  sources.forEach((source,si)=>{
+   const cache=paths[si],start=j*(1+nFaces);
+   cache[start]=Math.hypot(p[0]-source[0],p[1]-source[1],p[2]-source[2]);
+   for(let n=0;n<nFaces;n++)cache[start+n+1]=
+    reflectionLength(source,p,sceneGeometry.faces[n]);
+  });
+ }
+ return {...sceneGeometry,sources,paths,opaque,nFaces,total,
+  doorY:hiddenDoor.position.y,vaultY:beatVault.position.y};
+}
+function ensureAcousticCache(){
+ if(!acousticCache||Math.abs(acousticCache.doorY-hiddenDoor.position.y)>.2||
+    Math.abs(acousticCache.vaultY-beatVault.position.y)>.2)
+  acousticCache=makeAcousticCache();
+ return acousticCache;
+}
+function pressureFromPaths(paths,index,frequency,phase,reflectors){
+ const stride=reflectors.length+1,base=index*stride;
+ const direct=paths[base];
+ const k=2*Math.PI*frequency/SOUND_SPEED;
+ let real=Math.cos(k*direct+phase)/(1+.13*direct);
+ for(let i=0;i<reflectors.length;i++){
+  const length=paths[base+i+1];
+  if(!length)continue;
+  const face=reflectors[i];
+  real+=face.reflection*.16*Math.cos(k*length+phase)/(1+.13*length);
+ }
+ return real;
+}
+function acousticFieldAtGrid(index){
+ // Silence is true zero pressure, not a background survey wave.
+ if(!state.osc.some(o=>o.on))return 0;
+ const cache=ensureAcousticCache();
+ if(cache.opaque[index])return 0;
+ let energy=0;
+ const enabled=Math.max(1,state.activeEmitters||0);
+ const g=FIELD_GRID,ix=Math.floor(index/(g.ny*g.nz)),remainder=index-ix*g.ny*g.nz;
+ const iy=Math.floor(remainder/g.nz),iz=remainder%g.nz;
+ const point={x:g.x0+ix*g.dx,z:g.z0+iz*g.dz};
+ for(let i=0;i<3;i++){
+  const src=state.osc[i];
+  if(!src.on)continue;
+  const direction=beamToPoint(i,point);
+  const base=pressureFromPaths(cache.paths[i],index,src.freq,src.phase,cache.faces);
+  let pressure=base*direction.direct;
+  if(direction.bounce&&direction.reflected>.0001){
+   const phase=2*Math.PI*src.freq*direction.bounce.length/SOUND_SPEED+src.phase;
+   pressure+=direction.reflected*.86*Math.cos(phase);
+  }
+  energy+=pressure*.73/enabled;
+ }
+ return energy;
+}
+function reflectedMagnitude(source,point,freq){
+ const {faces}=ensureAcousticCache();
+ const direct=Math.hypot(...source.map((v,i)=>point[i]-v));
+ const k=2*Math.PI*freq/SOUND_SPEED;
+ let real=Math.cos(k*direct)/(1+.13*direct),imag=Math.sin(k*direct)/(1+.13*direct);
+ for(const face of faces){
+  const len=reflectionLength(source,point,face);
+  if(!len)continue;
+  const gain=face.reflection*.16/(1+.13*len);
+  real+=gain*Math.cos(k*len);imag+=gain*Math.sin(k*len);
+ }
+ return Math.hypot(real,imag);
+}
+// DIRECTIONAL REFLECTION AND BEAT COUPLING
+// Horizontal beam aiming is intentionally readable in Observer and uses a
+// finite angled physical mirror. A beat-responsive material responds to the
+// ENVELOPE rate, not an alleged new 4 Hz propagating acoustic carrier.
+const DISC={x:beatDisc.position.x,z:beatDisc.position.z,y:beatDisc.position.y};
+const BEAT_HZ=4;
+// Beat-required sites are explicit, local acoustic landmarks. This first
+// chamber has one; the urn's three matching tones are NOT a beat puzzle.
+const BEAT_SITES=[{id:'suspended-disc',chamber:0,x:DISC.x,z:DISC.z,
+ radius:2.85,sources:[0,1],naturalBeatHz:BEAT_HZ}];
+const BEAM_SPREAD=.29; // radians, approx 17 degrees
+function bearingRad(i){return ((state.osc[i].aim||0)*Math.PI/180);}
+function angleBetween(a,b){return Math.atan2(Math.sin(a-b),Math.cos(a-b));}
+function aimFalloff(i,x,z){
+ const source=EMITTERS[i];
+ const theta=Math.atan2(z-source.z,x-source.x);
+ const error=angleBetween(theta,bearingRad(i));
+ return Math.exp(-.5*Math.pow(error/BEAM_SPREAD,2));
+}
+function blockerIntersection(a,b){
+ // Acoustic baffle is sampled from its real mesh extents.
+ const halfX=acousticBaffle.geometry.parameters.width/2;
+ const halfZ=acousticBaffle.geometry.parameters.depth/2;
+ const left=acousticBaffle.position.x-halfX,right=acousticBaffle.position.x+halfX;
+ const near=acousticBaffle.position.z-halfZ,far=acousticBaffle.position.z+halfZ;
+ let tMin=0,tMax=1;
+ for(const [p,q,lo,hi] of [[a.x,b.x-a.x,left,right],[a.z,b.z-a.z,near,far]]){
+  if(Math.abs(q)<1e-8){if(p<lo||p>hi)return null;continue;}
+  const t1=(lo-p)/q,t2=(hi-p)/q;
+  tMin=Math.max(tMin,Math.min(t1,t2));tMax=Math.min(tMax,Math.max(t1,t2));
+  if(tMin>tMax)return null;
+ }
+ return tMin>.002&&tMin<.998?tMin:null;
+}
+function mirrorBounce(source,target){
+ // Image-source construction for a real rotated planar mirror.
+ const angle=acousticMirror.rotation.y;
+ const nx=Math.sin(angle),nz=Math.cos(angle);
+ const center=acousticMirror.position;
+ const ds=(source.x-center.x)*nx+(source.z-center.z)*nz;
+ const dt=(target.x-center.x)*nx+(target.z-center.z)*nz;
+ if(ds*dt<=.015)return null;
+ const image={x:source.x-2*ds*nx,z:source.z-2*ds*nz};
+ const dx=target.x-image.x,dz=target.z-image.z,denom=dx*nx+dz*nz;
+ if(Math.abs(denom)<1e-8)return null;
+ const t=-((image.x-center.x)*nx+(image.z-center.z)*nz)/denom;
+ if(t<=0||t>=1)return null;
+ const hit={x:image.x+dx*t,z:image.z+dz*t};
+ const u=(hit.x-center.x)*Math.cos(angle)-(hit.z-center.z)*Math.sin(angle);
+ if(Math.abs(u)>acousticMirror.geometry.parameters.width/2)return null;
+ if(blockerIntersection(source,hit)!==null||blockerIntersection(hit,target)!==null)return null;
+ return {hit,length:Math.hypot(hit.x-source.x,hit.z-source.z)+Math.hypot(target.x-hit.x,target.z-hit.z)};
+}
+function beamToPoint(i,target){
+ const source=EMITTERS[i];
+ const dist=Math.hypot(target.x-source.x,target.z-source.z);
+ const direct=blockerIntersection(source,target)===null
+  ?aimFalloff(i,target.x,target.z)/(1+.045*dist):0;
+ const bounce=mirrorBounce(source,target);
+ const reflected=bounce?
+  .88*Math.exp(-.5*Math.pow(angleBetween(
+   Math.atan2(bounce.hit.z-source.z,bounce.hit.x-source.x),bearingRad(i))/BEAM_SPREAD,2))
+  /(1+.045*bounce.length):0;
+ return {direct,reflected,bounce,strength:Math.max(direct,reflected)};
+}
+function updateBeatResponse(){
+ const r=readResonators().disc;
+ state.beatRate=state.activeChamber===0&&state.osc[0].on&&state.osc[1].on?
+  Math.abs(state.osc[0].freq-state.osc[1].freq):0;
+ state.beatOverlap=r?r.beatStrength:0;
+ state.beatCharge=r?r.beatCharge:0;
+}
+const beamGuideGroup=new THREE.Group();topologyGroup.add(beamGuideGroup);
+let beamGuideDirty=true;
+const beamGuides=EMITTERS.map((p,i)=>{
+ const material=new THREE.LineBasicMaterial({color:p.color,transparent:true,opacity:.61,depthWrite:false});
+ const line=new THREE.Line(new THREE.BufferGeometry(),material);
+ line.frustumCulled=false;beamGuideGroup.add(line);return line;
+});
+function rayToMirror(source,theta){
+ const dx=Math.cos(theta),dz=Math.sin(theta),a=acousticMirror.rotation.y;
+ const nx=Math.sin(a),nz=Math.cos(a),center=acousticMirror.position;
+ const denom=dx*nx+dz*nz;
+ if(Math.abs(denom)<1e-7)return null;
+ const distance=((center.x-source.x)*nx+(center.z-source.z)*nz)/denom;
+ if(distance<=.05||distance>19)return null;
+ const hit={x:source.x+distance*dx,z:source.z+distance*dz};
+ const u=(hit.x-center.x)*Math.cos(a)-(hit.z-center.z)*Math.sin(a);
+ if(Math.abs(u)>acousticMirror.geometry.parameters.width/2)return null;
+ return {hit,distance,nx,nz};
+}
+function refreshBeamGuides(){
+ for(let i=0;i<EMITTERS.length;i++){
+  const p=EMITTERS[i],line=beamGuides[i];
+  line.visible=Boolean(state.osc[i].on);
+  if(!line.visible)continue;
+  const theta=bearingRad(i),dx=Math.cos(theta),dz=Math.sin(theta),reach=14;
+  const rawEnd={x:p.x+dx*reach,z:p.z+dz*reach};
+  const bounce=rayToMirror(p,theta);
+  const blockT=blockerIntersection(p,rawEnd);
+  let points=[new THREE.Vector3(p.x,1.04,p.z)];
+  if(bounce&& (blockT===null||bounce.distance<blockT*reach)){
+   const hit=bounce.hit,nx=bounce.nx,nz=bounce.nz,dot=dx*nx+dz*nz;
+   const rx=dx-2*dot*nx,rz=dz-2*dot*nz;
+   points.push(new THREE.Vector3(hit.x,1.04,hit.z));
+   points.push(new THREE.Vector3(hit.x+rx*7,1.04,hit.z+rz*7));
+  }else if(blockT!==null){
+   points.push(new THREE.Vector3(p.x+dx*reach*blockT,1.04,p.z+dz*reach*blockT));
+  }else points.push(new THREE.Vector3(rawEnd.x,1.04,rawEnd.z));
+  line.geometry.dispose();line.geometry=new THREE.BufferGeometry().setFromPoints(points);
+ }
+ beamGuideDirty=false;
+}
+// EXPERIMENT 1.8 - 2D ACOUSTIC OBSERVER
+// One horizontal calculation plane, selective material objects, and a
+// fixed elliptical emitter rail. Geometry and responses are in chamber
+// coordinates; the orbiting camera never rotates the physical world.
+const OBSERVER_SCALE=.38;
+const RAIL={rx:9.70,rz:8.80};
+// One shared wave engine spans distinct, configurable regions.
+// Region scaffolding supplies positions, geometry and local objects.
+const ACOUSTIC_REGIONS=[
+ {id:'kindling',focusX:0,rail:RAIL,resonators:['pool','stone','disc']},
+ {id:'lamp',focusX:URN.x,rail:{rx:8.0,rz:7.3},resonators:['urn']}
+];
+function activeRegion(){return ACOUSTIC_REGIONS[state.activeChamber]||ACOUSTIC_REGIONS[0]}
+function activeFocus(){return activeRegion().focusX}
+function activeRail(){return activeRegion().rail}
+const PLANE_GRID={nx:76,nz:68,x0:-8.05,z0:-7.05,dx:16.10/75,dz:14.10/67};
+const observer2D=new THREE.Group();world.add(observer2D);
+let selectedFieldView='field',planeDirty=true,lastPlaneBuild=-1;
+const deg=Math.PI/180;
+const CONTROL_HEIGHT=.24;
+function wrapAngle(a){return Math.atan2(Math.sin(a),Math.cos(a))}
+// A rail is an instrument track: horn bodies cannot pass through each
+// other, though their sound fields can (and must) overlap inside the room.
+const MIN_HORN_GAP=.23; // ~13 degrees, sufficient for the horn silhouettes
+function railAngle(i){
+ return Number.isFinite(state.osc[i].rail)?state.osc[i].rail:[Math.PI,0,-Math.PI/2][i];
+}
+function railAt(i){
+ const t=railAngle(i),r=activeRail();
+ return {x:activeFocus()+r.rx*Math.cos(t),z:r.rz*Math.sin(t)};
+}
+function constrainRailMove(i,delta){
+ if(!Number.isFinite(delta)||Math.abs(delta)<1e-8)return false;
+ const current=railAngle(i);
+ let limit=Math.abs(delta);
+ for(let j=0;j<state.osc.length;j++){
+  if(i===j)continue;
+  const separation=wrapAngle(railAngle(j)-current);
+  // Each horn halts at the next occupied position in the drag direction.
+  if((delta>0&&separation>0)||(delta<0&&separation<0)){
+   limit=Math.min(limit,Math.max(0,Math.abs(separation)-MIN_HORN_GAP));
+  }
+ }
+ const step=Math.sign(delta)*limit;
+ if(Math.abs(step)<1e-6)return false;
+ state.osc[i].rail=wrapAngle(current+step);
+ return true;
+}
+function normalizeHornSpacing(){
+ // Older saved configurations may predate the collision rule.
+ for(let pass=0;pass<4;pass++){
+  for(let i=0;i<state.osc.length;i++)for(let j=i+1;j<state.osc.length;j++){
+   const a=railAngle(i),separation=wrapAngle(railAngle(j)-a);
+   if(Math.abs(separation)>=MIN_HORN_GAP)continue;
+   const side=separation>=0?1:-1;
+   state.osc[j].rail=wrapAngle(a+side*MIN_HORN_GAP);
+  }
+ }
+}
+function aimRadians(i){
+ const p=railAt(i);
+ return Math.atan2(-p.z,activeFocus()-p.x)+Math.max(-90,Math.min(90,state.osc[i].aim||0))*deg;
+}
+function emitterDirection(i){const a=aimRadians(i);return {x:Math.cos(a),z:Math.sin(a)}}
+function refreshSourceCoordinates(){
+ for(let i=0;i<3;i++){const p=railAt(i);EMITTERS[i].x=p.x;EMITTERS[i].z=p.z}
+}
+refreshSourceCoordinates();
+// Active acoustic objects come from actual geometry, not scenery.
+// Floor, water plane, thin ornaments, and the decorative shell are omitted.
+function segmentFromStone(mesh,coeff){
+ const par=mesh.geometry.parameters,ang=mesh.rotation.y;
+ const alongWidth=par.width>par.depth;
+ const half=(alongWidth?par.width:par.depth)/2;
+ const dx=(alongWidth?Math.cos(ang):-Math.sin(ang))*half;
+ const dz=(alongWidth?Math.sin(ang):Math.cos(ang))*half;
+ return {ax:mesh.position.x-dx,az:mesh.position.z-dz,
+  bx:mesh.position.x+dx,bz:mesh.position.z+dz,
+  mesh,reflection:coeff,initialY:mesh.position.y};
+}
+const acousticSegments=[
+ segmentFromStone(acousticMirror,.78),
+ segmentFromStone(acousticBaffle,.58),
+ segmentFromStone(hiddenDoor,.62),
+ segmentFromStone(beatVault,.7)
+];
+for(const mesh of physicalWorld.children){
+ if(!mesh.isMesh||mesh.geometry.type!=='BoxGeometry'||mesh.material!==stoneMat)continue;
+ const par=mesh.geometry.parameters;
+ if(par.height>3&&par.width<.65&&par.depth>2.5
+  &&Math.abs(mesh.position.x-6.03)<.1)
+  acousticSegments.push(segmentFromStone(mesh,ACOUSTIC_MATERIALS.stone.reflection));
+}
+for(const mesh of secondStoneSegments){
+ const seg=segmentFromStone(mesh,ACOUSTIC_MATERIALS.stone.reflection*.9);seg.chamber=1;acousticSegments.push(seg);
+}
+const acousticColumns=[];
+for(const mesh of physicalWorld.children){
+ if(!mesh.isMesh||mesh.geometry.type!=='BoxGeometry'||mesh.material!==stoneMat)continue;
+ const p=mesh.geometry.parameters;
+ if(mesh===acousticBaffle||mesh===acousticMirror)continue;
+ if(p.height<1.8||p.width>1.15||p.depth>1.2)continue;
+ acousticColumns.push({x:mesh.position.x,z:mesh.position.z,
+  radius:Math.max(p.width,p.depth)*.47,reflection:.42});
+}
+for(const mesh of secondColumns){
+ const par=mesh.geometry.parameters;
+ acousticColumns.push({x:mesh.position.x,z:mesh.position.z,
+  radius:Math.max(par.width,par.depth)*.49,reflection:.42,chamber:1});
+}
+function activeSegment(seg){
+ return (seg.chamber??0)===state.activeChamber&&
+   Math.abs(seg.mesh.position.y-seg.initialY)<.9;
+}
+function cross2(ax,az,bx,bz){return ax*bz-az*bx}
+function segmentHit2(a,b,c,d){
+ const ux=b.x-a.x,uz=b.z-a.z,vx=d.x-c.x,vz=d.z-c.z;
+ const den=cross2(ux,uz,vx,vz);
+ if(Math.abs(den)<1e-9)return null;
+ const qx=c.x-a.x,qz=c.z-a.z;
+ const t=cross2(qx,qz,vx,vz)/den,u=cross2(qx,qz,ux,uz)/den;
+ if(t>.008&&t<.992&&u>=0&&u<=1)return {t,u,x:a.x+t*ux,z:a.z+t*uz};
+ return null;
+}
+function blockedByStone(a,b,exclude=null){
+ for(const seg of acousticSegments){
+  if(seg===exclude||!activeSegment(seg))continue;
+  if(segmentHit2(a,b,{x:seg.ax,z:seg.az},{x:seg.bx,z:seg.bz}))return true;
+ }
+ return false;
+}
+function bounce2D(source,target,seg){
+ if(!activeSegment(seg))return null;
+ const dx=seg.bx-seg.ax,dz=seg.bz-seg.az,L=Math.hypot(dx,dz);
+ if(L<.01)return null;
+ const nx=-dz/L,nz=dx/L;
+ const ds=(source.x-seg.ax)*nx+(source.z-seg.az)*nz;
+ const dt=(target.x-seg.ax)*nx+(target.z-seg.az)*nz;
+ if(ds*dt<=.005)return null;
+ const mirror={x:source.x-2*ds*nx,z:source.z-2*ds*nz};
+ const rayX=target.x-mirror.x,rayZ=target.z-mirror.z,den=rayX*nx+rayZ*nz;
+ if(Math.abs(den)<1e-8)return null;
+ const t=-((mirror.x-seg.ax)*nx+(mirror.z-seg.az)*nz)/den;
+ if(t<=0||t>=1)return null;
+ const hit={x:mirror.x+t*rayX,z:mirror.z+t*rayZ};
+ const projection=(hit.x-seg.ax)*dx/L+(hit.z-seg.az)*dz/L;
+ if(projection<0||projection>L)return null;
+ if(blockedByStone(source,hit,seg)||blockedByStone(hit,target,seg))return null;
+ return {hit,length:Math.hypot(hit.x-source.x,hit.z-source.z)+
+                    Math.hypot(hit.x-target.x,hit.z-target.z)};
+}
+function coneGain(i,point){
+ const p=railAt(i),d=Math.atan2(point.z-p.z,point.x-p.x);
+ const err=wrapAngle(d-aimRadians(i));
+ return Math.exp(-.5*Math.pow(err/.36,2));
+}
+// Complex phasor pressure at one plane point from one source. This uses real
+// direct and finite specular one-bounce paths plus weak column scattering.
+// It is a 2D acoustic path approximation, not a full PDE wave solver.
+function pressure2D(i,x,z){
+ if(!state.osc[i].on)return {real:0,imag:0,mag:0};
+ const source=railAt(i),target={x,z};
+ const o=state.osc[i],k=2*Math.PI*o.freq/SOUND_SPEED;
+ let real=0,imag=0;
+ function add(length,weight){
+  const phase=k*length+(o.phase||0);
+  real+=weight*Math.cos(phase);imag+=weight*Math.sin(phase);
+ }
+ const directLen=Math.hypot(x-source.x,z-source.z);
+ if(!blockedByStone(source,target))
+  add(directLen,coneGain(i,target)/(1+.11*directLen));
+ for(const seg of acousticSegments){
+  const bounce=bounce2D(source,target,seg);
+  if(!bounce)continue;
+  add(bounce.length,seg.reflection*.63*coneGain(i,bounce.hit)/(1+.11*bounce.length));
+ }
+ // A limited set of genuine columns reradiates a much weaker scattered
+ // component. This makes material landmarks affect the field without
+ // including ordinary floor geometry.
+ for(const column of acousticColumns){
+  if((column.chamber??0)!==state.activeChamber)continue;
+  const originDistance=Math.hypot(column.x-source.x,column.z-source.z);
+  const targetDistance=Math.hypot(x-column.x,z-column.z);
+  if(targetDistance>7.5)continue;
+  const gain=coneGain(i,column)*column.reflection*.18/
+   ((1+.1*originDistance)*(1+.16*targetDistance));
+  if(gain>.0001)add(originDistance+targetDistance,gain);
+  if(targetDistance<column.radius*1.35){
+   real*=.48;imag*=.48;
+  }
+ }
+ return {real,imag,mag:Math.hypot(real,imag)};
+}
+// The same source-to-target function drives both Observer feedback and
+// Immersion puzzle coupling. The visual field is not a disconnected effect.
+function localResponse2D(i,target){return pressure2D(i,target.x,target.z).mag;}
+const landMat=new THREE.MeshBasicMaterial({
+ vertexColors:true,transparent:true,opacity:.92,side:THREE.DoubleSide,depthWrite:false
+});
+const sampleCount=PLANE_GRID.nx*PLANE_GRID.nz;
+// Cache a static field and animate only the vertices near an actual beat site.
+// This keeps the 76×68 acoustic solver out of the 60fps animation loop.
+const beatBaseHeights=new Float32Array(sampleCount);
+const beatBaseColors=new Float32Array(sampleCount*4);
+let beatFieldCells=[];
+let wallFieldCells=[]; // A compact set of vertices ON the existing wave landscape.
+const heightBuffer=new Float32Array(sampleCount*3);
+const shadeBuffer=new Float32Array(sampleCount*4);
+// Expensive geometric reflection is solved only when a source or region changes.
+// Phase motion is derived from these three cached complex-pressure fields.
+const waveCache={
+ re:Array.from({length:3},()=>new Float32Array(sampleCount)),
+ im:Array.from({length:3},()=>new Float32Array(sampleCount)),
+ mag:Array.from({length:3},()=>new Float32Array(sampleCount)),
+ energy:new Float32Array(sampleCount),
+ crest:new Float32Array(sampleCount),
+ active:[],peak:.48,coherence:0,
+ phase:new Float64Array(3),lastMotionAt:0,lastDrawAt:0,
+ landmarks:{}
+};
+const meshIndices=[];
+for(let x=0;x<PLANE_GRID.nx-1;x++)for(let z=0;z<PLANE_GRID.nz-1;z++){
+ const n=x*PLANE_GRID.nz+z,m=n+PLANE_GRID.nz;
+ meshIndices.push(n,m,n+1,m,m+1,n+1);
+}
+for(let x=0;x<PLANE_GRID.nx;x++)for(let z=0;z<PLANE_GRID.nz;z++){
+ const idx=x*PLANE_GRID.nz+z;
+ heightBuffer[idx*3]=PLANE_GRID.x0+x*PLANE_GRID.dx;
+ heightBuffer[idx*3+1]=.13;
+ heightBuffer[idx*3+2]=PLANE_GRID.z0+z*PLANE_GRID.dz;
+ shadeBuffer[idx*4+3]=0;
+}
+const landscapeGeom=new THREE.BufferGeometry();
+landscapeGeom.setAttribute('position',new THREE.BufferAttribute(heightBuffer,3));
+landscapeGeom.setAttribute('color',new THREE.BufferAttribute(shadeBuffer,4));
+landscapeGeom.setIndex(meshIndices);
+const landscape=new THREE.Mesh(landscapeGeom,landMat);
+landscape.frustumCulled=false;observer2D.add(landscape);
+const diagnosticLines=new THREE.LineSegments(new THREE.BufferGeometry(),
+ new THREE.LineBasicMaterial({color:0xd1e9f1,transparent:true,opacity:.58,depthWrite:false}));
+observer2D.add(diagnosticLines);
+let diagnosticPositions=[];
+function acousticEdge(points,color,opacity=.20){
+ const geom=new THREE.BufferGeometry().setFromPoints(points.map(p=>new THREE.Vector3(p.x,.12,p.z)));
+ const line=points.length>2?new THREE.LineLoop(geom,new THREE.LineBasicMaterial({color,transparent:true,opacity,depthWrite:false})):
+  new THREE.Line(geom,new THREE.LineBasicMaterial({color,transparent:true,opacity,depthWrite:false}));
+ observer2D.add(line);return line;
+}
+for(const seg of acousticSegments)acousticEdge([{x:seg.ax,z:seg.az},{x:seg.bx,z:seg.bz}],
+ seg.mesh===acousticMirror?0xa5bedb:0x719eb9,seg.mesh===acousticMirror?.36:.19);
+for(const col of acousticColumns){
+ const outline=[];
+ for(let n=0;n<16;n++){
+  const a=2*Math.PI*n/16;
+  outline.push({x:col.x+(col.radius+.09)*Math.cos(a),
+                z:col.z+(col.radius+.09)*Math.sin(a)});
+ }
+ acousticEdge(outline,0x84b9cc,.20);
+}
+acousticEdge(Array.from({length:28},(_,n)=>{
+ const a=2*Math.PI*n/28;return {x:DISC.x+.9*Math.cos(a),z:DISC.z+.9*Math.sin(a)}
+}),0xc7a4e9,.36);
+// Faint structural outlines precede physical transformations.
+const poolPathEcho=[];
+for(let ix=0;ix<11;ix++){
+ const x=-3.45+ix*.69,outline=[
+  new THREE.Vector3(x-.31,.22,-.94),new THREE.Vector3(x+.31,.22,-.94),
+  new THREE.Vector3(x+.31,.22,.94),new THREE.Vector3(x-.31,.22,.94)
+ ];
+ const material=new THREE.LineBasicMaterial({color:0x9ceeff,transparent:true,opacity:.02,depthWrite:false});
+ const line=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(outline),material);
+ observer2D.add(line);poolPathEcho.push(line);
+}
+// The hidden wall expresses alignment as one continuous hairline seam.
+const wallEcho=new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+ new THREE.Vector3(5.85,.20,-1.04),new THREE.Vector3(5.85,.20,1.04)
+]),new THREE.LineBasicMaterial({color:0xb9ebff,transparent:true,opacity:.025,depthWrite:false}));
+observer2D.add(wallEcho);
+const urnEchoRings=[];
+for(let i=0;i<3;i++){
+ const material=new THREE.LineBasicMaterial({color:[0x73d2eb,0xe9c597,0xc8a8ec][i],
+  transparent:true,opacity:.055,depthWrite:false});
+ const points=Array.from({length:48},(_,n)=>{
+  const a=n*2*Math.PI/48,r=1.26+i*.27;
+  return new THREE.Vector3(URN.x+Math.cos(a)*r,.22+i*.04,
+                           URN.z+Math.sin(a)*r);
+ });
+ const ring=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points),material);
+ observer2D.add(ring);urnEchoRings.push(ring);
+}
+const urnObserverGlyph=new THREE.Mesh(new THREE.OctahedronGeometry(.44,1),
+ new THREE.MeshBasicMaterial({color:0x9be5ec,transparent:true,opacity:.05,depthWrite:false}));
+urnObserverGlyph.position.set(URN.x,.55,URN.z);observer2D.add(urnObserverGlyph);
+function responseStageVisuals(){
+ // Pool reveals an underwater bridge from the entry shore outward.
+ for(let ix=0;ix<poolPathEcho.length;ix++){
+  const section=Math.max(0,Math.min(1,(state.poolCoupling-.08-ix*.051)/.29));
+  poolPathEcho[ix].material.opacity=state.activeChamber===0?.015+.78*section:0;
+ }
+ wallEcho.material.opacity=state.activeChamber===0?.025+
+  .82*Math.pow(state.wallCoupling,1.7):0;
+ const activeUrn=state.activeChamber===1;
+ for(let i=0;i<3;i++){
+  const strength=state.urnSourceValues[i]||0;
+  urnEchoRings[i].material.opacity=activeUrn?.045+.82*strength:0;
+  urnChannels[i].material.opacity=state.lampLit?.85:.04+.68*strength;
+ }
+ urnObserverGlyph.material.opacity=activeUrn?.035+.72*state.urnCharge:0;
+ urnObserverGlyph.scale.setScalar(.8+1.2*state.urnCharge);
+ urnBronze.emissiveIntensity=.06+.58*state.urnCharge+(state.lampLit?.75:0);
+ urnGlowMat.opacity=.035+.68*state.urnCharge+(state.lampLit?.18:0);
+ lampCrystal.material.emissiveIntensity=state.lampLit?3.1:.04+.4*state.urnCharge;
+ lampCrystal.material.color.setHex(state.lampLit?0xffd8a0:0x6b8eaa);
+ lampCrystal.material.emissive.setHex(state.lampLit?0xffb45f:0x224b70);
+ lampLight.intensity=state.lampLit?10:0;
+ lampHalo.material.opacity=state.lampLit?.27:0;
+}
+// Conceptual perimeter rail, visible only as a ghost unless a source is
+// selected. It does not collide or reflect any acoustic energy.
+const railMaterial=new THREE.LineBasicMaterial({
+ color:0x91dcf3,transparent:true,opacity:.055,depthWrite:false});
+const railPoints=Array.from({length:128},(_,n)=>{
+ const a=2*Math.PI*n/128;
+ return new THREE.Vector3(RAIL.rx*Math.cos(a),.16,RAIL.rz*Math.sin(a));
+});
+const railLine=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(railPoints),railMaterial);
+observer2D.add(railLine);
+// Mystical brass-like acoustic horns with a flared mouth and visible rear lever.
+const railMarkers=[];
+for(let i=0;i<3;i++){
+ const p=EMITTERS[i];
+ const group=new THREE.Group();observer2D.add(group);
+ const horn=new THREE.Group();group.add(horn);
+ const hornMat=new THREE.MeshStandardMaterial({color:p.color,metalness:.70,roughness:.35,
+  emissive:p.color,emissiveIntensity:.20,transparent:true,opacity:.92});
+ const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.31,.12,.98,12,1,true),hornMat);
+ barrel.rotation.z=-Math.PI/2;barrel.position.set(.40,.63,0);horn.add(barrel);
+ const mouth=new THREE.Mesh(new THREE.TorusGeometry(.33,.06,7,24),hornMat);
+ mouth.rotation.y=Math.PI/2;mouth.position.set(.91,.63,0);horn.add(mouth);
+ const throat=new THREE.Mesh(new THREE.SphereGeometry(.23,10,8),hornMat);
+ throat.position.set(-.11,.63,0);horn.add(throat);
+ const pivot=new THREE.Mesh(new THREE.CylinderGeometry(.16,.22,.64,10),
+  new THREE.MeshStandardMaterial({color:0x9a8c7c,metalness:.65,roughness:.35}));
+ pivot.position.y=.30;group.add(pivot);
+ const halo=new THREE.Mesh(new THREE.TorusGeometry(.48,.029,6,40),
+  new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:.27,depthWrite:false}));
+ halo.rotation.x=Math.PI/2;halo.position.y=.05;group.add(halo);
+ const handle=new THREE.Mesh(new THREE.SphereGeometry(.34,16,12),
+  new THREE.MeshStandardMaterial({color:0xf2dbac,metalness:.48,roughness:.28,
+   emissive:0xbda065,emissiveIntensity:.54}));
+ const gripHalo=new THREE.Mesh(new THREE.TorusGeometry(.50,.034,8,36),
+  new THREE.MeshBasicMaterial({color:0xe7d6ab,transparent:true,opacity:.73,depthWrite:false}));
+ gripHalo.rotation.x=Math.PI/2;handle.add(gripHalo);
+ observer2D.add(handle);
+ const stem=new THREE.Line(new THREE.BufferGeometry(),
+  new THREE.LineBasicMaterial({color:0xe2c7a0,transparent:true,opacity:.92,depthWrite:false}));
+ observer2D.add(stem);
+ railMarkers.push({group,head:horn,headMaterial:hornMat,halo,handle,stem});
+}
+function leverPivot(i){
+ const p=railAt(i),radial={x:p.x-activeFocus(),z:p.z};
+ const radius=Math.max(.01,Math.hypot(radial.x,radial.z));
+ return {x:p.x+radial.x/radius*.70,z:p.z+radial.z/radius*.70};
+}
+function leverAt(i){
+ // Rear lever is opposite the acoustic direction. Its control must use that
+ // inverse relationship, otherwise dragging it snaps toward the wrong bearing.
+ const c=leverPivot(i),d=emitterDirection(i);
+ return {x:c.x-d.x*1.55,z:c.z-d.z*1.55};
+}
+const aimingArc=new THREE.Line(new THREE.BufferGeometry(),
+ new THREE.LineBasicMaterial({color:0x9bd9ec,transparent:true,opacity:.47,depthWrite:false}));
+observer2D.add(aimingArc);
+const aimRay=new THREE.Line(new THREE.BufferGeometry(),
+ new THREE.LineBasicMaterial({color:0x9be8f2,transparent:true,opacity:.72,depthWrite:false}));
+observer2D.add(aimRay);
+function updateRailGraphics(){
+ refreshSourceCoordinates();
+ const currentRail=activeRail();
+ railLine.position.x=activeFocus();
+ railLine.position.y=CONTROL_HEIGHT-.16;
+ railLine.scale.set(currentRail.rx/RAIL.rx,1,currentRail.rz/RAIL.rz);
+ railMaterial.opacity=selectedEmitterIndex>=0?.39:.065;
+ for(let i=0;i<3;i++){
+  const p=railAt(i),d=emitterDirection(i),obj=railMarkers[i];
+  obj.group.position.set(p.x,0,p.z);
+  obj.group.scale.setScalar(i===selectedEmitterIndex?1.27:1);
+  obj.head.rotation.y=-aimRadians(i);
+  obj.headMaterial.emissiveIntensity=state.osc[i].on?.46:.035;
+  obj.headMaterial.opacity=state.osc[i].on?1:.42;
+  obj.halo.material.opacity=i===selectedEmitterIndex?(obj.bumped?1:.89):.23;
+  const lever=leverAt(i);
+  obj.handle.position.set(lever.x,CONTROL_HEIGHT,lever.z);
+  obj.handle.visible=i===selectedEmitterIndex;
+  obj.stem.visible=i===selectedEmitterIndex;
+  if(obj.stem.visible){
+   obj.stem.geometry.dispose();
+   obj.stem.geometry=new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(p.x,CONTROL_HEIGHT,p.z),new THREE.Vector3(lever.x,CONTROL_HEIGHT,lever.z)]);
+  }
+ }
+ const selected=selectedEmitterIndex;
+ aimingArc.visible=aimRay.visible=selected>=0;
+ if(selected>=0){
+  const p=railAt(selected);
+  const c=Math.atan2(-p.z,activeFocus()-p.x);
+  const arc=[];
+  for(let n=0;n<=36;n++){
+   const a=c-Math.PI/2+n*Math.PI/36;
+   const radial={x:p.x-activeFocus(),z:p.z},radius=Math.max(.01,Math.hypot(radial.x,radial.z));
+   arc.push(new THREE.Vector3(p.x-Math.cos(a)*1.55+radial.x/radius*.70,CONTROL_HEIGHT,
+     p.z-Math.sin(a)*1.55+radial.z/radius*.70));
+  }
+  aimingArc.geometry.dispose();aimingArc.geometry=new THREE.BufferGeometry().setFromPoints(arc);
+  const bearing=aimRadians(selected),direction={x:Math.cos(bearing),z:Math.sin(bearing)};
+  const far={x:p.x+direction.x*17,z:p.z+direction.z*17};
+  let best=17;
+  for(const seg of acousticSegments){
+   if(!activeSegment(seg))continue;
+   const hit=segmentHit2(p,far,{x:seg.ax,z:seg.az},{x:seg.bx,z:seg.bz});
+   if(hit&&hit.t*17<best)best=hit.t*17;
+  }
+  const end=new THREE.Vector3(p.x+direction.x*best,.52,p.z+direction.z*best);
+  aimRay.geometry.dispose();aimRay.geometry=new THREE.BufferGeometry().setFromPoints([
+   new THREE.Vector3(p.x,.52,p.z),end]);
+ }
+ planeDirty=true;
+}
+function computeFieldPlane(){
+ const begun=performance.now(),g=PLANE_GRID;
+ const rawPressure=new Float32Array(sampleCount),rawAmplitude=new Float32Array(sampleCount);
+ const sourceMagnitudes=waveCache.mag,sourceReals=waveCache.re,sourceImags=waveCache.im;
+ beatFieldCells.length=0;
+ wallFieldCells.length=0;
+ const activeIndices=state.osc.map((o,i)=>o.on?i:-1).filter(i=>i>=0);
+ waveCache.active=activeIndices;
+ const active=activeIndices.length;
+ const frequencies=activeIndices.map(i=>state.osc[i].freq);
+ const spread=active?Math.max(...frequencies)-Math.min(...frequencies):0;
+ waveCache.coherence=active>1?Math.exp(-.5*Math.pow(spread/8,2)):0;
+ if(!active&&!(state.activeChamber===0&&state.hasCrossedGap)){
+  landscape.visible=diagnosticLines.visible=false;
+  $('planeStats').textContent='2D · 0 active sources · field silent';
+  planeDirty=false;return;
+ }
+ let peak=0;
+ for(let x=0;x<g.nx;x++)for(let z=0;z<g.nz;z++){
+  const j=x*g.nz+z,px=activeFocus()+g.x0+x*g.dx,pz=g.z0+z*g.dz;
+  heightBuffer[j*3]=px;
+  let energy=0,real=0,imag=0;
+  for(let i=0;i<3;i++){
+   if(!state.osc[i].on)continue;
+   const p=pressure2D(i,px,pz);
+   energy+=p.mag*p.mag;real+=p.real;imag+=p.imag;
+   sourceMagnitudes[i][j]=p.mag;
+   sourceReals[i][j]=p.real;sourceImags[i][j]=p.imag;
+  }
+  // Coherent horns produce a true constructive/destructive standing field.
+  // The previous RMS-only display erased this information in Chamber II.
+  const rms=Math.sqrt(energy/Math.max(1,active));
+  const phasor=Math.hypot(real,imag)/Math.max(1,active);
+  rawPressure[j]=real;
+  rawAmplitude[j]=(1-.65*waveCache.coherence)*rms+
+   .65*waveCache.coherence*phasor;
+  peak=Math.max(peak,rawAmplitude[j]);
+ }
+ waveCache.peak=Math.max(.48,peak*.85);
+ waveCache.landmarks={};
+ for(const id of activeRegion().resonators){
+  const profile=RESONATOR_PROFILES[id],indices=[];
+  for(let j=0;j<sampleCount;j++){
+   const x=heightBuffer[j*3],z=heightBuffer[j*3+2];
+   if(j%2===0&&Math.hypot(x-profile.x,z-profile.z)<profile.visualRadius)indices.push(j);
+  }
+  waveCache.landmarks[id]=indices;
+ }
+ if(selectedFieldView==='field'){
+  const denom=waveCache.peak;
+  for(let j=0;j<sampleCount;j++){
+   const normalized=Math.min(1,rawAmplitude[j]/denom);
+   // Localized spectral coherence becomes orderly rings near a sympathetic object.
+   const wx=heightBuffer[j*3],wz=heightBuffer[j*3+2];
+   const target=state.activeChamber===1?URN:
+    state.hasCrossedGap?{x:5.82,z:0}:{x:-4.12,z:0};
+   const distance=Math.hypot(wx-target.x,wz-target.z);
+   const coherence=state.activeChamber===1?state.urnCharge:
+    state.hasCrossedGap?state.wallCoupling:state.poolCoupling;
+   const gathered=Math.exp(-Math.pow(distance/3.3,2))*coherence;
+   const harmonic=Math.pow(.5+.5*Math.cos(distance*3.2),2);
+   // With a single horn, the spatial phase comes from k=2πf/c, so
+   // turning the frequency dial changes actual node spacing. This is
+   // a stationary pressure snapshot, not a fabricated moving beat.
+   const showCarrier=state.activeChamber===0&&state.hasCrossedGap;
+   const carrier=Math.min(1,Math.abs(rawPressure[j])/denom);
+   const energy=Math.min(1,normalized*(showCarrier?.57:.84)+
+     (showCarrier?.33*carrier:0)+.32*gathered*harmonic);
+   const elevation=Math.pow(energy,1.48);
+   waveCache.energy[j]=energy;
+   // A stationary energy scaffold persists underneath animated pressure.
+   heightBuffer[j*3+1]=.15+elevation*(1.43+.16*waveCache.coherence);
+   const brightness=.045+.955*Math.pow(energy,.86);
+   // Scattered waves remain cool; near coherent objects they become paler and
+   // slightly golden as the target begins to answer.
+   const pearl=Math.min(.90,gathered*.78);
+   shadeBuffer[j*4]=brightness*(.17+.49*pearl);
+   shadeBuffer[j*4+1]=brightness*(.72+.17*pearl);
+   shadeBuffer[j*4+2]=brightness*(.86-.24*pearl);
+   shadeBuffer[j*4+3]=Math.min(1,.10+energy*.86);
+    beatBaseHeights[j]=heightBuffer[j*3+1];
+    for(let k=0;k<4;k++)beatBaseColors[j*4+k]=shadeBuffer[j*4+k];
+    // Preserve the existing acoustic wave mesh. The stone's response is
+    // a localized distortion of this surface, never an independent ring.
+    if(state.activeChamber===0&&state.hasCrossedGap){
+      const r=Math.hypot(wx-5.82,wz);
+      if(r<3.25&&wx<=5.98){
+        let phaseOffset=0,localBeat=0;
+        if(state.wallBeatPair){
+          const [a,b]=state.wallBeatPair;
+          const angleA=Math.atan2(sourceImags[a][j],sourceReals[a][j]);
+          const angleB=Math.atan2(sourceImags[b][j],sourceReals[b][j]);
+          const sign=state.osc[a].freq>=state.osc[b].freq?1:-1;
+          phaseOffset=sign*(angleA-angleB);
+          localBeat=Math.min(1,Math.sqrt(
+            sourceMagnitudes[a][j]*sourceMagnitudes[b][j])*2.2);
+        }
+        wallFieldCells.push({index:j,x:wx,z:wz,r,phaseOffset,localBeat,
+          weight:Math.exp(-.5*Math.pow(r/1.70,2))*
+           Math.min(1,Math.max(0,(5.98-wx)/.37))});
+      }
+    }
+    // Only the meaningful area around a beat-requiring object moves. The
+    // overlap uses acoustic pressures already calculated above.
+    for(let siteIndex=0;siteIndex<BEAT_SITES.length;siteIndex++){
+      const site=BEAT_SITES[siteIndex],a=site.sources[0],b=site.sources[1];
+      if(site.chamber!==state.activeChamber||
+         (state.activeChamber===0&&state.hasCrossedGap)||
+         !state.osc[a].on||!state.osc[b].on)continue;
+      const r=Math.hypot(wx-site.x,wz-site.z);
+      if(r>site.radius*1.85)continue;
+      const paired=Math.min(1,Math.sqrt(
+        sourceMagnitudes[a][j]*sourceMagnitudes[b][j])*2.2);
+      const local=paired*Math.exp(-.5*Math.pow(r/site.radius,2));
+      if(local>.028)beatFieldCells.push({
+        index:j,weight:local,radialPhase:r*2.45,siteIndex
+      });
+    }
+  }
+  landscapeGeom.attributes.position.needsUpdate=true;
+  landscapeGeom.attributes.color.needsUpdate=true;
+  landscape.visible=true;diagnosticLines.visible=false;
+ }else{
+  // A lightweight 2D zero-crossing diagnostic, no 3D nodal sheets.
+  diagnosticPositions=[];
+  for(let x=0;x<g.nx-1;x++)for(let z=0;z<g.nz-1;z++){
+   const ids=[x*g.nz+z,(x+1)*g.nz+z,
+    (x+1)*g.nz+z+1,x*g.nz+z+1];
+   const vals=ids.map(j=>rawPressure[j]);
+   const hits=[];
+   for(const [a,b] of [[0,1],[1,2],[2,3],[3,0]]){
+    if((vals[a]>=0)===(vals[b]>=0))continue;
+    const t=vals[a]/(vals[a]-vals[b]);
+    const ax=x+(a===1||a===2?1:0),az=z+(a>=2?1:0);
+    const bx=x+(b===1||b===2?1:0),bz=z+(b>=2?1:0);
+    hits.push(new THREE.Vector3(activeFocus()+g.x0+(ax+t*(bx-ax))*g.dx,
+      .21,g.z0+(az+t*(bz-az))*g.dz));
+   }
+   for(let n=0;n+1<hits.length;n+=2)diagnosticPositions.push(hits[n],hits[n+1]);
+  }
+  diagnosticLines.geometry.dispose();
+  diagnosticLines.geometry=new THREE.BufferGeometry().setFromPoints(diagnosticPositions);
+  landscape.visible=false;diagnosticLines.visible=true;
+ }
+ const duration=performance.now()-begun;
+ $('planeStats').textContent='2D '+g.nx+'×'+g.nz+' · '+active+' source'+(active===1?'':'s')+
+   ' · calculation '+duration.toFixed(0)+' ms';
+ planeDirty=false;lastPlaneBuild=performance.now();
+}
+// Beat frequency changes the VISUAL ENVELOPE, not the acoustic solver.
+// A 4 Hz difference produces 4 gentle swell cycles per second. Frequencies
+// too far apart to visually track do not create artificial slow flashing.
+// Universal 2D wave visualizer. All regions use exactly this movement model.
+// Physical wavelength, reflection, modal coupling and true beat frequencies
+// are preserved in the solver; animation is deliberately slowed for legibility.
+function animateBeatField(seconds){
+ if(state.mode!=='observer'||selectedFieldView!=='field'||!landscape.visible)return;
+ const now=performance.now();
+ if(now-waveCache.lastDrawAt<32)return; // limit vertex upload to ~30 fps
+ const dt=waveCache.lastMotionAt?Math.min(.06,Math.max(0,(now-waveCache.lastMotionAt)/1000)):0;
+ waveCache.lastMotionAt=now;
+ waveCache.lastDrawAt=now;
+ const active=waveCache.active,amount=active.length;
+ // The field geometry uses true carrier frequency (wavelength and reflection).
+ // On screen we display it in slow motion: ALL sources move outward, with
+ // gentle positive phase speeds. A pair's actual detuning remains the input
+ // to the response solver; only its *visual* beat clock is compressed.
+ // Previous code subtracted a mean frequency, which made low horns run
+ // backward and caused detuned multiple horns to flash at many Hz.
+ const lowest=amount?Math.min(...active.map(i=>state.osc[i].freq)):0;
+ const cosines=[0,0,0],sines=[0,0,0];
+ for(const i of active){
+  const detune=Math.max(0,state.osc[i].freq-lowest);
+  // Min 0.48 cycles/s, max 1.03. A 4 Hz source difference makes a
+  // readable ~0.24 Hz visual envelope rather than four flashes/second.
+  const visualHz=.48+.55*(1-Math.exp(-detune/7));
+  waveCache.phase[i]=(waveCache.phase[i]+2*Math.PI*visualHz*dt)%(Math.PI*2);
+  cosines[i]=Math.cos(waveCache.phase[i]);
+  sines[i]=Math.sin(waveCache.phase[i]);
+ }
+ const gain=1/Math.max(1,amount),denom=waveCache.peak;
+ for(let j=0;j<sampleCount;j++){
+  let pressure=0;
+  for(const i of active)
+   // pressure2D stores cos(k*r+phase). cos(k*r-visualTime) propagates
+   // outward; the previous minus-imaginary form ran inward to the horns.
+   pressure+=waveCache.re[i][j]*cosines[i]+waveCache.im[i][j]*sines[i];
+  const instantaneous=Math.max(-1,Math.min(1,pressure*gain/denom));
+  const energy=waveCache.energy[j],k=j*4;
+  // Static scaffold keeps coherent fields alive even at pressure zero crossings.
+  heightBuffer[j*3+1]=Math.max(.065,beatBaseHeights[j]+
+   instantaneous*(.10+.33*energy)*(.76+.24*waveCache.coherence));
+  waveCache.crest[j]=Math.max(0,instantaneous);
+  const shimmer=Math.max(0,instantaneous)*energy;
+  shadeBuffer[k]=Math.min(1,beatBaseColors[k]+.17*shimmer);
+  shadeBuffer[k+1]=Math.min(1,beatBaseColors[k+1]+.15*shimmer);
+  shadeBuffer[k+2]=Math.min(1,beatBaseColors[k+2]+.17*shimmer);
+  shadeBuffer[k+3]=Math.min(1,beatBaseColors[k+3]+.11*shimmer);
+ }
+ // Immersion thump leaves a short surface disturbance on the very same field.
+ const age=performance.now()*.001-state.wallProbeRealAt;
+ if(state.activeChamber===0&&state.hasCrossedGap&&age>=0&&age<3.6)
+  for(const cell of wallFieldCells){
+   const distance=Math.hypot(cell.x-5.82,cell.z-state.wallProbeZ);
+   const impulse=wallImpulseWave(age,distance)*cell.weight;
+   heightBuffer[cell.index*3+1]+=.46*impulse;
+   const k=cell.index*4,value=Math.min(1,Math.abs(impulse));
+   shadeBuffer[k]=Math.min(1,shadeBuffer[k]+.20*value);
+   shadeBuffer[k+1]=Math.min(1,shadeBuffer[k+1]+.24*value);
+  }
+ landscapeGeom.attributes.position.needsUpdate=true;
+ landscapeGeom.attributes.color.needsUpdate=true;
+}
+function setPlaneDirty(){planeDirty=true}
+
+// An acoustic imprint makes the physical player legible in Observer.
+const avatarGroup=new THREE.Group();observer2D.add(avatarGroup);
+const avatarMaterial=new THREE.MeshBasicMaterial({color:0xe4f6ff,transparent:true,opacity:.88,depthWrite:false});
+const avatarBody=new THREE.Mesh(new THREE.CylinderGeometry(.13,.22,.78,10),avatarMaterial);
+avatarBody.position.y=.78;avatarGroup.add(avatarBody);
+const avatarHead=new THREE.Mesh(new THREE.SphereGeometry(.2,12,8),avatarMaterial);
+avatarHead.position.y=1.43;avatarGroup.add(avatarHead);
+const avatarBase=new THREE.Mesh(new THREE.TorusGeometry(.36,.024,6,36),
+ new THREE.MeshBasicMaterial({color:0x89d6ee,transparent:true,opacity:.72,depthWrite:false}));
+avatarBase.rotation.x=Math.PI/2;avatarBase.position.y=.1;avatarGroup.add(avatarBase);
+const facingArrow=new THREE.Mesh(new THREE.ConeGeometry(.16,.40,8),avatarMaterial);
+facingArrow.rotation.z=-Math.PI/2;facingArrow.position.set(.47,.35,0);avatarGroup.add(facingArrow);
+const beatHalo=new THREE.Mesh(new THREE.TorusGeometry(.88,.04,8,54),
+ new THREE.MeshBasicMaterial({color:0xd8b1ec,transparent:true,opacity:.1,depthWrite:false}));
+beatHalo.position.set(DISC.x,.37,DISC.z);
+beatHalo.rotation.x=-Math.PI/2;
+observer2D.add(beatHalo);
+// Physical wavefronts sit around the disc, not across the entire chamber.
+// They share the same beat clock as the Observer's localized wave surface.
+const beatWorldRings=[];
+for(let i=0;i<3;i++){
+ const material=new THREE.MeshBasicMaterial({
+  color:i===1?0x9de4ec:0xd6b6ef,transparent:true,opacity:0,
+  side:THREE.DoubleSide,depthWrite:false
+ });
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(.91+i*.18,.026,7,68),material);
+ ring.position.set(DISC.x,DISC.y,DISC.z-.12-i*.018);
+ physicalWorld.add(ring);
+ beatWorldRings.push(ring);
+}
+// Mineral glints follow the same driven beat phase as the landscape and door.
+function createStoneGlints(parent,count){
+ const positions=new Float32Array(count*3),geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+ const material=new THREE.PointsMaterial({color:0xffebbd,size:.135,
+  transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,
+  sizeAttenuation:true});
+ const points=new THREE.Points(geometry,material);
+ points.visible=false;points.frustumCulled=false;parent.add(points);
+ return {count,positions,geometry,material,points};
+}
+const observerStoneGlints=createStoneGlints(observer2D,32);
+const immersionStoneGlints=createStoneGlints(physicalWorld,40);
+function animateStoneGlints(seconds){
+ const coherence=stoneBeatCoherence();
+ const intensity=Math.min(1,Math.max(0,(coherence-.12)*3.2))*
+   Math.min(1,Math.max(0,(state.wallCoupling-.55)/.35));
+ const active=state.activeChamber===0&&state.hasCrossedGap&&
+   !state.wallSolved&&intensity>.02;
+ const showObserver=false; // shared wave-crest pool owns Observer sparkle
+ const showImmersion=active&&state.mode==='immersion';
+ observerStoneGlints.points.visible=showObserver;
+ immersionStoneGlints.points.visible=showImmersion;
+ if(!showObserver&&!showImmersion)return;
+ const clock=2*Math.PI*state.wallBeatRate*seconds;
+ for(const glints of [observerStoneGlints,immersionStoneGlints]){
+  if(!glints.points.visible)continue;
+  const cells=glints===observerStoneGlints?
+   wallFieldCells.filter(c=>c.weight>.24&&c.localBeat>.12):null;
+  if(cells&&!cells.length){glints.points.visible=false;continue;}
+  let visible=0;
+  for(let i=0;i<glints.count;i++){
+   let px,py,pz,phase;
+   if(cells){
+    const cell=cells[(i*17)%cells.length];
+    px=cell.x;py=heightBuffer[cell.index*3+1]+.095;pz=cell.z;
+    phase=clock+cell.phaseOffset;
+   }else{
+    pz=-.96+1.92*((i*.61803398875)%1);
+    py=.27+3.05*((i*.7548776662)%1);
+    px=5.764; // physical front face of hidden door
+    phase=clock+py*1.23+pz*2.8;
+   }
+   const lit=Math.cos(phase)>.78,offset=3*i;
+   glints.positions[offset]=lit?px:0;
+   glints.positions[offset+1]=lit?py:-1000;
+   glints.positions[offset+2]=lit?pz:0;
+   if(lit)visible++;
+  }
+  glints.geometry.attributes.position.needsUpdate=true;
+  glints.material.opacity=Math.min(.94,intensity*(.57+.43*visible/glints.count));
+ }
+}
+// Shared resonance hints: sparks are anchored to moving pressure crests,
+// and every region supplies its resonant-object metadata to this one renderer.
+function animateFieldCrestSparkles(){
+ const shown=state.mode==='observer'&&selectedFieldView==='field'&&
+   landscape.visible&&waveCache.active.length>0;
+ const readings=readResonators();
+ for(const [id,pool] of Object.entries(fieldCrestSparkles)){
+  pool.points.visible=false;
+  if(!shown)continue;
+  const r=readings[id],profile=RESONATOR_PROFILES[id];
+  const indices=waveCache.landmarks[id];
+  if(!r||!indices?.length)continue;
+  const progress=Math.max(0,Math.min(1,
+   (r.quality-profile.sparkFrom)/(profile.sparkTo-profile.sparkFrom)));
+  if(progress<=.01)continue;
+  const allowance=Math.ceil(pool.count*progress),seed=Math.floor(performance.now()/125);
+  let count=0;
+  for(let i=0;i<allowance;i++){
+   const j=indices[(i*113+seed*13)%indices.length];
+   const crest=waveCache.crest[j],stored=waveCache.energy[j];
+   if(crest<.18+.22*(1-progress)||stored<.14)continue;
+   const k=count*3;
+   pool.positions[k]=heightBuffer[j*3];
+   pool.positions[k+1]=heightBuffer[j*3+1]+.11;
+   pool.positions[k+2]=heightBuffer[j*3+2];
+   count++;
+  }
+  for(let i=count;i<pool.count;i++)pool.positions[i*3+1]=-1000;
+  pool.geometry.attributes.position.needsUpdate=true;
+  pool.material.opacity=.20+.78*progress;
+  pool.points.visible=count>0;
+ }
+}
+const emitterMarkers=new THREE.Group();world.add(emitterMarkers);
+for(const p of EMITTERS){
+ const marker=new THREE.Mesh(new THREE.IcosahedronGeometry(.14,1),
+  new THREE.MeshBasicMaterial({color:p.color}));
+ marker.position.set(p.x,1.04,p.z);
+ const halo=new THREE.Mesh(new THREE.TorusGeometry(.28,.018,5,32),
+  new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:.8}));
+ halo.rotation.x=Math.PI/2;halo.position.set(p.x,.78,p.z);
+ emitterMarkers.add(marker,halo);
+}
+const oscRoot=$('oscillators');
+let selectedEmitterIndex=-1;
+const emitterButtons=[];
+for(let i=0;i<3;i++){
+ const button=document.createElement('button');
+ button.className='emitterTab';button.type='button';button.id='emitterBtn'+i;
+ button.innerHTML='<span class="dot"></span><span>Source '+(i+1)+'</span>';
+ button.setAttribute('aria-label','Select source '+(i+1)+' on the conceptual rail');
+ button.addEventListener('click',()=>{
+  selectedEmitterIndex=selectedEmitterIndex===i?-1:i;
+  updateEmitterDock();renderField();
+ });
+ oscRoot.append(button);emitterButtons.push(button);
+}
+function updateEmitterDock(){
+ const chosen=selectedEmitterIndex>=0;
+ $('freqEditor').classList.toggle('expanded',chosen);
+ $('selectedEmitter').textContent=chosen?'Source '+(selectedEmitterIndex+1)+' · Perimeter':'Select a source';
+ $('railHint').textContent=chosen
+  ?'Drag horn anywhere · Grip turns it · Horns cannot cross'
+  :'Tap a horn · Slide its base along the rail · Drag the background to orbit';
+ emitterButtons.forEach((button,i)=>{
+  button.classList.toggle('selected',i===selectedEmitterIndex);
+  button.classList.toggle('powered',state.osc[i].on);
+  button.classList.toggle('off',!state.osc[i].on);
+  button.setAttribute('aria-pressed',String(i===selectedEmitterIndex));
+ });
+ if(chosen){
+  const o=state.osc[selectedEmitterIndex];
+  $('frequencyRange').value=String(o.freq);
+  $('freqValue').textContent=o.freq+' Hz';
+  $('powerToggle').textContent=o.on?'On':'Off';
+  $('powerToggle').classList.toggle('active',o.on);
+  $('powerToggle').setAttribute('aria-pressed',String(o.on));
+ }
+ updateRailGraphics();
+}
+function selectedFrequency(value){
+ if(selectedEmitterIndex<0)return;
+ const o=state.osc[selectedEmitterIndex],frequency=Math.min(420,Math.max(60,Math.round(value)));
+ if(o.freq===frequency)return;
+ o.freq=frequency;updateEmitterDock();syncAudio();renderField();
+}
+$('frequencyRange').addEventListener('input',e=>selectedFrequency(+e.target.value));
+$('freqDown').addEventListener('click',()=>{
+ if(selectedEmitterIndex>=0)selectedFrequency(state.osc[selectedEmitterIndex].freq-1);
+});
+$('freqUp').addEventListener('click',()=>{
+ if(selectedEmitterIndex>=0)selectedFrequency(state.osc[selectedEmitterIndex].freq+1);
+});
+$('powerToggle').addEventListener('click',()=>{
+ if(selectedEmitterIndex<0)return;
+ state.osc[selectedEmitterIndex].on=!state.osc[selectedEmitterIndex].on;
+ updateEmitterDock();syncAudio();renderField();
+});
+$('dockOptions').addEventListener('click',()=>{
+ const hidden=$('dockSettings').classList.toggle('hidden');
+ $('dockOptions').setAttribute('aria-expanded',String(!hidden));
+});
+updateEmitterDock();
+// Precision readouts are optional. Acoustic motion remains the main feedback.
+let numbersVisible=true;
+try{numbersVisible=localStorage.getItem('resonance19Numbers')!=='off'}catch(e){}
+function syncNumbers(){
+ document.body.classList.toggle('wave-guided',!numbersVisible);
+ $('numbersToggle').textContent=numbersVisible?'Numbers on':'Numbers off';
+ $('numbersToggle').setAttribute('aria-pressed',String(numbersVisible));
+}
+$('numbersToggle').addEventListener('click',()=>{
+ numbersVisible=!numbersVisible;
+ try{localStorage.setItem('resonance19Numbers',numbersVisible?'on':'off')}catch(e){}
+ syncNumbers();
+});
+syncNumbers();
+// Spatial modal approximation. The resonant center is a property of each object,
+// not a password. Narrow, continuous response envelopes constrain solutions.
+const WATER_MODE_HZ=136,WALL_MODE_HZ=224;
+// Display the 224 Hz stone resonance slowed to its 4 Hz signature.
+const WALL_TARGET_BEAT_HZ=4;
+// World objects are parameterized materials and modes, not custom wave engines.
+// Their response is sampled from the same mesh-reflected 2D pressure field.
+const RESONATOR_PROFILES={
+ pool:{id:'pool',region:0,material:'water',x:-4.12,z:0,modeHz:WATER_MODE_HZ,
+  bandwidth:5.5,gain:1.82,aggregation:'sqrt',visualRadius:3.15,sparkFrom:.70,sparkTo:.96},
+ stone:{id:'stone',region:0,material:'stone',x:5.82,z:0,modeHz:WALL_MODE_HZ,
+  bandwidth:7,gain:1.82,aggregation:'sqrt',visualRadius:3,
+  beat:{targetHz:4,width:.72,localGain:2.2,sympatheticWidth:11},
+  sparkFrom:.13,sparkTo:.48},
+ disc:{id:'disc',region:0,material:'bronze',x:DISC.x,z:DISC.z,modeHz:180,
+  bandwidth:85,gain:1,aggregation:'sqrt',visualRadius:2.8,
+  beat:{targetHz:4,width:.85,localGain:2.2,pair:[0,1]},
+  sparkFrom:.28,sparkTo:.73},
+ urn:{id:'urn',region:1,material:'bronze',x:URN.x,z:URN.z,modeHz:URN_HZ,
+  bandwidth:5.5,gain:2.05,aggregation:'mean',visualRadius:4.1,
+  unison:{required:3,maxSpread:1,minimum:.34},sparkFrom:.39,sparkTo:.92}
+};
+const fieldCrestSparkles={};
+for(const [id,p] of Object.entries(RESONATOR_PROFILES)){
+ const pool=createStoneGlints(observer2D,56);
+ pool.material.color.setHex(ACOUSTIC_MATERIALS[p.material].sparkColor);
+ pool.material.size=.24;
+ fieldCrestSparkles[id]=pool;
+}
+const acousticReadings={};
+let lastAcousticSignature='';
+function acousticSignature(){
+ return state.activeChamber+'|'+(state.wallSolved?'open':'closed')+'|'+
+  state.osc.map(o=>[o.on?1:0,o.freq,o.aim||0,o.rail||0].join(':')).join('|');
+}
+function evaluateResonator(p){
+ const channels=state.osc.map((o,i)=>{
+  if(!o.on)return {level:0,spatial:0};
+  const spatial=localResponse2D(i,p)*(1-ACOUSTIC_MATERIALS[p.material].absorption*.12);
+  const tuned=resonance(o.freq,p.modeHz,p.bandwidth);
+  const gain=p.aggregation==='mean'?Math.min(1,spatial*p.gain):spatial*p.gain;
+  return {spatial,level:gain*tuned};
+ });
+ const active=state.osc.filter(o=>o.on).length;
+ const divisor=p.aggregation==='mean'?state.osc.length:
+   p.aggregation==='sqrt'?Math.sqrt(Math.max(1,active)):1;
+ const level=Math.min(1,channels.reduce((v,c)=>v+c.level,0)/divisor);
+ let beatStrength=0,beatRate=0,beatPair=null,beatCharge=0;
+ if(p.beat){
+  for(let i=0;i<3;i++)for(let j=i+1;j<3;j++){
+   if(p.beat.pair&&(i!==p.beat.pair[0]||j!==p.beat.pair[1]))continue;
+   const a=state.osc[i],b=state.osc[j];if(!a.on||!b.on)continue;
+   const difference=Math.abs(a.freq-b.freq);
+   if(difference<.15||difference>9)continue;
+   const overlap=Math.min(1,Math.sqrt(channels[i].spatial*channels[j].spatial)*p.beat.localGain);
+   const sympathetic=p.beat.sympatheticWidth?Math.sqrt(
+    resonance(a.freq,p.modeHz,p.beat.sympatheticWidth)*
+    resonance(b.freq,p.modeHz,p.beat.sympatheticWidth)):1;
+   const strength=overlap*sympathetic;
+   if(strength>beatStrength){beatStrength=strength;beatRate=difference;beatPair=[i,j];}
+  }
+  beatCharge=beatStrength*resonance(beatRate,p.beat.targetHz,p.beat.width);
+ }
+ let present=0,ready=false,unisonQuality=0;
+ if(p.unison){
+  present=channels.filter(c=>c.level>.23).length;
+  const enabled=state.osc.filter(o=>o.on),f=enabled.map(o=>o.freq);
+  const spread=f.length?Math.max(...f)-Math.min(...f):999;
+  ready=enabled.length===p.unison.required&&enabled.length===state.osc.length&&
+   spread<=p.unison.maxSpread&&
+   enabled.every(o=>Math.abs(o.freq-p.modeHz)<=p.bandwidth)&&
+   Math.min(...channels.map(c=>c.level))>p.unison.minimum;
+  unisonQuality=level*Math.min(1,present/p.unison.required)*
+   Math.exp(-.5*Math.pow(spread/3.2,2));
+ }
+ const quality=p.unison?unisonQuality:p.beat?
+  (p.id==='stone'?level*beatCharge:beatCharge):level;
+ return {profile:p,material:ACOUSTIC_MATERIALS[p.material],channels,level,
+  beatRate,beatStrength,beatPair,beatCharge,present,ready,quality};
+}
+function readResonators(){
+ const key=acousticSignature();
+ if(key!==lastAcousticSignature){
+  for(const region of ACOUSTIC_REGIONS)for(const id of region.resonators){
+   const p=RESONATOR_PROFILES[id];
+   acousticReadings[id]=p.region===state.activeChamber?evaluateResonator(p):null;
+  }
+  lastAcousticSignature=key;
+ }
+ return acousticReadings;
+}
+const WAVE_TIME_SLOWDOWN=WALL_MODE_HZ/WALL_TARGET_BEAT_HZ;
+function wallImpulseWave(displayAge,distanceMeters){
+ if(displayAge<0||displayAge>3.6)return 0;
+ const delayed=displayAge/WAVE_TIME_SLOWDOWN-distanceMeters/SOUND_SPEED;
+ if(delayed<=0)return 0;
+ const onset=Math.min(1,delayed*WAVE_TIME_SLOWDOWN*14);
+ return onset*Math.exp(-displayAge*ACOUSTIC_MATERIALS.stone.damping*9)*
+  Math.sin(2*Math.PI*WALL_MODE_HZ*delayed);
+}
+function resonance(frequency,center,width){
+ const detune=(frequency-center)/width;
+ return Math.exp(-.5*detune*detune);
+}
+// One horn can reveal the urn; two make interlocking filaments; three
+// matched frequencies and meaningful local pressure form a coherent mode.
+// The object has a natural frequency, while ALL three inputs must match.
+function updateUrnResponse(){
+ const r=readResonators().urn;
+ if(!r){
+  state.urnCharge=0;state.urnReady=false;state.urnStage=0;
+  state.urnSourceValues=[0,0,0];return;
+ }
+ state.urnSourceValues=r.channels.map(c=>c.level);
+ state.urnCharge=r.level;
+ state.urnReady=r.ready;
+ state.urnStage=state.lampLit?4:state.urnReady?3:r.present;
+}
+function updateCouplings(){
+ const r=readResonators();
+ state.activeEmitters=state.osc.filter(o=>o.on).length;
+ state.poolCoupling=r.pool?r.pool.level:0;
+ state.wallCoupling=r.stone?r.stone.level:0;
+ state.wallBeatStrength=r.stone?r.stone.beatStrength:0;
+ state.wallBeatRate=r.stone?r.stone.beatRate:0;
+ state.wallBeatPair=r.stone?r.stone.beatPair:null;
+}
+function stoneBeatCoherence(){
+ const r=readResonators().stone;
+ return r?r.beatCharge:0;
+}
+function stoneReady(){return state.wallCoupling>.78&&stoneBeatCoherence()>.17}
+function waterMode(x,y,z){
+ const envelope=Math.exp(-Math.pow(x/5.5,4));
+ return Math.cos(Math.PI*x/6.9)*Math.cos(Math.PI*z/4.2)*Math.cos(Math.PI*(y-.3)/4.7)*envelope;
+}
+function doorwayMode(x,y,z){
+ const envelope=Math.exp(-Math.pow((x-5.5)/4.7,4));
+ return Math.cos(Math.PI*(x-6.0)/4.7)*Math.cos(2*Math.PI*z/7.8)*Math.cos(Math.PI*y/4.4)*envelope;
+}
+function modalField(x,y,z){
+ return state.poolCoupling*waterMode(x,y,z)+state.wallCoupling*doorwayMode(x,y,z);
+}
+function sampleField(x,z,time=0){
+ let value=modalField(x,.4,z);
+ if(state.mode==='immersion')for(const p of state.pulses){
+  const age=time-p.t,dist=Math.hypot(x-p.x,z-p.z);
+  if(age<3&&age>=0){
+   const front=age*p.speed;
+   value+=p.strength*Math.exp(-Math.pow((dist-front)*1.4,2))*
+    Math.sin(dist*4.5-age*8)*(1-age/3)*Math.max(0,1-dist/p.reach);
+  }
+ }
+ return value;
+}
+function renderField(time=0){
+ updateCouplings();
+ updateBeatResponse();
+ updateUrnResponse();
+ responseStageVisuals();
+ if(state.mode==='observer'&&planeDirty&&
+    (lastPlaneBuild<0||performance.now()-lastPlaneBuild>76))
+    computeFieldPlane();
+ // Material memory: the world holds its recent state for a limited immersed time.
+ const crossingActive=state.waterRaisedUntil>immersionTime;
+ const doorwayActive=state.wallSolved||state.wallOpenUntil>immersionTime;
+ let stableCount=0;
+ for(const tile of tiles){
+  // The raised walkway follows a fixed mineral lattice: three parallel lanes.
+  // Different arbitrary standing wave nodes do not automatically make ground.
+  const onPath=Math.abs(tile.z)<=.82;
+  const precursor=onPath?Math.max(0,Math.min(1,
+    (state.poolCoupling-.08-tile.ix*.051)/.29)):0;
+  const stable=crossingActive&&onPath;
+  stableCount+=stable?1:0;tile.stable=stable;
+  tile.mesh.scale.set(stable?1:.93,stable?1:.11,stable?1:.93);
+  tile.mesh.position.y=stable?-.04:-.42;
+  tile.mesh.material.opacity=stable?.94:(onPath?.04+.66*precursor:.02);
+  tile.mesh.material.emissiveIntensity=stable?.90:.08+1.8*precursor;
+  tile.mesh.material.color.setHSL(.52,.68,stable?.66:.22+.40*precursor);
+ }
+ state.passageOpen=hasConnectedPassage();
+ const beatOpened=state.beatOpenUntil>immersionTime;
+ beatVault.position.y=beatOpened?5.2:1.2;
+ beatVaultSeam.material.opacity=beatOpened?.8:.10+.45*state.beatCharge;
+ hiddenDoor.position.y=doorwayActive?5.8:1.75;
+ hiddenDoor.material.opacity=doorwayActive?.12:1;
+ doorSeam.material.opacity=doorwayActive?.78:
+   .035+.62*Math.pow(state.wallCoupling,1.5);
+ poolSurface.material.emissiveIntensity=crossingActive?.62:.10+.29*state.poolCoupling;
+ poolRim.material.emissiveIntensity=.15+state.poolCoupling*.85;
+ portal.material.emissiveIntensity=doorwayActive?1.8:.15;
+ const poolPercent=Math.round(state.poolCoupling*100),wallPercent=Math.round(state.wallCoupling*100);
+ $('poolLevel').textContent=poolPercent+'%'+(state.poolCoupling>.78?' · READY':'');
+ $('wallLevel').textContent=wallPercent+'%'+(stoneReady()?' · READY':'');
+ $('poolBar').style.width=poolPercent+'%';
+ $('wallBar').style.width=wallPercent+'%';
+ $('beatMeter').textContent=state.activeChamber===1
+  ?(state.lampLit?'LIT':Math.round(state.urnCharge*100)+'%')
+  :Math.round(state.beatCharge*100)+'%'+(state.beatCharge>.56?' READY':'');
+ $('targetLabel').firstChild.textContent=state.activeChamber===1?'Urn ':'Disc ';
+ $('beatInfo').textContent=state.activeChamber===1
+   ?(state.lampLit?'Three voices · One flame':
+     state.urnReady?'All three in harmony · Pulse':
+     state.urnStage+'/3 horns · '+URN_HZ+' Hz')
+   :(state.osc[0].on&&state.osc[1].on?
+     state.beatRate+' Hz · at disc':'Two horns needed');
+ $('aimTip').textContent=selectedEmitterIndex>=0
+   ?'Head '+Math.round(state.osc[selectedEmitterIndex].aim||0)+'° inward'
+   :state.activeEmitters===0?'Silent plane':'Select a source to move it';
+ beatHalo.visible=state.activeChamber===0&&!state.hasCrossedGap&&
+  state.beatOverlap>.03;
+ beatHalo.material.opacity=.05+.35*state.beatCharge;
+ $('powerHint').textContent=state.activeEmitters===0
+   ?'No active sources. The acoustic plane is silent.'
+   :state.activeEmitters+' emitter'+(state.activeEmitters===1?'':'s')+
+     ' active · Move sources along rail and aim ±90° inward.';
+ $('modeHint').textContent=state.activeChamber===1
+  ?'Urn: '+URN_HZ+' Hz · all three horns at the same frequency'
+  :state.foundPoolTone||state.foundWallTone
+   ?[(state.foundPoolTone?'Pool: '+WATER_MODE_HZ+' Hz':null),
+     (state.foundWallTone?'Stone: '+WALL_MODE_HZ+' Hz · target beat '+WALL_TARGET_BEAT_HZ+' Hz with two horns':null)].filter(Boolean).join(' · ')
+   :'Pulse near a material in Immersion to learn its tone';
+ if(state.mode==='observer'){
+  $('fieldStatus').textContent=state.activeChamber===1
+   ?(state.lampLit?'LAMP KINDLED · Three horns remain in harmony'
+     :state.urnReady?'THE URN IS COHERENT · Return and Pulse beside it'
+     :state.urnStage===2?'TWO CHANNELS RESPOND · Find a third matching voice'
+     :state.urnStage===1?'THE URN STIRS · Add a second voice'
+     :'URN DORMANT · Pulse it to hear its natural tone')
+   :state.hasCrossedGap
+   ?(state.wallSolved||state.wallOpenUntil>immersionTime
+     ?'STONE PASSAGE OPEN · Shift inside and continue'
+     :stoneReady()
+      ?'STONE IN PHASE · Sparkling seam · PULSE to open'
+      :state.wallCoupling>.78
+       ?'STONE HEARS THE TONE · Match a 4 Hz beat with two horns'
+       :state.foundWallTone
+        ?'STONE WALL NEXT · Tune two horns near '+WALL_MODE_HZ+' Hz'
+       :'STONE WALL NEXT · PULSE beside it to learn its tone')
+   :state.activeEmitters===0
+   ?'NO EMITTERS ACTIVE · Acoustic field is silent'
+   :state.beatCharge>.56
+   ?'DISC POTENTIAL · Shift inside and PULSE near the disc'
+   :state.poolCoupling>.78
+   ?'POOL RESONATES · Go inside and PULSE near the rim'
+   :stoneReady()?'WALL RESONATES · Go inside and PULSE near the seam'
+   :'TUNE THE 2D FIELD · Pulse materials to learn their tone';
+ }else if(state.activeChamber===1){
+  $('fieldStatus').textContent=state.lampLit?'THE LAMP IS BURNING · Explore'
+   :state.urnReady?'THREE HORNS IN UNISON · Pulse the urn'
+   :state.urnStage>=2?'THE URN IS WAKING · Find its third voice at '+URN_HZ+' Hz'
+   :state.urnStage===1?'ONE VOICE SHIMMERS · Tune the other horns'
+   :'THE BRONZE URN IS QUIET · Pulse beside it to hear its tone';
+ }else if(Math.hypot(state.playerX-DISC.x,state.playerZ-DISC.z)<2.3){
+  $('fieldStatus').textContent=state.beatOpenUntil>immersionTime
+   ?'BEAT VAULT OPEN · Explore the northern alcove'
+   :state.beatCharge>.56?'DISC BEATING · PULSE TO ACTIVATE'
+   :state.beatOverlap>.35?'TWO BEAMS OVERLAP · TUNE THEIR BEAT RATE'
+   :'DISC IS QUIET · AIM TWO SOURCES IN OBSERVER';
+ }else if(state.playerX< -3.1){
+  const remaining=Math.max(0,Math.ceil(state.waterRaisedUntil-immersionTime));
+  $('fieldStatus').textContent=crossingActive?'WATER PATH RAISED · '+remaining+' seconds left'
+   :state.poolCoupling>.78?'POOL IS RESONATING · PULSE to raise the path'
+   :'POOL IS QUIET · Pulse the rim and retune outside';
+ }else{
+  $('fieldStatus').textContent=doorwayActive?'HIDDEN DOOR OPEN · Reach the gate'
+   :stoneReady()?'HOLLOW WALL RESONATES · PULSE near it'
+   :'STONE WALL BLOCKS THE EXIT · Pulse to investigate';
+ }
+}
+// A route exists only when adjacent stable cells connect the two anchored islands.
+// Geometry emerges from the field, rather than switching among programmed bridge models.
+const tileGrid=Array.from({length:NX},()=>Array(NZ));
+for(const tile of tiles)tileGrid[tile.ix][tile.iz]=tile;
+function hasConnectedPassage(){
+ const queue=[],seen=new Set();
+ for(let z=0;z<NZ;z++)if(tileGrid[0][z].stable){queue.push([0,z]);seen.add('0:'+z);}
+ for(let head=0;head<queue.length;head++){
+   const [x,z]=queue[head];
+   if(x===NX-1)return true;
+   for(const [nx,nz] of [[x+1,z],[x-1,z],[x,z+1],[x,z-1]]){
+     if(nx<0||nx>=NX||nz<0||nz>=NZ)continue;
+     const key=nx+':'+nz;
+     if(tileGrid[nx][nz].stable&&!seen.has(key)){seen.add(key);queue.push([nx,nz]);}
+   }
+ }
+ return false;
+}
+function groundAt(x,z){
+ if(Math.abs(z)>6.72)return false;
+ // Navigable matter: prevent the player from walking through the extra
+ // resonant columns, scattering blocks, angled mirror or closed northern vault.
+ const obstacles=[...physicalWorld.children,...secondRoom.children].filter(mesh=>
+   mesh.isMesh&&mesh.material===stoneMat&&mesh.geometry.type==='BoxGeometry');
+ for(const mesh of obstacles){
+  const p=mesh.geometry.parameters;
+  const halfHeight=p.height*mesh.scale.y/2;
+  const top=mesh.position.y+halfHeight,bottom=mesh.position.y-halfHeight;
+  if(top<.36||bottom>1.70)continue; // ignore floor and lifted doors above head
+  const dx=x-mesh.position.x,dz=z-mesh.position.z;
+  const ca=Math.cos(mesh.rotation.y),sa=Math.sin(mesh.rotation.y);
+  const lx=ca*dx-sa*dz,lz=sa*dx+ca*dz;
+  if(Math.abs(lx)<p.width*mesh.scale.x/2+.14&&
+     Math.abs(lz)<p.depth*mesh.scale.z/2+.14)return false;
+ }
+ // The far wall blocks progress until its central concealed door is opened.
+ if(x>5.75&&x<6.35){
+   const open=state.wallSolved||state.wallOpenUntil>immersionTime;
+   if(!open||Math.abs(z)>1.02)return false;
+ }
+ // There is a small physical join (7.82 to 8.15) between the first
+ // chamber's platform and the second chamber floor. It must be navigable;
+ // otherwise the player hits an invisible gap despite passing the gate.
+ if(x>7.79&&x<SECOND_START&&Math.abs(z)<1.60&&state.wallSolved)return true;
+ if(x>=SECOND_START&&x<=SECOND_END&&Math.abs(z)<5.95){
+   // The freestanding urn is not traversable, but can be pulsed beside it.
+   return Math.hypot(x-URN.x,z-URN.z)>1.45;
+  }
+  if(Math.abs(z)<=6.72 && x>=-7.82&&x<=-3.29)return true;
+ if(Math.abs(z)<=6.72 && x>=3.29&&x<=7.82)return true;
+ const ix=Math.round((x+3.45)/.69),iz=Math.round((z+2.4)/.8);
+ if(ix<0||ix>=NX||iz<0||iz>=NZ)return false;
+ const tile=tileGrid[ix][iz];
+ return tile.stable&&Math.abs(x-tile.x)<.395&&Math.abs(z-tile.z)<.455;
+}
+function finishPassage(){
+ if(state.finished)return;
+ state.finished=true;stopJoystick(null);stopLookJoystick(null);stopPulse();
+ const config=state.osc.map(o=>({hz:o.freq,on:o.on,aim:o.aim||0,rail:o.rail}));
+ const saved=JSON.parse(localStorage.getItem('resonanceKindling19')||'[]');
+ const key=config.map(o=>o.on?o.hz+':'+Math.round(o.rail*100):'off').join('-');
+ if(!saved.some(entry=>entry.key===key)){
+  saved.push({key,date:new Date().toISOString(),config});
+  localStorage.setItem('resonanceKindling19',JSON.stringify(saved.slice(-25)));
+ }
+ $('discoveryTitle').textContent='The lamp awakens';
+ $('discoveryText').textContent='You crossed the submerged path, opened the hidden wall, '+
+  'and brought three horns into unison at '+URN_HZ+' Hz. '+
+  'One final Pulse made their shared resonance tangible. '+
+  saved.length+' distinct kindling arrangement'+(saved.length===1?'':'s')+' recorded.';
+ $('discovery').classList.remove('hidden');
+}
+$('keepExploring').addEventListener('click',()=>$('discovery').classList.add('hidden'));
+$('anotherRoute').addEventListener('click',()=>{
+ $('discovery').classList.add('hidden');
+ state.finished=false;state.hasCrossedGap=false;
+ try{for(const key of [WALL_PROGRESS_KEY,WALL_SOLVED_KEY,CHAMBER_TWO_KEY])
+  localStorage.removeItem(key)}catch(e){}
+ state.wallSolved=false;
+ state.playerX=-5.5;state.playerZ=0;state.yaw=0;state.pitch=-.07;
+ state.waterRaisedUntil=-1;state.wallOpenUntil=-1;state.beatOpenUntil=-1;
+ state.lampLit=false;state.urnCharge=0;state.urnStage=0;state.urnReady=false;
+ state.activeChamber=0;$('previewRoom').textContent='Test Room II';
+ updateRailGraphics();planeDirty=true;updateObjective();
+ renderField();toast('Both chambers reset · Discover another arrangement');
+});
+let audioCtx=null,voices=[],soundOn=false,masterGain=null;
+async function toggleSound(){
+  try {
+    if(!audioCtx){
+      audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+      masterGain=audioCtx.createGain();masterGain.gain.value=.52;masterGain.connect(audioCtx.destination);
+      for(let i=0;i<3;i++){
+        const fundamental=audioCtx.createOscillator(),harmonic=audioCtx.createOscillator();
+        const fLevel=audioCtx.createGain(),hLevel=audioCtx.createGain(),level=audioCtx.createGain();
+        fundamental.type='sine';harmonic.type='sine';
+        fundamental.frequency.value=state.osc[i].freq;harmonic.frequency.value=state.osc[i].freq*3;
+        fLevel.gain.value=.55;hLevel.gain.value=.45;level.gain.value=0;
+        fundamental.connect(fLevel).connect(level);
+        harmonic.connect(hLevel).connect(level);
+        level.connect(masterGain);fundamental.start();harmonic.start();
+        voices.push({fundamental,harmonic,level});
+      }
+    }
+    if(audioCtx.state!=='running')await audioCtx.resume();
+    soundOn=!soundOn;syncAudio();
+    $('audio').textContent=soundOn?'🔊 Sound on':'🔈 Sound off';
+    $('audio').classList.toggle('active',soundOn);
+    
+    
+    if(soundOn){playTestTone();toast('Audio enabled · Hear the test tone?')}
+    else toast('Sound muted');
+  }catch(e){toast('Audio could not start: '+(e.message||'Try Safari'))}
+}
+function syncAudio(){
+  if(!audioCtx)return;
+  for(let i=0;i<voices.length;i++){
+    const v=voices[i],freq=state.osc[i].freq,t=audioCtx.currentTime;
+    v.fundamental.frequency.setTargetAtTime(freq,t,.025);
+    v.harmonic.frequency.setTargetAtTime(freq*3,t,.025);
+    v.level.gain.setTargetAtTime(soundOn&&state.osc[i].on?.065:0,t,.035);
+  }
+}
+$('audio').addEventListener('click',toggleSound);
+
+document.addEventListener('visibilitychange',()=>{
+ if(!document.hidden&&soundOn&&audioCtx&&audioCtx.state!=='running'){
+  audioCtx.resume().catch(()=>{});
+ }
+});
+
+// Inside, impulses originate near the player and travel through the same world field.
+// Universal local instrument: the same spatial Pulse diagnoses objects and
+// excites them. Holding the button repeatedly introduces energy over time.
+function playImpulse(sustained=false){
+ if(state.mode!=='immersion')return;
+ const cfg={hz:272,length:sustained?.38:.45,speed:6.6,
+  strength:sustained?1.15:1.4,reach:12.5,color:0x84ddef,label:'Pulse'};
+ const source={x:state.playerX,z:state.playerZ},t=immersionTime;
+ const visual=new THREE.Mesh(new THREE.TorusGeometry(1,.025,6,56),
+  new THREE.MeshBasicMaterial({color:cfg.color,transparent:true,opacity:.65,depthWrite:false}));
+ visual.rotation.x=Math.PI/2;
+ visual.position.set(source.x,.16,source.z);world.add(visual);
+ state.pulses.push({...cfg,t,x:source.x,z:source.z,visual});
+ if(soundOn&&audioCtx){
+  if(audioCtx.state!=='running')audioCtx.resume().catch(()=>{});
+  const at=audioCtx.currentTime,o=audioCtx.createOscillator(),gain=audioCtx.createGain();
+  o.type='triangle';o.frequency.setValueAtTime(cfg.hz,at);
+  gain.gain.setValueAtTime(.0001,at);
+  gain.gain.exponentialRampToValueAtTime(.12,at+.018);
+  gain.gain.exponentialRampToValueAtTime(.0001,at+cfg.length);
+  o.connect(gain);gain.connect(masterGain);
+  o.start(at);o.stop(at+cfg.length+.025);
+ }
+ const nearUrn=state.activeChamber===1&&Math.hypot(state.playerX-URN.x,state.playerZ-URN.z)<3.0;
+ const nearDisc=Math.hypot(state.playerX-DISC.x,state.playerZ-DISC.z)<2.1;
+ const nearPool=state.playerX>-6.6&&state.playerX<-3.1&&Math.abs(state.playerZ)<2.5;
+ const nearWall=state.playerX>3.7&&state.playerX<6.1&&Math.abs(state.playerZ)<2.2;
+ let response='Pulse spreads and scatters through the chamber';
+ let kindled=false,wallOpenedNow=false;
+ if(nearUrn){
+  if(!sustained)playMaterialEcho(URN_HZ);
+  if(state.lampLit)response='The lamp burns steadily · Three voices remember one frequency';
+  else if(state.urnReady){
+   state.lampLit=true;kindled=true;
+   response='THREE HORNS IN UNISON · The urn kindles the suspended lamp';
+  }else if(state.urnStage===2){
+   response='Two channels shimmer around the urn · The third horn must join at '+URN_HZ+' Hz';
+  }else if(state.urnStage===1){
+   response='One ribbon answers the urn · It wants three horns singing together at '+URN_HZ+' Hz';
+  }else{
+   response='The bronze urn rings at '+URN_HZ+' Hz · Three horns must share the same tone';
+  }
+ }else if(nearDisc){
+  state.foundDisc=true;
+  // A local probe reveals a decaying natural four-beat rhythm regardless of
+  // whether the distant horns have yet been tuned.
+  if(!sustained)state.beatProbeAt=immersionTime;
+  if(state.beatCharge>.56){
+   state.beatOpenUntil=immersionTime+28;
+   response='Suspended disc catches the 4 Hz beat · Northern vault rises';
+  }else if(state.beatOverlap>.3){
+   if(!sustained)playMaterialEcho(180);
+   response='Two beams touch the disc · Try a 4 Hz difference';
+  }else{
+   if(!sustained)playMaterialEcho(180);
+   response='The disc rings · Bring two waves into alignment';
+  }
+ }else if(nearPool){
+  state.foundPoolTone=true;
+  if(state.poolCoupling>.78){
+   state.waterRaisedUntil=immersionTime+38;
+   response='The mineral-water lattice rises · 38 seconds of footing';
+  }else{
+   if(!sustained)playMaterialEcho(WATER_MODE_HZ);
+   response='Mineral pool answers at about '+WATER_MODE_HZ+' Hz · Retune in Observer';
+  }
+ }else if(nearWall){
+  state.foundWallTone=true;
+  state.wallProbeAt=immersionTime;
+  state.wallProbeRealAt=performance.now()*.001;
+  state.wallProbeZ=Math.max(-.93,Math.min(.93,state.playerZ));
+  if(state.wallSolved){
+   response='The stone passage remains open · Continue toward the urn';
+  }else if(stoneReady()){
+   state.wallSolved=true;wallOpenedNow=true;
+   try{
+    localStorage.setItem(WALL_SOLVED_KEY,'1');
+    localStorage.setItem(WALL_PROGRESS_KEY,'1');
+   }catch(e){}
+   response='The hollow cavity resonates · Stone passage unlocked';
+  }else{
+   if(!sustained)playMaterialEcho(WALL_MODE_HZ);
+   response='The stone rings near '+WALL_MODE_HZ+' Hz; slowed waves reveal 4 Hz · Match two horns in Observer';
+  }
+ }
+ planeDirty=true;renderField(immersionTime);
+ if(kindled){
+  // Let the player see the light bloom before the discovery panel appears.
+  toast('THE LAMP IGNITES · Three voices become one flame');
+  setTimeout(()=>finishPassage(),1700);
+  return;
+ }
+ if(!sustained||state.beatOpenUntil===immersionTime+28||
+   state.waterRaisedUntil===immersionTime+38||wallOpenedNow)toast(response);
+}
+function playMaterialEcho(hz){
+ if(!soundOn||!audioCtx||audioCtx.state!=='running')return;
+ const t=audioCtx.currentTime;
+ const osc=audioCtx.createOscillator(),harm=audioCtx.createOscillator(),gain=audioCtx.createGain();
+ osc.type='triangle';harm.type='sine';
+ osc.frequency.value=hz;harm.frequency.value=hz*3;
+ gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(.13,t+.02);
+ gain.gain.exponentialRampToValueAtTime(.0001,t+.72);
+ osc.connect(gain);harm.connect(gain);gain.connect(masterGain);
+ osc.start(t);harm.start(t);osc.stop(t+.75);harm.stop(t+.75);
+}
+let pulseHolding=false,pulseNextTime=0;
+const pulseButton=$('actionButton');
+pulseButton.addEventListener('pointerdown',e=>{
+ e.preventDefault();if(state.mode!=='immersion')return;
+ try{pulseButton.setPointerCapture(e.pointerId)}catch{}
+ pulseHolding=true;
+ pulseNextTime=immersionTime+.55;
+ playImpulse(false);
+});
+function stopPulse(){pulseHolding=false}
+for(const event of ['pointerup','pointercancel','lostpointercapture'])
+ pulseButton.addEventListener(event,stopPulse);
+function updateObjective(){
+ $('objective').textContent=state.activeChamber===1
+  ?(state.mode==='observer'?'CHAMBER II · Three horns, one frequency':
+    'CHAMBER II · The urn and the sleeping lamp')
+  :state.hasCrossedGap
+   ?(state.mode==='observer'?'CHAMBER I · Tune the hidden stone':
+     'CHAMBER I · Find the seam in the stone')
+   :(state.mode==='observer'?'CHAMBER I · Reveal the submerged path':
+     'CHAMBER I · Water crossing and the hidden stone');
+}
+function changeMode(mode){
+ stopJoystick(null);stopLookJoystick(null);stopPulse();
+ state.mode=mode;
+ document.body.classList.toggle('in-immersion',mode==='immersion');
+ $('shiftMode').textContent=mode==='observer'?'Enter Immersion':'Enter Observer';
+ /* No tool choice in 1.8. */
+ physicalWorld.visible=mode==='immersion';
+ updateObjective();
+ for(const p of state.pulses)if(p.visual)p.visual.visible=mode==='immersion';
+ $('observer').classList.toggle('active',mode==='observer');
+ $('immerse').classList.toggle('active',mode==='immersion');
+ $('move').classList.toggle('show',mode==='immersion');
+ $('controls').classList.toggle('immersed',mode==='immersion');
+ $('immersionTools').classList.toggle('show',mode==='immersion');
+ shellGroup.visible=false;
+ $('viewControls').classList.toggle('hidden',mode!=='observer');
+ world.scale.setScalar(mode==='observer'?OBSERVER_SCALE:1);
+ world.position.set(0,0,0);globe.quaternion.identity();
+ planeDirty=true;syncAtlasVisibility();
+ toast(mode==='observer'?'Matter disappears · Only resonance remains':'Matter visible · Time resumes');
+}
+$('shiftMode').addEventListener('click',()=>changeMode(state.mode==='observer'?'immersion':'observer'));
+$('observer').addEventListener('click',()=>changeMode('observer'));
+$('immerse').addEventListener('click',()=>changeMode('immersion'));
+// Observer dock remains visible, without a hide or collapse function.
+const joystick=$('joystick'),stick=$('stick'),lookJoystick=$('lookJoystick'),lookStick=$('lookStick');
+let movementPointer=null;
+function updateJoystick(e){
+ const r=joystick.getBoundingClientRect(),x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2);
+ const range=39,distance=Math.hypot(x,y),strength=Math.min(1,distance/range);
+ const px=distance>0?x/distance*range*strength:0,py=distance>0?y/distance*range*strength:0;
+ stick.style.transform=`translate(${px}px,${py}px)`;
+ state.moveX=px/range;state.moveY=-py/range;
+}
+function stopJoystick(e){
+ if(movementPointer!==null&&(e==null||e.pointerId===movementPointer)){
+  movementPointer=null;state.moveX=0;state.moveY=0;stick.style.transform='translate(0px,0px)';
+ }
+}
+joystick.addEventListener('pointerdown',e=>{
+ e.preventDefault();movementPointer=e.pointerId;
+ try{joystick.setPointerCapture(e.pointerId)}catch{}
+ updateJoystick(e);
+});
+joystick.addEventListener('pointermove',e=>{if(e.pointerId===movementPointer)updateJoystick(e)});
+for(const event of ['pointerup','pointercancel','lostpointercapture'])joystick.addEventListener(event,stopJoystick);
+let lookPointer=null;
+function updateLookStick(e){
+ const r=lookJoystick.getBoundingClientRect(),x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2);
+ const range=37,distance=Math.hypot(x,y),strength=Math.min(1,distance/range);
+ const px=distance?x/distance*range*strength:0,py=distance?y/distance*range*strength:0;
+ lookStick.style.transform=`translate(${px}px,${py}px)`;
+ state.lookX=px/range;state.lookY=-py/range; // Up on stick means look up
+}
+function stopLookJoystick(e){
+ if(lookPointer!==null&&(e==null||e.pointerId===lookPointer)){
+   lookPointer=null;state.lookX=0;state.lookY=0;
+   lookStick.style.transform='translate(0px,0px)';
+ }
+}
+lookJoystick.addEventListener('pointerdown',e=>{
+ e.preventDefault();lookPointer=e.pointerId;
+ try{lookJoystick.setPointerCapture(e.pointerId)}catch{}
+ updateLookStick(e);
+});
+lookJoystick.addEventListener('pointermove',e=>{if(e.pointerId===lookPointer)updateLookStick(e)});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])lookJoystick.addEventListener(type,stopLookJoystick);
+window.addEventListener('blur',()=>{stopJoystick(null);stopLookJoystick(null);stopPulse()});
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function minFitDistance(){
+ const aspect=(canvas.clientWidth||window.innerWidth)/
+   Math.max(1,canvas.clientHeight||window.innerHeight);
+ const halfHorizontal=Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)*aspect;
+ // Include the outer lever's full reach so it cannot be cropped by Safari.
+ const outerRadius=(activeRail().rx+2.35)*OBSERVER_SCALE;
+ return Math.max(17.4,outerRadius/halfHorizontal*1.06);
+}
+function zoom(factor){
+ state.observerDistance=clamp(state.observerDistance*factor,minFitDistance(),39);
+}
+$('zoomIn').addEventListener('click',()=>zoom(.87));
+$('zoomOut').addEventListener('click',()=>zoom(1.16));
+$('resetView').addEventListener('click',()=>{
+ state.observerAzimuth=-Math.PI/2;state.observerDistance=Math.max(22.1,minFitDistance());
+ toast('Observer camera level · 33° elevation');
+});
+// A touch is either source translation, inward head aiming, orbit or pinch.
+// Raycast from the camera into the fixed calculation plane.
+const pointerRay=new THREE.Raycaster();
+const pointerPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-OBSERVER_SCALE*CONTROL_HEIGHT);
+const leverPointerPlane=pointerPlane;
+function planePointer(e,plane=pointerPlane){
+ const rect=canvas.getBoundingClientRect();
+ const ndc=new THREE.Vector2(
+  2*(e.clientX-rect.left)/Math.max(1,rect.width)-1,
+  1-2*(e.clientY-rect.top)/Math.max(1,rect.height));
+ camera.updateMatrixWorld();
+ pointerRay.setFromCamera(ndc,camera);
+ const point=new THREE.Vector3();
+ if(!pointerRay.ray.intersectPlane(plane,point))return null;
+ return {x:point.x/OBSERVER_SCALE,z:point.z/OBSERVER_SCALE};
+}
+const pointers=new Map();let pinchDistance=0,gesture=null;
+function pointerPair(){
+ const a=[...pointers.values()];
+ if(a.length<2)return null;
+ return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
+}
+function controlScreenPosition(x,y,z){
+ const rect=canvas.getBoundingClientRect();
+ camera.updateMatrixWorld();
+ const point=new THREE.Vector3(x*OBSERVER_SCALE,y*OBSERVER_SCALE,z*OBSERVER_SCALE).project(camera);
+ return {x:rect.left+(point.x+1)*rect.width*.5,
+   y:rect.top+(1-point.y)*rect.height*.5,z:point.z};
+}
+function controlDistance(e,x,y,z){
+ const p=controlScreenPosition(x,y,z);
+ return p.z>1?Infinity:Math.hypot(p.x-e.clientX,p.y-e.clientY);
+}
+function leverDragAngle(e,i){
+ const p=planePointer(e,leverPointerPlane);
+ if(!p)return null;
+ const center=leverPivot(i);
+ // Pointing from the *tail grip toward its outside pivot* is the horn
+ // direction. Dragging the rear arm now turns the horn the correct way.
+ return Math.atan2(center.z-p.z,center.x-p.x);
+}
+function railAngleFromPoint(p){
+ const r=activeRail();
+ return Math.atan2(p.z/r.rz,(p.x-activeFocus())/r.rx);
+}
+function selectGesture(e){
+ // Larger, independent invisible touch regions. Checking screen projection
+ // avoids perspective mismatches between the horn, lever and the drag plane.
+ let bestHorn=-1,bestDist=59;
+ for(let i=0;i<3;i++){
+  const src=railAt(i),d=emitterDirection(i);
+  const atBase=controlDistance(e,src.x,CONTROL_HEIGHT,src.z);
+  const atBody=controlDistance(e,src.x,.63,src.z);
+  const atMouth=controlDistance(e,src.x+d.x*.65,.63,src.z+d.z*.65);
+  const distance=Math.min(atBase,atBody,atMouth);
+  if(distance<bestDist){bestDist=distance;bestHorn=i;}
+ }
+ if(selectedEmitterIndex>=0){
+  const h=leverAt(selectedEmitterIndex);
+  const gripDist=controlDistance(e,h.x,CONTROL_HEIGHT,h.z);
+  // Aiming is only selected near the real grip. A close horn body still
+  // takes precedence so dragging its base never accidentally changes angle.
+  if(gripDist<53&&(bestHorn<0||gripDist+6<bestDist))return 'aim';
+ }
+ if(bestHorn>=0){
+  if(bestHorn!==selectedEmitterIndex){
+   selectedEmitterIndex=bestHorn;updateEmitterDock();
+  }
+  return 'rail';
+ }
+ return 'orbit';
+}
+canvas.addEventListener('pointerdown',e=>{
+ e.preventDefault();
+ pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ try{canvas.setPointerCapture(e.pointerId)}catch{}
+ if(pointers.size===1&&state.mode==='observer'){
+  const kind=selectGesture(e);
+  gesture={id:e.pointerId,kind};
+  if(kind==='aim'&&selectedEmitterIndex>=0){
+   gesture.startAim=state.osc[selectedEmitterIndex].aim||0;
+   gesture.startAngle=leverDragAngle(e,selectedEmitterIndex);
+   railMarkers[selectedEmitterIndex].handle.scale.setScalar(1.3);
+  }else if(kind==='rail'&&selectedEmitterIndex>=0){
+   const p=planePointer(e);
+   gesture.previousRailAngle=p?railAngleFromPoint(p):null;
+  }
+ }else if(pointers.size===2){
+  gesture=null;pinchDistance=pointerPair();
+ }
+});
+canvas.addEventListener('pointermove',e=>{
+ const old=pointers.get(e.pointerId);if(!old)return;
+ const dx=e.clientX-old.x,dy=e.clientY-old.y;
+ pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(pointers.size>=2){
+  if(state.mode==='observer'){
+   const next=pointerPair();
+   if(next>1&&pinchDistance>1)zoom(pinchDistance/next);
+   pinchDistance=next;
+  }
+  return;
+ }
+ if(state.mode==='observer'){
+  if(!gesture||gesture.id!==e.pointerId)return;
+  if(gesture.kind==='orbit'){
+   state.observerAzimuth=wrapAngle(state.observerAzimuth+dx*.006);
+   return;
+  }
+  if(selectedEmitterIndex<0)return;
+  const o=state.osc[selectedEmitterIndex];
+  if(gesture.kind==='rail'){
+   const p=planePointer(e);if(!p)return;
+   const angle=railAngleFromPoint(p);
+   if(gesture.previousRailAngle!==null){
+    const delta=wrapAngle(angle-gesture.previousRailAngle);
+    const moved=constrainRailMove(selectedEmitterIndex,delta);
+    railMarkers[selectedEmitterIndex].bumped=!moved&&Math.abs(delta)>.012;
+   }
+   gesture.previousRailAngle=angle;
+  }else if(gesture.kind==='aim'){
+   const angle=leverDragAngle(e,selectedEmitterIndex);
+   if(angle===null||gesture.startAngle===null)return;
+   const change=wrapAngle(angle-gesture.startAngle)/deg;
+   o.aim=Math.round(clamp(gesture.startAim+change,-90,90));
+  }
+  updateEmitterDock();renderField();
+ }else{
+  state.yaw+=dx*.005;
+  state.pitch=clamp(state.pitch+(invertLookY?1:-1)*dy*.005,-1.1,1.1);
+ }
+});
+function releasePointer(e){
+ pointers.delete(e.pointerId);
+ if(gesture?.id===e.pointerId){
+  if(selectedEmitterIndex>=0){
+   railMarkers[selectedEmitterIndex].bumped=false;
+   if(gesture.kind==='aim')
+    railMarkers[selectedEmitterIndex].handle.scale.setScalar(1);
+  }
+  gesture=null;
+  updateRailGraphics();
+ }
+ if(pointers.size<2)pinchDistance=0;
+}
+for(const type of ['pointerup','pointercancel','lostpointercapture'])
+ canvas.addEventListener(type,releasePointer);
+canvas.addEventListener('wheel',e=>{
+ if(state.mode==='observer'){e.preventDefault();zoom(e.deltaY>0?1.1:.9)}
+},{passive:false});
+// Tilt controls are intentionally omitted: the landscape remains upright.
+$('save').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonancePlane19Discoveries')||'[]');notes.push({saved:new Date().toISOString(),osc:state.osc.map(o=>({...o}))});localStorage.setItem('resonancePlane19Discoveries',JSON.stringify(notes.slice(-20)));toast(`Discovery saved (${Math.min(notes.length,20)})`)});
+$('previewRoom').addEventListener('click',()=>{
+ const next=state.activeChamber===0?1:0;
+ state.activeChamber=next;state.playerX=next?11:(state.hasCrossedGap?4.25:-5.5);state.playerZ=0;
+ state.yaw=next?0:0;state.pitch=-.07;
+ $('previewRoom').textContent=next?'Test Room I':'Test Room II';
+ updateObjective();
+ updateRailGraphics();planeDirty=true;renderField();
+ toast(next?'Testing Chamber II · Three horns, one frequency':
+   'Testing Chamber I · Water and concealed stone');
+});
+$('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonancePlane19Discoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;
+ state.osc.forEach((o,i)=>{
+  if(!Number.isFinite(o.aim))o.aim=0;
+  o.aim=Math.max(-90,Math.min(90,o.aim));
+  if(!Number.isFinite(o.rail))o.rail=[Math.PI,0,-Math.PI/2][i];
+ });
+ normalizeHornSpacing();
+ updateEmitterDock();setPlaneDirty();syncAudio();renderField();toast('Latest plane configuration restored')});
+let toastTimer=0;function toast(txt){$('toast').textContent=txt;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),1750)}
+const clock=new THREE.Clock();let frame=0,immersionTime=0;
+let previousFrame=0;
+function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();
+ const dt=Math.min(.06,Math.max(0,t-previousFrame));previousFrame=t;
+ if(state.mode==='immersion')immersionTime+=dt;
+ if(pulseHolding&&state.mode==='immersion'&&immersionTime>=pulseNextTime){
+  pulseNextTime=immersionTime+.44;playImpulse(true);
+ }
+ if(state.mode==='immersion'){
+   state.yaw+=state.lookX*2.15*dt;
+   state.pitch=clamp(state.pitch+(invertLookY?-1:1)*state.lookY*1.55*dt,-1.05,1.05);
+   if(state.moveX||state.moveY){
+     const speed=2.65,len=Math.max(1,Math.hypot(state.moveX,state.moveY));
+     const forward=state.moveY/len,side=state.moveX/len;
+     const vx=forward*Math.cos(state.yaw)-side*Math.sin(state.yaw);
+     const vz=forward*Math.sin(state.yaw)+side*Math.cos(state.yaw);
+     // Try each axis separately so the player can slide naturally along unstable edges.
+     const targetX=clamp(state.playerX+vx*speed*dt,-7.5,23.52);
+     const targetZ=clamp(state.playerZ+vz*speed*dt,-6.63,6.63);
+     const canX=groundAt(targetX,state.playerZ);
+     if(canX)state.playerX=targetX;
+     const canZ=groundAt(state.playerX,targetZ);
+     if(canZ)state.playerZ=targetZ;
+     if(!canX&&!canZ&&t-state.lastBlockMessage>1.5){
+       state.lastBlockMessage=t;
+       toast(state.playerX>5?'Stone wall · Try a Pulse to diagnose it':'No footing · Tune the pool, then PULSE');
+     }
+   }
+   if(state.activeChamber===0&&!state.hasCrossedGap&&state.playerX>3.33&&state.playerX<7.6){
+     state.hasCrossedGap=true;
+     try{localStorage.setItem(WALL_PROGRESS_KEY,'1')}catch(e){}
+     setPlaneDirty();updateObjective();
+     toast('CROSSING COMPLETE · The hidden stone is next');
+   }
+   const chamber=state.playerX>8.45?1:state.playerX<7.6?0:state.activeChamber;
+   if(chamber!==state.activeChamber){
+    state.activeChamber=chamber;
+    $('previewRoom').textContent=chamber?'Test Room I':'Test Room II';
+    updateRailGraphics();planeDirty=true;
+    if(chamber===1){
+     state.wallSolved=true;
+     try{
+      localStorage.setItem(WALL_PROGRESS_KEY,'1');
+      localStorage.setItem(WALL_SOLVED_KEY,'1');
+      localStorage.setItem(CHAMBER_TWO_KEY,'1');
+     }catch(e){}
+    }
+    updateObjective();
+    toast(chamber?'CHAMBER II · The urn awaits three voices':'CHAMBER I · The submerged path');
+   }
+   if(groundAt(state.playerX,state.playerZ))state.lastGrounded=t;
+   else if(t-state.lastGrounded>1){
+     const beyond=state.hasCrossedGap&&state.activeChamber===0;
+     state.playerX=beyond?4.25:-5.5;state.playerZ=0;
+     state.lastGrounded=t;
+     toast(beyond?'Field collapsed · Returned to far shore':
+       'Field collapsed · Returned to entrance');
+   }
+ }
+  if(state.mode==='observer'){
+    avatarGroup.position.set(state.playerX,0,state.playerZ);
+    avatarGroup.rotation.y=-state.yaw;
+    globe.quaternion.identity();
+    const elevation=33*Math.PI/180,azimuth=state.observerAzimuth;
+    const distance=state.observerDistance,horizontal=Math.cos(elevation)*distance;
+    camera.position.set(activeFocus()*OBSERVER_SCALE+horizontal*Math.cos(azimuth),
+      distance*Math.sin(elevation),horizontal*Math.sin(azimuth));
+    camera.up.set(0,1,0);
+    camera.lookAt(activeFocus()*OBSERVER_SCALE,.05,0);
+  }else{
+    globe.quaternion.identity();
+    const px=state.playerX;
+    camera.position.set(px,1.85,state.playerZ);
+    const direction=new THREE.Vector3(Math.cos(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),Math.sin(state.yaw)*Math.cos(state.pitch));
+    camera.lookAt(camera.position.clone().add(direction));
+  }
+  const perceivedTime=state.mode==='immersion'?immersionTime:0;
+  // Visual scintillation expresses possible resonance, without advancing
+  // physical simulation time in Observer.
+  const shimmer=state.mode==='observer'?performance.now()*.001:immersionTime;
+  urnFlowRing.position.y=1.95+.055*Math.sin(shimmer*2.1);
+  urnFlowRing.scale.setScalar(1+.09*Math.sin(shimmer*1.35));
+  urnChannels.forEach((ring,i)=>{
+   ring.position.y=1.13+i*.29+.075*(state.urnSourceValues[i]||0)*
+     Math.sin(shimmer*2.8+i*2);
+   ring.scale.setScalar(1+.06*(state.urnSourceValues[i]||0)*
+     Math.cos(shimmer*2.3+i*2));
+  });
+  lampHalo.scale.setScalar(1+.1*Math.sin(shimmer*1.25));
+  lampCrystal.rotation.y=shimmer*.22;
+  railMarkers.forEach((m,i)=>{
+   if(state.osc[i].on){
+    m.head.scale.setScalar(1+.018*Math.sin(shimmer*6+i*2));
+   }else m.head.scale.setScalar(1);
+  });
+  // Actual acoustic beating animates only at designated beat landmarks.
+  // The amplitude envelope is timed to the sources' frequency DIFFERENCE.
+  const isBeatRoom=state.activeChamber===0;
+  const beatFreq=state.beatRate;
+  const canSeeBeat=isBeatRoom&&state.osc[0].on&&state.osc[1].on&&
+     state.beatOverlap>.025;
+  const visualBeat=beatFreq>.12&&beatFreq<=9;
+  const beatEnvelope=canSeeBeat&&visualBeat
+   ?(.5+.5*Math.cos(2*Math.PI*beatFreq*t)):.5;
+  const matchingBeat=Math.exp(-.5*Math.pow((beatFreq-BEAT_HZ)/1.85,2));
+  const drivenStrength=canSeeBeat?state.beatOverlap*
+    (.31+.69*matchingBeat):0;
+  // A tap in Immersion supplies a brief natural resonant response. The
+  // decaying 4 Hz wobble is a clue, not a field activation.
+  const probeAge=immersionTime-state.beatProbeAt;
+  const probeStrength=state.mode==='immersion'&&isBeatRoom&&
+    probeAge>=0&&probeAge<3.3?Math.exp(-probeAge*1.12):0;
+  const probeEnvelope=.5+.5*Math.cos(2*Math.PI*BEAT_HZ*probeAge);
+  const discWave=drivenStrength*beatEnvelope+
+    probeStrength*probeEnvelope*.95;
+  discMaterial.emissiveIntensity=.08+.24*drivenStrength+.86*discWave;
+  beatDisc.scale.setScalar(1+.055*discWave-.018*drivenStrength);
+  discRim.material.opacity=.13+.56*discWave+.16*drivenStrength;
+  beatWorldRings.forEach((ring,i)=>{
+    const ringBeat=visualBeat?(.5+.5*Math.cos(2*Math.PI*beatFreq*t-i*.65)):.45;
+    const ringProbe=.5+.5*Math.cos(2*Math.PI*BEAT_HZ*probeAge-i*.65);
+    const strength=drivenStrength*ringBeat+probeStrength*ringProbe*.92;
+    ring.visible=isBeatRoom&&state.mode==='immersion'&&strength>.03;
+    ring.material.opacity=Math.min(.66,strength*(.48-i*.095));
+    ring.scale.setScalar(1+.08*i+.19*strength);
+  });
+  beatHalo.material.opacity=state.mode==='observer'&&!state.hasCrossedGap&&canSeeBeat?
+    .09+(.24+.44*matchingBeat)*drivenStrength*beatEnvelope:0;
+  beatHalo.scale.setScalar(.92+.26*drivenStrength*beatEnvelope);
+  // A physical Pulse briefly makes the stone itself shimmer and wobble.
+  // There are no separate wall rings in either mode.
+  const wallAge=performance.now()*.001-state.wallProbeRealAt;
+  const wallImpact=state.mode==='immersion'&&state.activeChamber===0&&
+    wallAge>=0&&wallAge<3.6;
+  const vertices=hiddenDoor.geometry.attributes.position;
+  const wallPosition=vertices.array;
+  let peakMotion=0;
+  for(let p=0;p<wallPosition.length;p+=3){
+    const x=hiddenDoorBase[p],y=hiddenDoorBase[p+1],z=hiddenDoorBase[p+2];
+    const face=x<-.235?1:0; // Front surface facing the approaching player
+    const edgeTaper=Math.max(0,Math.sin(Math.PI*(y+1.9)/3.8))*
+      Math.max(0,Math.sin(Math.PI*(z+1.12)/2.24));
+    const separation=Math.hypot(y,z-state.wallProbeZ);
+    const impulse=wallImpact?wallImpulseWave(wallAge,separation):0;
+    // Driven stone surface moves at the horns' actual frequency difference.
+    const driven=state.mode==='immersion'&&state.wallBeatPair?
+      state.wallBeatStrength*(.22+.78*Math.min(1,stoneBeatCoherence()))*
+      Math.cos(2*Math.PI*state.wallBeatRate*t+y*1.23+z*2.8):0;
+    const motion=face*edgeTaper*(impulse+.55*driven);
+    wallPosition[p]=x-.095*motion; // physical stone motion
+    peakMotion=Math.max(peakMotion,Math.abs(motion));
+  }
+  vertices.needsUpdate=true;
+  if(wallImpact||state.wallBeatPair)hiddenDoor.geometry.computeVertexNormals();
+  hiddenDoorMaterial.emissiveIntensity=Math.min(.85,peakMotion*(.20+.9*state.wallCoupling));
+  // Cached phasors animate the entire field without re-solving reflections.
+  animateBeatField(t);
+  animateFieldCrestSparkles();
+  animateStoneGlints(t);
+  core.rotation.y=perceivedTime*.3;portal.rotation.z=perceivedTime*.06;
+  for(let i=0;i<rings.length;i++)rings[i].material.opacity=.13+.08*Math.sin(perceivedTime*.8+i);
+  for(const p of state.pulses){
+    if(!p.visual)continue;
+    const age=Math.max(0,immersionTime-p.t),radius=Math.min(p.reach,.25+age*p.speed);
+    p.visual.scale.setScalar(radius);
+    p.visual.material.opacity=.65*Math.max(0,1-age/3)*Math.max(0,1-radius/(p.reach*1.1));
+    if(age>=3){world.remove(p.visual);p.visual.geometry.dispose();p.visual.material.dispose();}
+  }
+  state.pulses=state.pulses.filter(p=>immersionTime-p.t<3);
+  if(frame++%3===0)renderField(state.mode==='immersion'?immersionTime:0);
+  renderer.render(scene,camera);
+}
+function resize(){
+ const w=canvas.clientWidth||window.innerWidth,h=canvas.clientHeight||window.innerHeight;
+ camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);
+}window.addEventListener('resize',resize);
+renderField();changeMode('observer');animate();
+</script>
+</body>
+</html>
