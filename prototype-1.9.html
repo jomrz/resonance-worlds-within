@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.9.3</title>
+<title>Resonance: Worlds Within | Prototype 1.9.4</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -81,22 +81,13 @@ body.in-immersion #objective{display:none}
 #planeStats{font-size:10px;color:#a2c9d5;margin-top:6px}
 #immersionTools #actionButton{width:79px;height:79px}
 #dockSettings #viewControls{justify-content:center}
-#stoneBeacon{position:absolute;left:50%;top:50%;width:118px;height:118px;transform:translate(-50%,-50%);display:none;pointer-events:none;z-index:7;overflow:visible;filter:drop-shadow(0 0 5px rgba(89,210,243,.58))}
-#stoneBeacon .stoneWave{position:absolute;left:50%;top:50%;width:64px;height:64px;margin-left:-32px;margin-top:-32px;border:2.5px solid #90ebff;border-radius:50%;opacity:0;will-change:transform,opacity}
-#stoneBeacon .stoneTarget{position:absolute;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%);border:2px dashed #a2edff;border-radius:50%;box-shadow:0 0 10px rgba(142,229,252,.6);background:rgba(24,88,112,.18)}
-#stoneBeacon .stoneTarget:after{content:"";position:absolute;left:50%;top:50%;width:5px;height:5px;transform:translate(-50%,-50%);border-radius:50%;background:#c9f8ff}
-#stoneBeacon .stoneLabel{position:absolute;left:50%;top:84px;transform:translateX(-50%);white-space:nowrap;font-size:11px;font-weight:700;letter-spacing:.05em;color:#d5f6ff;text-shadow:0 1px 4px #06101b,0 0 10px #0a344c;background:rgba(9,29,45,.75);padding:3px 6px;border-radius:6px}
 </style>
 </head>
 <body>
 <canvas id="world"></canvas>
 <div id="hud">
-  <div id="stoneBeacon" aria-hidden="true">
-    <span class="stoneWave"></span><span class="stoneWave"></span><span class="stoneWave"></span>
-    <span class="stoneTarget"></span><span class="stoneLabel" id="stoneSignalLabel"></span>
-  </div>
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.9.3</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.9.4</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
     <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER I · The submerged path</div>
@@ -207,15 +198,6 @@ world.add(physicalWorld);
 // The rings appear after any nearby Pulse, with amplitude indicating resonance.
 hiddenDoorMaterial.emissive.setHex(0x377f9e);
 hiddenDoorMaterial.emissiveIntensity=0;
-const wallImpactRings=[];
-for(let i=0;i<3;i++){
- const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.025,6,64),
-  new THREE.MeshBasicMaterial({color:0x9ceaff,transparent:true,opacity:0,
-   side:THREE.DoubleSide,depthWrite:false}));
- ring.rotation.y=Math.PI/2; // Vertical YZ plane, facing the approaching player.
- ring.position.set(5.755,1.65,0);
- ring.visible=false;physicalWorld.add(ring);wallImpactRings.push(ring);
-}
 // CHAMBER II: Beyond the stone door waits an urn and a lamp.
 const URN={x:16,z:0},URN_HZ=208,SECOND_START=8.15,SECOND_END=23.65;
 const secondRoom=new THREE.Group();physicalWorld.add(secondRoom);
@@ -993,6 +975,7 @@ const sampleCount=PLANE_GRID.nx*PLANE_GRID.nz;
 const beatBaseHeights=new Float32Array(sampleCount);
 const beatBaseColors=new Float32Array(sampleCount*4);
 let beatFieldCells=[];
+let wallFieldCells=[]; // A compact set of vertices ON the existing wave landscape.
 const heightBuffer=new Float32Array(sampleCount*3);
 const shadeBuffer=new Float32Array(sampleCount*4);
 const meshIndices=[];
@@ -1053,24 +1036,6 @@ const wallEcho=new THREE.Line(new THREE.BufferGeometry().setFromPoints([
  new THREE.Vector3(5.85,.20,-1.04),new THREE.Vector3(5.85,.20,1.04)
 ]),new THREE.LineBasicMaterial({color:0xb9ebff,transparent:true,opacity:.025,depthWrite:false}));
 observer2D.add(wallEcho);
-// Observer wall echoes are anchored at the stone seam in chamber coordinates.
-// They express WALL coupling; the disc's 4 Hz beat remains over the disc.
-const wallObserverRings=[];
-for(let i=0;i<3;i++){
- const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.046,8,72),
-  new THREE.MeshBasicMaterial({color:0x7ee6ff,transparent:true,opacity:0,
-   side:THREE.DoubleSide,depthWrite:false,depthTest:false}));
- ring.rotation.x=-Math.PI/2;
- ring.position.set(5.85,1.92,0); // Exactly at the hidden wall's center.
- ring.renderOrder=24;
- ring.visible=false;observer2D.add(ring);wallObserverRings.push(ring);
-}
-const wallObserverAnchor=new THREE.Mesh(new THREE.SphereGeometry(.15,12,10),
- new THREE.MeshBasicMaterial({color:0xd0f5ff,transparent:true,opacity:.2,
-  depthWrite:false,depthTest:false}));
-wallObserverAnchor.position.set(5.85,1.94,0);
-wallObserverAnchor.renderOrder=25;
-wallObserverAnchor.visible=false;observer2D.add(wallObserverAnchor);
 const urnEchoRings=[];
 for(let i=0;i<3;i++){
  const material=new THREE.LineBasicMaterial({color:[0x73d2eb,0xe9c597,0xc8a8ec][i],
@@ -1226,6 +1191,7 @@ function computeFieldPlane(){
  const rawPressure=new Float32Array(sampleCount),rawAmplitude=new Float32Array(sampleCount);
  const sourceMagnitudes=Array.from({length:3},()=>new Float32Array(sampleCount));
  beatFieldCells.length=0;
+ wallFieldCells.length=0;
  const active=state.osc.filter(o=>o.on).length;
  if(!active){
   landscape.visible=diagnosticLines.visible=false;
@@ -1272,6 +1238,16 @@ function computeFieldPlane(){
    shadeBuffer[j*4+3]=Math.min(1,.10+energy*.86);
     beatBaseHeights[j]=heightBuffer[j*3+1];
     for(let k=0;k<4;k++)beatBaseColors[j*4+k]=shadeBuffer[j*4+k];
+    // Preserve the existing acoustic wave mesh. The stone's response is
+    // a localized distortion of this surface, never an independent ring.
+    if(state.activeChamber===0&&state.hasCrossedGap){
+      const r=Math.hypot(wx-5.82,wz);
+      if(r<3.25&&wx<=5.98){
+        wallFieldCells.push({index:j,r,weight:
+          Math.exp(-.5*Math.pow(r/1.70,2))*
+          Math.min(1,Math.max(0,(5.98-wx)/.37))});
+      }
+    }
     // Only the meaningful area around a beat-requiring object moves. The
     // overlap uses acoustic pressures already calculated above.
     for(let siteIndex=0;siteIndex<BEAT_SITES.length;siteIndex++){
@@ -1324,7 +1300,7 @@ function computeFieldPlane(){
 // too far apart to visually track do not create artificial slow flashing.
 function animateBeatField(seconds){
  if(state.mode!=='observer'||selectedFieldView!=='field'||
-    !landscape.visible||!beatFieldCells.length)return;
+    !landscape.visible||(!beatFieldCells.length&&!wallFieldCells.length))return;
  // Each landmark has a separate source pair and preferred beat rate. This
  // supports future rhythm-responsive objects without another visualization.
  const clocks=BEAT_SITES.map(site=>{
@@ -1344,6 +1320,38 @@ function animateBeatField(seconds){
   shadeBuffer[k+1]=Math.min(1,beatBaseColors[k+1]+.16*cell.weight*clock.clarity*beat);
   shadeBuffer[k+2]=Math.min(1,beatBaseColors[k+2]+.24*cell.weight*clock.clarity*beat);
   shadeBuffer[k+3]=Math.min(1,beatBaseColors[k+3]+.30*cell.weight*clock.clarity*beat);
+ }
+ // Material-specific response at the stone, integrated into the spatial
+ // pressure landscape. The response strength comes from the same calculated
+ // wallCoupling that controls the stone puzzle; a recent local Pulse contributes
+ // a short-lived impulse even if the horns are detuned.
+ const probeAge=performance.now()*.001-state.wallProbeRealAt;
+ const probeEcho=probeAge>=0&&probeAge<5?Math.exp(-probeAge*.75):0;
+ const driven=state.activeChamber===0&&state.hasCrossedGap?
+   Math.min(1,Math.max(state.wallCoupling,probeEcho*.76)):0;
+ if(driven>.006){
+  for(const cell of wallFieldCells){
+    const j=cell.index,k=j*4;
+    // The slow visual envelope reveals how a much faster sound excites the
+    // surface. The wave still belongs to the existing 2D acoustic field.
+    const pressure=Math.sin(seconds*7.1-cell.r*3.15);
+    const motion=driven*cell.weight*pressure;
+    heightBuffer[j*3+1]=Math.max(.08,beatBaseHeights[j]+.72*motion);
+    const glow=driven*cell.weight*(.5+.5*pressure);
+    shadeBuffer[k]=Math.min(1,beatBaseColors[k]+.27*glow);
+    shadeBuffer[k+1]=Math.min(1,beatBaseColors[k+1]+.34*glow);
+    shadeBuffer[k+2]=Math.min(1,beatBaseColors[k+2]+.29*glow);
+    shadeBuffer[k+3]=Math.min(1,beatBaseColors[k+3]+.20*glow);
+  }
+ }else{
+  // When the wall no longer responds, return every affected vertex exactly
+  // to its original pressure surface. No permanent rings or false resonance.
+  for(const cell of wallFieldCells){
+    const j=cell.index,k=j*4;
+    heightBuffer[j*3+1]=beatBaseHeights[j];
+    for(let channel=0;channel<4;channel++)
+      shadeBuffer[k+channel]=beatBaseColors[k+channel];
+  }
  }
  landscapeGeom.attributes.position.needsUpdate=true;
  landscapeGeom.attributes.color.needsUpdate=true;
@@ -2147,45 +2155,6 @@ $('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.g
 let toastTimer=0;function toast(txt){$('toast').textContent=txt;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),1750)}
 const clock=new THREE.Clock();let frame=0,immersionTime=0;
 let previousFrame=0;
-// Screen-space wall signal is projected from the SAME world coordinate as
-// the hidden stone seam. This avoids rings getting lost under the 2D surface,
-// and makes it obvious which landmark is (or isn't) resonating.
-const stoneBeacon=$('stoneBeacon');
-const stoneBeaconWaves=[...stoneBeacon.querySelectorAll('.stoneWave')];
-const stoneSignalLabel=$('stoneSignalLabel');
-const stoneBeaconPoint=new THREE.Vector3(5.78,1.4,0);
-function updateStoneBeacon(t){
- // The player's actual location also identifies the far shore, including
- // pre-checkpoint saves from an already-running gameplay session.
- const atStone=state.activeChamber===0&&
-  (state.hasCrossedGap||state.playerX>3.3);
- if(state.mode!=='observer'||!atStone){
-  stoneBeacon.style.display='none';return;
- }
- // Use the physical chamber origin, rather than an assumed screen position.
- world.updateWorldMatrix(true,false);
- camera.updateMatrixWorld();
- const screen=world.localToWorld(stoneBeaconPoint.clone()).project(camera);
- if(!Number.isFinite(screen.x)||screen.z < -1||screen.z>1){
-  stoneBeacon.style.display='none';return;
- }
- const rect=canvas.getBoundingClientRect();
- stoneBeacon.style.left=(rect.left+(screen.x+1)*.5*rect.width)+'px';
- stoneBeacon.style.top=(rect.top+(1-screen.y)*.5*rect.height)+'px';
- stoneBeacon.style.display='block';
- const elapsed=performance.now()*.001-state.wallProbeRealAt;
- const probe=elapsed>=0&&elapsed<8?Math.exp(-elapsed*.52):0;
- const energy=Math.min(1,Math.max(state.wallCoupling,probe*.88));
- stoneSignalLabel.textContent='STONE '+Math.round(state.wallCoupling*100)+'%';
- // A quiet stone gets a stationary locator. Driven or freshly struck stone
- // has wavefronts that expand from its own position.
- stoneBeaconWaves.forEach((wave,i)=>{
-  const phase=(t*.82+i/3)%1;
-  wave.style.transform='scale('+(.30+1.90*phase).toFixed(3)+')';
-  wave.style.opacity=energy>.012?
-   String(Math.min(.94,(.2+.82*energy)*(1-phase))):'0';
- });
-}
 function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();
  const dt=Math.min(.06,Math.max(0,t-previousFrame));previousFrame=t;
  if(state.mode==='immersion')immersionTime+=dt;
@@ -2252,7 +2221,6 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
     const direction=new THREE.Vector3(Math.cos(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),Math.sin(state.yaw)*Math.cos(state.pitch));
     camera.lookAt(camera.position.clone().add(direction));
   }
-  updateStoneBeacon(t);
   const perceivedTime=state.mode==='immersion'?immersionTime:0;
   // Visual scintillation expresses possible resonance, without advancing
   // physical simulation time in Observer.
@@ -2306,40 +2274,15 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
   beatHalo.material.opacity=state.mode==='observer'&&!state.hasCrossedGap&&canSeeBeat?
     .09+(.24+.44*matchingBeat)*drivenStrength*beatEnvelope:0;
   beatHalo.scale.setScalar(.92+.26*drivenStrength*beatEnvelope);
-  const wallCoherence=state.activeChamber===0?state.wallCoupling:0;
-  const wallFocused=state.mode==='observer'&&state.activeChamber===0&&
-    state.hasCrossedGap;
-  const wallProbeAge=performance.now()*.001-state.wallProbeRealAt;
-  const wallProbeMemory=wallProbeAge>=0&&wallProbeAge<5?
-    Math.exp(-wallProbeAge*.67):0;
-  const wallDisplayEnergy=Math.max(wallCoherence,wallProbeMemory*.85);
-  wallObserverAnchor.visible=wallFocused;
-  wallObserverAnchor.material.opacity=wallFocused?.32+.58*wallDisplayEnergy:0;
-  wallObserverAnchor.scale.setScalar(1+.27*wallDisplayEnergy*Math.sin(t*5));
-  wallObserverRings.forEach((ring,i)=>{
-    // Three expanding wavefronts originate at the stone, not the disc.
-    // A wrong-frequency test produces a short echo; coupling sustains it.
-    const progress=((t*1.18-i/3)%1+1)%1;
-    ring.visible=wallFocused;
-    ring.scale.setScalar(.24+1.12*progress);
-    ring.material.opacity=wallFocused?
-      (.12+.76*wallDisplayEnergy)*(1-progress)*(.52+.48*wallDisplayEnergy):0;
-  });
+  // A physical Pulse briefly makes the stone itself shimmer and wobble.
+  // There are no separate wall rings in either mode.
   const wallAge=immersionTime-state.wallProbeAt;
   const wallImpact=state.mode==='immersion'&&state.activeChamber===0&&
-    wallAge>=0&&wallAge<1.45;
-  wallImpactRings.forEach((ring,i)=>{
-    const phase=wallAge-i*.15;
-    const travel=Math.max(0,Math.min(1,phase/1.12));
-    ring.visible=wallImpact&&phase>=0&&phase<1.12;
-    if(ring.visible){
-      ring.position.z=state.wallProbeZ;
-      ring.scale.setScalar(.33+1.22*travel);
-      ring.material.opacity=(.28+.5*wallCoherence)*(1-travel);
-    }
-  });
-  hiddenDoorMaterial.emissiveIntensity=wallImpact?
-    (.18+.9*wallCoherence)*Math.exp(-2.1*wallAge):0;
+    wallAge>=0&&wallAge<1.5;
+  const wallDecay=wallImpact?Math.exp(-wallAge*2.4):0;
+  const wallMotion=wallDecay*Math.sin(wallAge*24);
+  hiddenDoorMaterial.emissiveIntensity=wallDecay*(.25+.95*state.wallCoupling);
+  hiddenDoor.scale.z=1+wallMotion*(.012+.024*state.wallCoupling);
   // Only the meaningful two-source overlap around the disc receives
   // animated waves. The 2D solver remains static between user edits.
   animateBeatField(t);
