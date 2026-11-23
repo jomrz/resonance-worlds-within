@@ -2408,6 +2408,9 @@ function changeMode(mode){
  stopJoystick(null);stopLookJoystick(null);stopPulse();
  state.mode=mode;
  document.body.classList.toggle('in-immersion',mode==='immersion');
+ // Observer retains its distinct acoustic palette.
+ scene.background.set(mode==='observer'?0x09101b:0x121f20);
+ scene.fog.color.set(mode==='observer'?0x09101b:0x152626);
  $('shiftMode').textContent=mode==='observer'?'Enter Immersion':'Enter Observer';
  /* No tool choice in 1.8. */
  physicalWorld.visible=mode==='immersion';
@@ -2730,6 +2733,7 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
        'Field collapsed · Returned to entrance');
    }
  }
+  poseTraveler(t);
   if(state.mode==='observer'){
     avatarGroup.position.set(state.playerX,0,state.playerZ);
     avatarGroup.rotation.y=-state.yaw;
@@ -2861,7 +2865,12 @@ function resize(){
  const w=canvas.clientWidth||window.innerWidth,h=canvas.clientHeight||window.innerHeight;
  camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);
 }window.addEventListener('resize',resize);
-renderField();changeMode('observer');animate();
+let initialMode='observer';
+try{
+ const requestedView=new URLSearchParams(window.location.search).get('view');
+ if(requestedView==='immersion')initialMode='immersion';
+}catch(e){}
+renderField();changeMode(initialMode);animate();
 </script>
 </body>
 </html>
