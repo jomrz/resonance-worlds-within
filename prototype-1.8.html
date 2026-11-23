@@ -1329,8 +1329,8 @@ async function toggleSound(){
     soundOn=!soundOn;syncAudio();
     $('audio').textContent=soundOn?'🔊 Sound on':'🔈 Sound off';
     $('audio').classList.toggle('active',soundOn);
-    $('immersiveAudio').textContent=soundOn?'🔊 On':'🔈 Sound';
-    $('immersiveAudio').classList.toggle('active',soundOn);
+    
+    
     if(soundOn){playTestTone();toast('Audio enabled · Hear the test tone?')}
     else toast('Sound muted');
   }catch(e){toast('Audio could not start: '+(e.message||'Try Safari'))}
@@ -1345,26 +1345,7 @@ function syncAudio(){
   }
 }
 $('audio').addEventListener('click',toggleSound);
-$('immersiveAudio').addEventListener('click',toggleSound);
-function playTestTone(){
- if(!audioCtx||audioCtx.state!=='running'){toast('Audio not active · Tap Sound off first');return;}
- const t=audioCtx.currentTime+.005;
- const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
- osc.type='triangle';osc.frequency.setValueAtTime(783.99,t);
- osc.frequency.setValueAtTime(987.77,t+.23);
- gain.gain.setValueAtTime(.0001,t);
- gain.gain.exponentialRampToValueAtTime(.18,t+.02);
- gain.gain.setValueAtTime(.18,t+.34);
- gain.gain.exponentialRampToValueAtTime(.0001,t+.6);
- osc.connect(gain).connect(masterGain);osc.start(t);osc.stop(t+.62);
-}
-$('soundTest').addEventListener('click',async()=>{
- try {
-  if(!soundOn){await toggleSound();return;}
-  if(audioCtx.state!=='running')await audioCtx.resume();
-  playTestTone();toast(audioCtx.state==='running'?'Test tone played':'Audio interrupted');
- }catch(e){toast('Audio test failed: '+(e.message||'Try Safari'))}
-});
+
 document.addEventListener('visibilitychange',()=>{
  if(!document.hidden&&soundOn&&audioCtx&&audioCtx.state!=='running'){
   audioCtx.resume().catch(()=>{});
@@ -1372,74 +1353,66 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 // Inside, impulses originate near the player and travel through the same world field.
-function playImpulse(kind){
+// Universal local instrument: the same spatial Pulse diagnoses objects and
+// excites them. Holding the button repeatedly introduces energy over time.
+function playImpulse(sustained=false){
  if(state.mode!=='immersion')return;
- const cfg={
-  knock:{hz:185,length:.20,speed:3.1,strength:1.15,reach:3.2,color:0xe0bd87,label:'Thump'},
-  chime:{hz:WALL_MODE_HZ*3,length:1.45,speed:2.4,strength:.70,reach:6.5,color:0xf1cc84,label:'Chime'},
-  pulse:{hz:WATER_MODE_HZ*2,length:.54,speed:7.5,strength:1.4,reach:14,color:0x81dbf1,label:'Pulse'}
- }[kind];
- const source=kind==='pulse'?{x:state.playerX,z:state.playerZ}:{
-  x:state.playerX+Math.cos(state.yaw)*1.15,
-  z:state.playerZ+Math.sin(state.yaw)*1.15
- };
- const t=immersionTime;
- const visual=new THREE.Mesh(new THREE.TorusGeometry(1,.025,6,64),
+ const cfg={hz:272,length:sustained?.38:.45,speed:6.6,
+  strength:sustained?1.15:1.4,reach:12.5,color:0x84ddef,label:'Pulse'};
+ const source={x:state.playerX,z:state.playerZ},t=immersionTime;
+ const visual=new THREE.Mesh(new THREE.TorusGeometry(1,.025,6,56),
   new THREE.MeshBasicMaterial({color:cfg.color,transparent:true,opacity:.65,depthWrite:false}));
- visual.rotation.x=Math.PI/2;visual.position.set(source.x,.16,source.z);world.add(visual);
+ visual.rotation.x=Math.PI/2;
+ visual.position.set(source.x,.16,source.z);world.add(visual);
  state.pulses.push({...cfg,t,x:source.x,z:source.z,visual});
  if(soundOn&&audioCtx){
-   if(audioCtx.state!=='running')audioCtx.resume().catch(()=>{});
-   const at=audioCtx.currentTime,o=audioCtx.createOscillator(),harmonic=audioCtx.createOscillator(),gain=audioCtx.createGain();
-   o.type=kind==='knock'?'triangle':'sine';harmonic.type='triangle';
-   o.frequency.setValueAtTime(cfg.hz,at);harmonic.frequency.setValueAtTime(cfg.hz*2,at);
-   gain.gain.setValueAtTime(.0001,at);
-   gain.gain.exponentialRampToValueAtTime(.12,at+.016);
-   gain.gain.exponentialRampToValueAtTime(.0001,at+cfg.length);
-   o.connect(gain);harmonic.connect(gain);gain.connect(masterGain);
-   o.start(at);harmonic.start(at);o.stop(at+cfg.length+.02);harmonic.stop(at+cfg.length+.02);
+  if(audioCtx.state!=='running')audioCtx.resume().catch(()=>{});
+  const at=audioCtx.currentTime,o=audioCtx.createOscillator(),gain=audioCtx.createGain();
+  o.type='triangle';o.frequency.setValueAtTime(cfg.hz,at);
+  gain.gain.setValueAtTime(.0001,at);
+  gain.gain.exponentialRampToValueAtTime(.12,at+.018);
+  gain.gain.exponentialRampToValueAtTime(.0001,at+cfg.length);
+  o.connect(gain);gain.connect(masterGain);
+  o.start(at);o.stop(at+cfg.length+.025);
  }
+ const nearDisc=Math.hypot(state.playerX-DISC.x,state.playerZ-DISC.z)<2.1;
  const nearPool=state.playerX>-6.6&&state.playerX<-3.1&&Math.abs(state.playerZ)<2.5;
  const nearWall=state.playerX>3.7&&state.playerX<6.1&&Math.abs(state.playerZ)<2.2;
- const nearDisc=Math.hypot(state.playerX-DISC.x,state.playerZ-DISC.z)<1.8;
- let response=cfg.label+' · A wave travels through the chamber';
- if(kind==='knock'){
-   if(nearDisc){
-     state.foundDisc=true;
-     playMaterialEcho(180);
-     response='Hanging disc has a slow 4 Hz mechanical response · Find two converging waves';
-   }else if(nearPool){
-     state.foundPoolTone=true;
-     playMaterialEcho(WATER_MODE_HZ);
-     response='Mineral pool rings near '+WATER_MODE_HZ+' Hz · Remember this tone';
-   }else if(nearWall){
-     state.foundWallTone=true;
-     playMaterialEcho(WALL_MODE_HZ);
-     response='That wall sounds hollow · Resonance near '+WALL_MODE_HZ+' Hz';
-   }else response='Stone rings solid · Try thumping the pool rim or far wall';
- }else if(kind==='pulse'&&nearPool){
-   if(state.poolCoupling>.78){
-     state.waterRaisedUntil=immersionTime+38;
-     response='The mineral-water lattice rises · 38 seconds of solid footing';
-   }else response='The pool only ripples · Tune its natural resonance in Observer';
- }else if(kind==='chime'&&nearDisc){
-   if(state.beatCharge>.56){
-     state.beatOpenUntil=immersionTime+28;state.foundDisc=true;
-     response='TWO BEAMS INTERLOCK · The northern vault rises for 28 seconds';
-   }else if(state.beatOverlap<.35)
-     response='The disc needs two beams · Redirect one off the angled reflector';
-   else response='Both beams reach the disc · Tune their difference to 4 Hz';
- }else if(kind==='chime'&&nearWall){
-   if(state.wallCoupling>.78){
-     state.wallOpenUntil=immersionTime+30;
-     state.foundWallTone=true;
-     response='Hidden stone cavity resonates · A doorway lifts open';
-   }else response='A hollow echo answers · Tune this wall mode in Observer';
- }else if(kind==='pulse')response='Pulse travels out, but no responsive pool is nearby';
- else if(kind==='chime')response='Chime rings here, but the hollow wall is farther away';
- atlasDirty=true;
- renderField(immersionTime);
- toast(response);
+ let response='Pulse spreads and scatters through the chamber';
+ if(nearDisc){
+  state.foundDisc=true;
+  if(state.beatCharge>.56){
+   state.beatOpenUntil=immersionTime+28;
+   response='Suspended disc catches the 4 Hz beat · Northern vault rises';
+  }else if(state.beatOverlap>.3){
+   if(!sustained)playMaterialEcho(180);
+   response='Two beams touch the disc · Try a 4 Hz difference';
+  }else{
+   if(!sustained)playMaterialEcho(180);
+   response='The disc rings · Bring two waves into alignment';
+  }
+ }else if(nearPool){
+  state.foundPoolTone=true;
+  if(state.poolCoupling>.78){
+   state.waterRaisedUntil=immersionTime+38;
+   response='The mineral-water lattice rises · 38 seconds of footing';
+  }else{
+   if(!sustained)playMaterialEcho(WATER_MODE_HZ);
+   response='Mineral pool answers at about '+WATER_MODE_HZ+' Hz · Retune in Observer';
+  }
+ }else if(nearWall){
+  state.foundWallTone=true;
+  if(state.wallCoupling>.78){
+   state.wallOpenUntil=immersionTime+30;
+   response='The hollow cavity resonates · Stone passage opens';
+  }else{
+   if(!sustained)playMaterialEcho(WALL_MODE_HZ);
+   response='Hollow wall answers near '+WALL_MODE_HZ+' Hz · Retune in Observer';
+  }
+ }
+ planeDirty=true;renderField(immersionTime);
+ if(!sustained||state.beatOpenUntil===immersionTime+28||
+   state.waterRaisedUntil===immersionTime+38||state.wallOpenUntil===immersionTime+30)toast(response);
 }
 function playMaterialEcho(hz){
  if(!soundOn||!audioCtx||audioCtx.state!=='running')return;
@@ -1452,23 +1425,18 @@ function playMaterialEcho(hz){
  osc.connect(gain);harm.connect(gain);gain.connect(masterGain);
  osc.start(t);harm.start(t);osc.stop(t+.75);harm.stop(t+.75);
 }
-let selectedLocalTool='knock';
-function syncLocalTool(){
- const options={knock:['◉','Thump'],chime:['♫','Chime'],pulse:['◎','Pulse']};
- $('actionGlyph').textContent=options[selectedLocalTool][0];
- $('actionName').textContent=options[selectedLocalTool][1];
- $('actionButton').setAttribute('aria-label','Use '+options[selectedLocalTool][1]);
-}
-for(const kind of ['knock','chime','pulse'])$(kind).addEventListener('click',()=>{
- selectedLocalTool=kind;syncLocalTool();
- /* No tool choice in 1.8. */
+let pulseHolding=false,pulseNextTime=0;
+const pulseButton=$('actionButton');
+pulseButton.addEventListener('pointerdown',e=>{
+ e.preventDefault();if(state.mode!=='immersion')return;
+ try{pulseButton.setPointerCapture(e.pointerId)}catch{}
+ pulseHolding=true;
+ pulseNextTime=immersionTime+.55;
+ playImpulse(false);
 });
-$('actionButton').addEventListener('click',()=>playImpulse(selectedLocalTool));
-$('toolPicker').addEventListener('click',()=>{
- const hidden=$('actionChoices').classList.toggle('hidden');
- $('toolPicker').setAttribute('aria-expanded',String(!hidden));
-});
-syncLocalTool();
+function stopPulse(){pulseHolding=false}
+for(const event of ['pointerup','pointercancel','lostpointercapture'])
+ pulseButton.addEventListener(event,stopPulse);
 function changeMode(mode){
  stopJoystick(null);stopLookJoystick(null);
  state.mode=mode;
