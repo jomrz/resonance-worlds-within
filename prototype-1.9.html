@@ -770,6 +770,7 @@ const PLANE_GRID={nx:76,nz:68,x0:-8.05,z0:-7.05,dx:16.10/75,dz:14.10/67};
 const observer2D=new THREE.Group();world.add(observer2D);
 let selectedFieldView='field',planeDirty=true,lastPlaneBuild=-1;
 const deg=Math.PI/180;
+const CONTROL_HEIGHT=.24;
 function wrapAngle(a){return Math.atan2(Math.sin(a),Math.cos(a))}
 // A rail is an instrument track: horn bodies cannot pass through each
 // other, though their sound fields can (and must) overlap inside the room.
@@ -1827,7 +1828,6 @@ $('resetView').addEventListener('click',()=>{
 // A touch is either source translation, inward head aiming, orbit or pinch.
 // Raycast from the camera into the fixed calculation plane.
 const pointerRay=new THREE.Raycaster();
-const CONTROL_HEIGHT=.24;
 const pointerPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-OBSERVER_SCALE*CONTROL_HEIGHT);
 const leverPointerPlane=pointerPlane;
 function planePointer(e,plane=pointerPlane){
