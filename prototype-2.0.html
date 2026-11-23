@@ -379,8 +379,10 @@ function growScenery(geometry,material,count,options){
  for(let i=0;i<count;i++){
   const p=specimenPoint(),size=options.min+scenicRandom()*(options.max-options.min);
   dummy.position.set(p.x,p.y+options.offset*size,p.z);
-  dummy.rotation.set(options.flat?-Math.PI/2:0,scenicRandom()*Math.PI*2,
-    options.flat?0:(scenicRandom()-.5)*.38);
+  const rotation=scenicRandom()*Math.PI*2;
+  // Flat moss lies on the ground; its variation rotates around its own normal.
+  if(options.flat)dummy.rotation.set(-Math.PI/2,0,rotation);
+  else dummy.rotation.set(0,rotation,(scenicRandom()-.5)*.38);
   dummy.scale.set(size*(.72+scenicRandom()*.7),size,size*(.72+scenicRandom()*.7));
   dummy.updateMatrix();batch.setMatrixAt(i,dummy.matrix);
   shade.setHex(options.colors[Math.floor(scenicRandom()*options.colors.length)]);
@@ -522,7 +524,11 @@ try{
 // Immersion has its own camera grammar: exploratory overhead by default,
 // with the original eye-level camera retained for inspection.
 let immersionView='overhead',immersionCameraYaw=0,immersionCameraSnap=true;
-try{if(localStorage.getItem('resonance20View')==='firstperson')immersionView='firstperson'}catch(e){}
+try{
+ if(localStorage.getItem('resonance20View')==='firstperson')immersionView='firstperson';
+ const requestedCamera=new URLSearchParams(window.location.search).get('camera');
+ if(requestedCamera==='overhead'||requestedCamera==='firstperson')immersionView=requestedCamera;
+}catch(e){}
 function syncImmersionView(){
  $('cameraMode').textContent=immersionView==='overhead'?'Eye view':'Overhead';
  $('cameraMode').setAttribute('aria-pressed',String(immersionView==='firstperson'));
@@ -531,6 +537,7 @@ function syncImmersionView(){
 $('cameraMode').addEventListener('click',()=>{
  immersionView=immersionView==='overhead'?'firstperson':'overhead';
  if(immersionView==='firstperson')state.pitch=-.1;
+ else immersionCameraYaw=state.yaw;
  try{localStorage.setItem('resonance20View',immersionView)}catch(e){}
  syncImmersionView();
  toast(immersionView==='overhead'?'Elevated camera · Drag the world to turn':
