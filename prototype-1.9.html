@@ -969,23 +969,41 @@ const railPoints=Array.from({length:128},(_,n)=>{
 });
 const railLine=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(railPoints),railMaterial);
 observer2D.add(railLine);
+// Mystical brass-like acoustic horns with a flared mouth and visible rear lever.
 const railMarkers=[];
 for(let i=0;i<3;i++){
  const p=EMITTERS[i];
  const group=new THREE.Group();observer2D.add(group);
- const head=new THREE.Mesh(new THREE.OctahedronGeometry(.28,0),
-  new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:.9}));
- head.position.y=.65;group.add(head);
- const halo=new THREE.Mesh(new THREE.TorusGeometry(.43,.022,6,40),
-  new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:.55,depthWrite:false}));
- halo.rotation.x=Math.PI/2;halo.position.y=.2;group.add(halo);
- const handle=new THREE.Mesh(new THREE.SphereGeometry(.14,12,8),
-  new THREE.MeshBasicMaterial({color:0xf5f8ff,transparent:true,opacity:.85}));
+ const horn=new THREE.Group();group.add(horn);
+ const hornMat=new THREE.MeshStandardMaterial({color:p.color,metalness:.70,roughness:.35,
+  emissive:p.color,emissiveIntensity:.20,transparent:true,opacity:.92});
+ const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.31,.12,.98,12,1,true),hornMat);
+ barrel.rotation.z=-Math.PI/2;barrel.position.set(.40,.63,0);horn.add(barrel);
+ const mouth=new THREE.Mesh(new THREE.TorusGeometry(.33,.06,7,24),hornMat);
+ mouth.rotation.y=Math.PI/2;mouth.position.set(.91,.63,0);horn.add(mouth);
+ const throat=new THREE.Mesh(new THREE.SphereGeometry(.23,10,8),hornMat);
+ throat.position.set(-.11,.63,0);horn.add(throat);
+ const pivot=new THREE.Mesh(new THREE.CylinderGeometry(.16,.22,.64,10),
+  new THREE.MeshStandardMaterial({color:0x9a8c7c,metalness:.65,roughness:.35}));
+ pivot.position.y=.30;group.add(pivot);
+ const halo=new THREE.Mesh(new THREE.TorusGeometry(.48,.029,6,40),
+  new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:.27,depthWrite:false}));
+ halo.rotation.x=Math.PI/2;halo.position.y=.05;group.add(halo);
+ const handle=new THREE.Mesh(new THREE.SphereGeometry(.23,12,8),
+  new THREE.MeshStandardMaterial({color:0xe8d5a9,metalness:.55,roughness:.22,
+   emissive:0x947b4d,emissiveIntensity:.25}));
  observer2D.add(handle);
  const stem=new THREE.Line(new THREE.BufferGeometry(),
-  new THREE.LineBasicMaterial({color:p.color,transparent:true,opacity:.55,depthWrite:false}));
+  new THREE.LineBasicMaterial({color:0xe2c7a0,transparent:true,opacity:.92,depthWrite:false}));
  observer2D.add(stem);
- railMarkers.push({group,head,halo,handle,stem});
+ railMarkers.push({group,head:horn,headMaterial:hornMat,halo,handle,stem});
+}
+function leverAt(i){
+ const p=railAt(i),d=emitterDirection(i);
+ const radial={x:p.x-activeFocus(),z:p.z};
+ const radius=Math.max(.01,Math.hypot(radial.x,radial.z));
+ return {x:p.x-d.x*1.55+radial.x/radius*.70,
+  z:p.z-d.z*1.55+radial.z/radius*.70};
 }
 const aimingArc=new THREE.Line(new THREE.BufferGeometry(),
  new THREE.LineBasicMaterial({color:0x9bd9ec,transparent:true,opacity:.47,depthWrite:false}));
@@ -1003,15 +1021,18 @@ function updateRailGraphics(){
   const p=railAt(i),d=emitterDirection(i),obj=railMarkers[i];
   obj.group.position.set(p.x,0,p.z);
   obj.group.scale.setScalar(i===selectedEmitterIndex?1.27:1);
-  obj.head.material.opacity=state.osc[i].on?1:.42;
+  obj.head.rotation.y=-aimRadians(i);
+  obj.headMaterial.emissiveIntensity=state.osc[i].on?.46:.035;
+  obj.headMaterial.opacity=state.osc[i].on?1:.42;
   obj.halo.material.opacity=i===selectedEmitterIndex?.89:.23;
-  obj.handle.position.set(p.x+d.x*1.28,.62,p.z+d.z*1.28);
+  const lever=leverAt(i);
+  obj.handle.position.set(lever.x,.67,lever.z);
   obj.handle.visible=i===selectedEmitterIndex;
   obj.stem.visible=i===selectedEmitterIndex;
   if(obj.stem.visible){
    obj.stem.geometry.dispose();
    obj.stem.geometry=new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(p.x,.62,p.z),new THREE.Vector3(p.x+d.x*1.28,.62,p.z+d.z*1.28)]);
+    new THREE.Vector3(p.x,.67,p.z),new THREE.Vector3(lever.x,.67,lever.z)]);
   }
  }
  const selected=selectedEmitterIndex;
@@ -1022,7 +1043,9 @@ function updateRailGraphics(){
   const arc=[];
   for(let n=0;n<=36;n++){
    const a=c-Math.PI/2+n*Math.PI/36;
-   arc.push(new THREE.Vector3(p.x+Math.cos(a)*2.25,.14,p.z+Math.sin(a)*2.25));
+   const radial={x:p.x-activeFocus(),z:p.z},radius=Math.max(.01,Math.hypot(radial.x,radial.z));
+   arc.push(new THREE.Vector3(p.x-Math.cos(a)*1.55+radial.x/radius*.70,.19,
+     p.z-Math.sin(a)*1.55+radial.z/radius*.70));
   }
   aimingArc.geometry.dispose();aimingArc.geometry=new THREE.BufferGeometry().setFromPoints(arc);
   const bearing=aimRadians(selected),direction={x:Math.cos(bearing),z:Math.sin(bearing)};
@@ -1661,8 +1684,8 @@ function selectGesture(e){
  const p=planePointer(e);
  if(!p)return 'orbit';
  if(selectedEmitterIndex>=0){
-  const source=railAt(selectedEmitterIndex),d=emitterDirection(selectedEmitterIndex);
-  const hx=source.x+d.x*1.28,hz=source.z+d.z*1.28;
+  const h=leverAt(selectedEmitterIndex);
+  const hx=h.x,hz=h.z;
   if(Math.hypot(p.x-hx,p.z-hz)<.78)return 'aim';
  }
  let nearest=-1,dist=1.06;
