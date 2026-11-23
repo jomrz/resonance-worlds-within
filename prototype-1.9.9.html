@@ -1516,13 +1516,6 @@ function animateStoneGlints(seconds){
 }
 // Shared resonance hints: sparks are anchored to moving pressure crests,
 // and every region supplies its resonant-object metadata to this one renderer.
-const fieldCrestSparkles={};
-for(const [id,p] of Object.entries(RESONATOR_PROFILES)){
- const pool=createStoneGlints(observer2D,56);
- pool.material.color.setHex(ACOUSTIC_MATERIALS[p.material].sparkColor);
- pool.material.size=.24;
- fieldCrestSparkles[id]=pool;
-}
 function animateFieldCrestSparkles(){
  const shown=state.mode==='observer'&&selectedFieldView==='field'&&
    landscape.visible&&waveCache.active.length>0;
@@ -1666,6 +1659,13 @@ const RESONATOR_PROFILES={
   bandwidth:5.5,gain:2.05,aggregation:'mean',visualRadius:4.1,
   unison:{required:3,maxSpread:1,minimum:.34},sparkFrom:.39,sparkTo:.92}
 };
+const fieldCrestSparkles={};
+for(const [id,p] of Object.entries(RESONATOR_PROFILES)){
+ const pool=createStoneGlints(observer2D,56);
+ pool.material.color.setHex(ACOUSTIC_MATERIALS[p.material].sparkColor);
+ pool.material.size=.24;
+ fieldCrestSparkles[id]=pool;
+}
 const acousticReadings={};
 let lastAcousticSignature='';
 function acousticSignature(){
