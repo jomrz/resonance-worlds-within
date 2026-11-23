@@ -1054,63 +1054,59 @@ for(const p of EMITTERS){
  emitterMarkers.add(marker,halo);
 }
 const oscRoot=$('oscillators');
-let selectedEmitterIndex=-1,editorMode='frequency';
+let selectedEmitterIndex=-1;
 const emitterButtons=[];
 for(let i=0;i<3;i++){
  const button=document.createElement('button');
- button.className='emitterTab';button.type='button';
- button.id='emitterBtn'+i;
+ button.className='emitterTab';button.type='button';button.id='emitterBtn'+i;
  button.innerHTML='<span class="dot"></span><span>Source '+(i+1)+'</span>';
- button.setAttribute('aria-label','Select '+EMITTERS[i].label+' emitter');
- button.addEventListener('click',()=>{selectedEmitterIndex=selectedEmitterIndex===i?-1:i;updateEmitterDock()});
+ button.setAttribute('aria-label','Select source '+(i+1)+' on the conceptual rail');
+ button.addEventListener('click',()=>{
+  selectedEmitterIndex=selectedEmitterIndex===i?-1:i;
+  updateEmitterDock();renderField();
+ });
  oscRoot.append(button);emitterButtons.push(button);
 }
 function updateEmitterDock(){
- const selected=selectedEmitterIndex>=0;
- $('freqEditor').classList.toggle('expanded',selected);
- if(!selected){$('selectedEmitter').textContent='Choose source';}
- const current=selected?state.osc[selectedEmitterIndex]:null;
- // The button names the mode you can SWITCH TO, instead of being a cryptic label.
- $('freqMode').textContent=editorMode==='frequency'?'Aim ↗':'Hz';
- $('freqMode').setAttribute('aria-label',editorMode==='frequency'?'Switch to aim direction':'Switch to frequency');
- $('freqMode').setAttribute('aria-pressed',String(editorMode==='aim'));
+ const chosen=selectedEmitterIndex>=0;
+ $('freqEditor').classList.toggle('expanded',chosen);
+ $('selectedEmitter').textContent=chosen?'Source '+(selectedEmitterIndex+1)+' · Perimeter':'Select a source';
+ $('railHint').textContent=chosen
+  ?'Drag colored marker around rail · Drag white tip to aim'
+  :'Select a source · Drag its position · Swipe background to orbit';
  emitterButtons.forEach((button,i)=>{
-  const active=i===selectedEmitterIndex;
-  button.classList.toggle('selected',active);
+  button.classList.toggle('selected',i===selectedEmitterIndex);
   button.classList.toggle('powered',state.osc[i].on);
   button.classList.toggle('off',!state.osc[i].on);
-  button.setAttribute('aria-pressed',String(active));
+  button.setAttribute('aria-pressed',String(i===selectedEmitterIndex));
  });
- if(!selected)return;
- $('selectedEmitter').textContent=EMITTERS[selectedEmitterIndex].label+
-   (editorMode==='aim'?' · Bearing':' · Frequency');
- const value=editorMode==='aim'?(current.aim||0):current.freq;
- $('frequencyRange').min=editorMode==='aim'?'0':'60';
- $('frequencyRange').max=editorMode==='aim'?'359':'420';
- $('frequencyRange').value=String(value);
- $('freqValue').textContent=value+(editorMode==='aim'?'°':' Hz');
- $('powerToggle').textContent=current.on?'On':'Off';
- $('powerToggle').classList.toggle('active',current.on);
- $('powerToggle').setAttribute('aria-pressed',String(current.on));
+ if(chosen){
+  const o=state.osc[selectedEmitterIndex];
+  $('frequencyRange').value=String(o.freq);
+  $('freqValue').textContent=o.freq+' Hz';
+  $('powerToggle').textContent=o.on?'On':'Off';
+  $('powerToggle').classList.toggle('active',o.on);
+  $('powerToggle').setAttribute('aria-pressed',String(o.on));
+ }
+ updateRailGraphics();
 }
-function setSelectedFrequency(value){
+function selectedFrequency(value){
  if(selectedEmitterIndex<0)return;
- const current=state.osc[selectedEmitterIndex];
- const v=editorMode==='aim'
-  ?Math.min(359,Math.max(0,Math.round(value)))
-  :Math.min(420,Math.max(60,Math.round(value)));
- const prop=editorMode==='aim'?'aim':'freq';
- if(current[prop]===v)return;
- current[prop]=v;updateEmitterDock();atlasDirty=true;beamGuideDirty=true;syncAudio();renderField();
+ const o=state.osc[selectedEmitterIndex],frequency=Math.min(420,Math.max(60,Math.round(value)));
+ if(o.freq===frequency)return;
+ o.freq=frequency;updateEmitterDock();syncAudio();renderField();
 }
-$('freqMode').addEventListener('click',()=>{editorMode=editorMode==='frequency'?'aim':'frequency';updateEmitterDock()});
-$('frequencyRange').addEventListener('input',e=>setSelectedFrequency(Number(e.target.value)));
-$('freqDown').addEventListener('click',()=>{if(selectedEmitterIndex>=0)setSelectedFrequency((editorMode==='aim'?(state.osc[selectedEmitterIndex].aim||0):state.osc[selectedEmitterIndex].freq)-1)});
-$('freqUp').addEventListener('click',()=>{if(selectedEmitterIndex>=0)setSelectedFrequency((editorMode==='aim'?(state.osc[selectedEmitterIndex].aim||0):state.osc[selectedEmitterIndex].freq)+1)});
+$('frequencyRange').addEventListener('input',e=>selectedFrequency(+e.target.value));
+$('freqDown').addEventListener('click',()=>{
+ if(selectedEmitterIndex>=0)selectedFrequency(state.osc[selectedEmitterIndex].freq-1);
+});
+$('freqUp').addEventListener('click',()=>{
+ if(selectedEmitterIndex>=0)selectedFrequency(state.osc[selectedEmitterIndex].freq+1);
+});
 $('powerToggle').addEventListener('click',()=>{
  if(selectedEmitterIndex<0)return;
  state.osc[selectedEmitterIndex].on=!state.osc[selectedEmitterIndex].on;
- updateEmitterDock();atlasDirty=true;beamGuideDirty=true;syncAudio();renderField();
+ updateEmitterDock();syncAudio();renderField();
 });
 $('dockOptions').addEventListener('click',()=>{
  const hidden=$('dockSettings').classList.toggle('hidden');
