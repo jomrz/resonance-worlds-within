@@ -81,6 +81,8 @@ body.in-immersion #objective{display:none}
 #planeStats{font-size:10px;color:#a2c9d5;margin-top:6px}
 #immersionTools #actionButton{width:79px;height:79px}
 #dockSettings #viewControls{justify-content:center}
+body.wave-guided #freqValue,body.wave-guided #dockReadout,body.wave-guided #beatReadout{display:none!important}
+body.wave-guided #railHint{margin-top:9px}
 </style>
 </head>
 <body>
@@ -101,7 +103,7 @@ body.in-immersion #objective{display:none}
     <div id="dockReadout"><span>Pool <strong id="poolLevel">0%</strong></span><div class="potentialTrack"><span id="poolBar"></span></div><span>Stone <strong id="wallLevel">0%</strong></span><div class="potentialTrack wall"><span id="wallBar"></span></div></div>
     <div id="beatReadout"><span id="targetLabel">Disc <strong id="beatMeter">0%</strong></span><span id="beatInfo">2 horns · 4 Hz beat</span><span id="aimTip">Select a horn to aim it</span></div>
     <div id="dockSettings" class="hidden" aria-label="Instrument settings">
-      <div id="dockSettingActions"><button id="audio">🔈 Sound off</button><button id="soundTest">♪ Test</button><button id="save">Save</button><button id="restore">Restore</button><button id="previewRoom">Test Room II</button></div>
+      <div id="dockSettingActions"><button id="audio">🔈 Sound off</button><button id="soundTest">♪ Test</button><button id="save">Save</button><button id="restore">Restore</button><button id="previewRoom">Test Room II</button><button id="numbersToggle" aria-pressed="true">Numbers on</button></div>
       <div id="viewControls"><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div>
       <div id="powerHint">Perimeter emitters can move and aim toward the chamber.</div><div id="planeStats">2D field · waiting for source</div><small id="modeHint">Pulse nearby materials to hear their resonances.</small>
       <p id="help">Observer uses one horizontal acoustic plane, approximately 33 degrees below an orbiting camera. Tap a source, drag its marker along the conceptual rail or drag the direction handle, which turns only through the inward-facing 180 degrees. Frequency and power remain in the dock. Floors and decorations are excluded from the field model. In Immersion, tap Pulse to probe an object or hold to provide sustained impulses. This is an approximate 2D acoustic model, not a full wave-equation solver.</p>
@@ -1478,8 +1480,7 @@ function animateStoneGlints(seconds){
    Math.min(1,Math.max(0,(state.wallCoupling-.55)/.35));
  const active=state.activeChamber===0&&state.hasCrossedGap&&
    !state.wallSolved&&intensity>.02;
- const showObserver=active&&state.mode==='observer'&&
-   selectedFieldView==='field'&&wallFieldCells.length>0;
+ const showObserver=false; // shared wave-crest pool owns Observer sparkle
  const showImmersion=active&&state.mode==='immersion';
  observerStoneGlints.points.visible=showObserver;
  immersionStoneGlints.points.visible=showImmersion;
@@ -1511,6 +1512,46 @@ function animateStoneGlints(seconds){
   }
   glints.geometry.attributes.position.needsUpdate=true;
   glints.material.opacity=Math.min(.94,intensity*(.57+.43*visible/glints.count));
+ }
+}
+// Shared resonance hints: sparks are anchored to moving pressure crests,
+// and every region supplies its resonant-object metadata to this one renderer.
+const fieldCrestSparkles={};
+for(const [id,p] of Object.entries(RESONATOR_PROFILES)){
+ const pool=createStoneGlints(observer2D,56);
+ pool.material.color.setHex(ACOUSTIC_MATERIALS[p.material].sparkColor);
+ pool.material.size=.24;
+ fieldCrestSparkles[id]=pool;
+}
+function animateFieldCrestSparkles(){
+ const shown=state.mode==='observer'&&selectedFieldView==='field'&&
+   landscape.visible&&waveCache.active.length>0;
+ const readings=readResonators();
+ for(const [id,pool] of Object.entries(fieldCrestSparkles)){
+  pool.points.visible=false;
+  if(!shown)continue;
+  const r=readings[id],profile=RESONATOR_PROFILES[id];
+  const indices=waveCache.landmarks[id];
+  if(!r||!indices?.length)continue;
+  const progress=Math.max(0,Math.min(1,
+   (r.quality-profile.sparkFrom)/(profile.sparkTo-profile.sparkFrom)));
+  if(progress<=.01)continue;
+  const allowance=Math.ceil(pool.count*progress),seed=Math.floor(performance.now()/125);
+  let count=0;
+  for(let i=0;i<allowance;i++){
+   const j=indices[(i*113+seed*13)%indices.length];
+   const crest=waveCache.crest[j],stored=waveCache.energy[j];
+   if(crest<.18+.22*(1-progress)||stored<.14)continue;
+   const k=count*3;
+   pool.positions[k]=heightBuffer[j*3];
+   pool.positions[k+1]=heightBuffer[j*3+1]+.11;
+   pool.positions[k+2]=heightBuffer[j*3+2];
+   count++;
+  }
+  for(let i=count;i<pool.count;i++)pool.positions[i*3+1]=-1000;
+  pool.geometry.attributes.position.needsUpdate=true;
+  pool.material.opacity=.20+.78*progress;
+  pool.points.visible=count>0;
  }
 }
 const emitterMarkers=new THREE.Group();world.add(emitterMarkers);
@@ -1583,6 +1624,20 @@ $('dockOptions').addEventListener('click',()=>{
  $('dockOptions').setAttribute('aria-expanded',String(!hidden));
 });
 updateEmitterDock();
+// Precision readouts are optional. Acoustic motion remains the main feedback.
+let numbersVisible=true;
+try{numbersVisible=localStorage.getItem('resonance19Numbers')!=='off'}catch(e){}
+function syncNumbers(){
+ document.body.classList.toggle('wave-guided',!numbersVisible);
+ $('numbersToggle').textContent=numbersVisible?'Numbers on':'Numbers off';
+ $('numbersToggle').setAttribute('aria-pressed',String(numbersVisible));
+}
+$('numbersToggle').addEventListener('click',()=>{
+ numbersVisible=!numbersVisible;
+ try{localStorage.setItem('resonance19Numbers',numbersVisible?'on':'off')}catch(e){}
+ syncNumbers();
+});
+syncNumbers();
 // Spatial modal approximation. The resonant center is a property of each object,
 // not a password. Narrow, continuous response envelopes constrain solutions.
 const WATER_MODE_HZ=136,WALL_MODE_HZ=224;
@@ -2521,10 +2576,11 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
     peakMotion=Math.max(peakMotion,Math.abs(motion));
   }
   vertices.needsUpdate=true;
-  if(wallImpact)hiddenDoor.geometry.computeVertexNormals();
+  if(wallImpact||state.wallBeatPair)hiddenDoor.geometry.computeVertexNormals();
   hiddenDoorMaterial.emissiveIntensity=Math.min(.85,peakMotion*(.20+.9*state.wallCoupling));
   // Cached phasors animate the entire field without re-solving reflections.
   animateBeatField(t);
+  animateFieldCrestSparkles();
   animateStoneGlints(t);
   core.rotation.y=perceivedTime*.3;portal.rotation.z=perceivedTime*.06;
   for(let i=0;i<rings.length;i++)rings[i].material.opacity=.13+.08*Math.sin(perceivedTime*.8+i);
