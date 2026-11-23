@@ -134,13 +134,70 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));
 renderer.setSize(canvas.clientWidth||window.innerWidth,canvas.clientHeight||window.innerHeight,false);
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-const scene=new THREE.Scene();scene.background=new THREE.Color('#09101b');scene.fog=new THREE.FogExp2('#09101b',.018);
+const scene=new THREE.Scene();
+// The physical world has an ancient, living palette; Observer remains cyan.
+// Fog also creates depth without requiring enormous environment geometry.
+scene.background=new THREE.Color('#121f20');
+scene.fog=new THREE.FogExp2('#152626',.019);
 const camera=new THREE.PerspectiveCamera(56,(canvas.clientWidth||window.innerWidth)/(canvas.clientHeight||window.innerHeight),.035,180);
-scene.add(new THREE.HemisphereLight(0x90bde1,0x132138,2.1));
-const sun=new THREE.DirectionalLight(0xa8dfff,2.3);sun.position.set(4,13,8);scene.add(sun);
-const amber=new THREE.PointLight(0xe9a96a,18,30);amber.position.set(5,6,-1);scene.add(amber);
+scene.add(new THREE.HemisphereLight(0xc6dfd1,0x26362f,1.9));
+const sun=new THREE.DirectionalLight(0xffe2ac,2.45);sun.position.set(-5,15,9);scene.add(sun);
+const amber=new THREE.PointLight(0xe4ba84,12,26);amber.position.set(5,6,-1);scene.add(amber);
 const crystalMat=new THREE.MeshPhysicalMaterial({color:0x7acbdc,metalness:.25,roughness:.27,transparent:true,opacity:.35,side:THREE.DoubleSide,depthWrite:false});
-const stoneMat=new THREE.MeshStandardMaterial({color:0x6b91a1,roughness:.72,metalness:.12});
+const stoneMat=new THREE.MeshStandardMaterial({color:0xc5cdc0,roughness:.97,metalness:.02});
+// A tiny deterministic, handmade stone atlas. This is a temporary 2.0 art
+// scaffold: asset-library textures and GLB models can replace it later.
+// Texture detail comes from pigment, worn mineral strata and irregular fissures
+// rather than high polygon counts. No network-dependent asset downloads.
+function ancientStoneAtlas(){
+ const size=512,c=document.createElement('canvas');c.width=c.height=size;
+ const ctx=c.getContext('2d');const im=ctx.createImageData(size,size),dst=im.data;
+ let seed=73921;
+ const rand=()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296};
+ const clampPixel=v=>Math.max(0,Math.min(255,Math.round(v)));
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+  const i=(y*size+x)*4;
+  const scale=Math.sin(x*.024+y*.011)*.42+
+   Math.cos(y*.034-x*.009)*.30+Math.sin((x+y)*.068)*.15;
+  const strata=Math.sin(y*.097+Math.sin(x*.021)*2.2)*5.5;
+  const grit=(rand()-.5)*31;
+  const lichen=Math.sin(x*.083+y*.02)*Math.cos(y*.064-x*.035);
+  const moss=lichen>.52?(lichen-.52)*26:0;
+  dst[i]=clampPixel(113+scale*27+strata+grit-moss*.8);
+  dst[i+1]=clampPixel(126+scale*24+strata*.8+grit*.9+moss);
+  dst[i+2]=clampPixel(111+scale*26+strata*.7+grit*.72-moss*.5);
+  dst[i+3]=255;
+ }
+ ctx.putImageData(im,0,0);
+ ctx.lineCap='round';
+ for(let i=0;i<82;i++){
+  const x=rand()*size,y=rand()*size,length=7+rand()*40;
+  ctx.beginPath();ctx.moveTo(x,y);
+  ctx.bezierCurveTo(x+length*.3,y+3-rand()*6,
+   x+length*.7,y+rand()*8-4,x+length,y+rand()*11-5);
+  ctx.lineWidth=.3+rand()*1.1;
+  ctx.strokeStyle=rand()>.27?'rgba(26,41,37,.24)':'rgba(225,213,180,.22)';
+  ctx.stroke();
+ }
+ for(let i=0;i<240;i++){
+  ctx.fillStyle=rand()>.65?'rgba(35,77,49,.26)':'rgba(223,209,169,.18)';
+  ctx.fillRect(rand()*size,rand()*size,1+rand()*3,1+rand()*2);
+ }
+ const tex=new THREE.CanvasTexture(c);
+ tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+ tex.repeat.set(1.8,1.8);
+ tex.colorSpace=THREE.SRGBColorSpace;
+ tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+ return tex;
+}
+const ancientStoneTexture=ancientStoneAtlas();
+stoneMat.map=ancientStoneTexture;
+stoneMat.needsUpdate=true;
+const floorMat=stoneMat.clone();
+const floorTexture=ancientStoneTexture.clone();
+floorTexture.repeat.set(4,5);floorTexture.needsUpdate=true;
+floorMat.map=floorTexture;
+floorMat.color.setHex(0x8a9888);
 const ACOUSTIC_MATERIALS={
  water:{reflection:.32,absorption:.22,damping:.24,sparkColor:0xa2eefe},
  stone:{reflection:.66,absorption:.12,damping:.10,sparkColor:0xffe1ad},
@@ -152,8 +209,8 @@ const world=new THREE.Group();scene.add(world);
 function makeBox(parent,w,h,d,x,y,z,material){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);parent.add(m);return m}
 function makeColumn(x,z,h){makeBox(world,.42,h,.42,x,h/2-.6,z,stoneMat);makeBox(world,.75,.27,.75,x,h-.6,z,stoneMat)}
 // The fixed landmarks are authored; the crossing is derived from an interfering spatial field.
-makeBox(world,4.5,.6,13.8,-5.55,-.45,0,stoneMat);
-makeBox(world,4.5,.6,13.8,5.55,-.45,0,stoneMat);
+makeBox(world,4.5,.6,13.8,-5.55,-.45,0,floorMat);
+makeBox(world,4.5,.6,13.8,5.55,-.45,0,floorMat);
 makeBox(world,1.7,.1,6,-5.25,-.08,0,crystalMat);
 makeBox(world,1.7,.1,6,5.25,-.08,0,crystalMat);
 for(const x of [-7.3,-4,4,7.3])for(const z of [-3.5,3.5])makeColumn(x,z,3+(Math.abs(x)*.11));
@@ -178,7 +235,7 @@ const beatVaultSeam=new THREE.Mesh(new THREE.TorusGeometry(.83,.018,6,48),
 beatVaultSeam.position.set(-5.45,1.6,6.25);world.add(beatVaultSeam);
 // Fictional mineral-rich water responds to a coupled standing mode and a physical pulse.
 const poolSurface=new THREE.Mesh(new THREE.PlaneGeometry(7.15,13.85),
- new THREE.MeshPhysicalMaterial({color:0x287b9f,emissive:0x0b354b,metalness:.36,roughness:.16,transparent:true,opacity:.68,side:THREE.DoubleSide,depthWrite:false}));
+ new THREE.MeshPhysicalMaterial({color:0x286f7a,emissive:0x143b43,metalness:.22,roughness:.23,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}));
 poolSurface.rotation.x=-Math.PI/2;poolSurface.position.set(0,-.36,0);world.add(poolSurface);
 const poolRim=new THREE.Mesh(new THREE.TorusGeometry(.78,.07,7,48),
  new THREE.MeshStandardMaterial({color:0xb8d9e5,emissive:0x3c8599,emissiveIntensity:.3}));
@@ -225,7 +282,7 @@ hiddenDoorMaterial.emissiveIntensity=0;
 const URN={x:16,z:0},URN_HZ=208,SECOND_START=8.15,SECOND_END=23.65;
 const secondRoom=new THREE.Group();physicalWorld.add(secondRoom);
 function roomBox(w,h,d,x,y,z,material){return makeBox(secondRoom,w,h,d,x,y,z,material)}
-roomBox(15.9,.66,12.65,15.92,-.53,0,stoneMat);
+roomBox(15.9,.66,12.65,15.92,-.53,0,floorMat);
 roomBox(15.75,3.9,.38,15.95,1.35,-6.23,stoneMat);
 roomBox(15.75,3.9,.38,15.95,1.35,6.23,stoneMat);
 roomBox(.40,4.4,12.75,23.85,1.58,0,stoneMat);
@@ -239,7 +296,7 @@ for(const x of [10.3,21.55])for(const z of [-5.3,5.3]){
 // remain visual boundaries so the external horns can excite the chamber.
 const urnReflector=roomBox(2.75,2.65,.22,19.65,1.08,3.45,stoneMat);
 urnReflector.rotation.y=-.38;
-const urnBronze=new THREE.MeshStandardMaterial({color:0x8b7982,metalness:.77,roughness:.29,
+const urnBronze=new THREE.MeshStandardMaterial({color:0x968c77,metalness:.73,roughness:.36,
  emissive:0x271f36,emissiveIntensity:.06});
 const urnGlowMat=new THREE.MeshBasicMaterial({color:0xa6edff,transparent:true,opacity:.08,depthWrite:false});
 roomBox(2.85,.55,2.85,URN.x,.1,URN.z,stoneMat);
