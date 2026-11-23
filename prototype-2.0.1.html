@@ -1785,12 +1785,43 @@ for(let i=0;i<3;i++){
  beatWorldRings.push(ring);
 }
 // Mineral glints follow the same driven beat phase as the landscape and door.
+// Shared feathered star texture: it removes the large square WebGL-point look.
+function resonanceSparkleSprite(){
+ const c=document.createElement('canvas');c.width=c.height=64;
+ const g=c.getContext('2d'),cx=32,cy=32;
+ const bloom=g.createRadialGradient(cx,cy,0,cx,cy,28);
+ bloom.addColorStop(0,'rgba(255,255,250,1)');
+ bloom.addColorStop(.09,'rgba(255,255,246,.92)');
+ bloom.addColorStop(.25,'rgba(255,248,214,.43)');
+ bloom.addColorStop(.55,'rgba(255,230,180,.12)');
+ bloom.addColorStop(1,'rgba(255,230,180,0)');
+ g.fillStyle=bloom;g.fillRect(0,0,64,64);
+ const ray=g.createLinearGradient(0,cy,64,cy);
+ ray.addColorStop(0,'rgba(255,255,255,0)');
+ ray.addColorStop(.37,'rgba(255,250,238,.07)');
+ ray.addColorStop(.5,'rgba(255,255,250,.75)');
+ ray.addColorStop(.63,'rgba(255,250,238,.07)');
+ ray.addColorStop(1,'rgba(255,255,255,0)');
+ g.fillStyle=ray;g.fillRect(7,31.25,50,1.5);
+ g.save();g.translate(cx,cy);g.rotate(Math.PI/2);g.translate(-cx,-cy);
+ g.fillStyle=ray;g.fillRect(9,31.35,46,1.3);g.restore();
+ const core=g.createRadialGradient(cx,cy,0,cx,cy,5);
+ core.addColorStop(0,'rgba(255,255,255,1)');
+ core.addColorStop(1,'rgba(255,255,255,0)');
+ g.fillStyle=core;g.fillRect(27,27,10,10);
+ const tex=new THREE.CanvasTexture(c);
+ tex.colorSpace=THREE.SRGBColorSpace;
+ tex.minFilter=THREE.LinearFilter;
+ tex.magFilter=THREE.LinearFilter;
+ return tex;
+}
+const sharedSparkleMap=resonanceSparkleSprite();
 function createStoneGlints(parent,count){
  const positions=new Float32Array(count*3),geometry=new THREE.BufferGeometry();
  geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
- const material=new THREE.PointsMaterial({color:0xffebbd,size:.135,
-  transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,
-  sizeAttenuation:true});
+ const material=new THREE.PointsMaterial({color:0xffebbd,size:.115,
+  map:sharedSparkleMap,alphaTest:.012,transparent:true,opacity:0,
+  depthWrite:false,blending:THREE.AdditiveBlending,sizeAttenuation:true});
  const points=new THREE.Points(geometry,material);
  points.visible=false;points.frustumCulled=false;parent.add(points);
  return {count,positions,geometry,material,points};
@@ -1852,7 +1883,7 @@ function animateFieldCrestSparkles(){
   const progress=Math.max(0,Math.min(1,
    (r.quality-profile.sparkFrom)/(profile.sparkTo-profile.sparkFrom)));
   if(progress<=.01)continue;
-  const allowance=Math.ceil(pool.count*progress),seed=Math.floor(performance.now()/125);
+  const allowance=Math.ceil(pool.count*progress),seed=Math.floor(performance.now()/400);
   let count=0;
   for(let i=0;i<allowance;i++){
    const j=indices[(i*113+seed*13)%indices.length];
@@ -1866,7 +1897,7 @@ function animateFieldCrestSparkles(){
   }
   for(let i=count;i<pool.count;i++)pool.positions[i*3+1]=-1000;
   pool.geometry.attributes.position.needsUpdate=true;
-  pool.material.opacity=.20+.78*progress;
+  pool.material.opacity=.14+.70*progress;
   pool.points.visible=count>0;
  }
 }
@@ -1978,9 +2009,9 @@ const RESONATOR_PROFILES={
 };
 const fieldCrestSparkles={};
 for(const [id,p] of Object.entries(RESONATOR_PROFILES)){
- const pool=createStoneGlints(observer2D,56);
+ const pool=createStoneGlints(observer2D,78);
  pool.material.color.setHex(ACOUSTIC_MATERIALS[p.material].sparkColor);
- pool.material.size=.24;
+ pool.material.size=.145;
  fieldCrestSparkles[id]=pool;
 }
 const acousticReadings={};
@@ -2560,12 +2591,9 @@ for(const type of ['pointerup','pointercancel','lostpointercapture'])lookJoystic
 window.addEventListener('blur',()=>{stopJoystick(null);stopLookJoystick(null);stopPulse()});
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function minFitDistance(){
- const aspect=(canvas.clientWidth||window.innerWidth)/
-   Math.max(1,canvas.clientHeight||window.innerHeight);
- const halfHorizontal=Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)*aspect;
- // Include the outer lever's full reach so it cannot be cropped by Safari.
- const outerRadius=(activeRail().rx+2.35)*OBSERVER_SCALE;
- return Math.max(17.4,outerRadius/halfHorizontal*1.06);
+ // Allow close inspection of individual wave crests. The outer horn rail
+ // can leave the frame when inspecting, but zoom-out always remains available.
+ return 7.6;
 }
 function zoom(factor){
  state.observerDistance=clamp(state.observerDistance*factor,minFitDistance(),39);
