@@ -231,6 +231,8 @@ for(let i=0;i<3;i++){
  secondRoom.add(band);urnChannels.push(band);
 }
 roomBox(.07,1.55,.07,URN.x,4.43,URN.z,stoneMat);
+const chamberFill=new THREE.PointLight(0x89b4df,4.5,24);
+chamberFill.position.set(URN.x,4.7,URN.z+3);secondRoom.add(chamberFill);
 const lampFrame=new THREE.Mesh(new THREE.TorusGeometry(.69,.09,10,48),urnBronze);
 lampFrame.rotation.x=Math.PI/2;lampFrame.position.set(URN.x,3.7,URN.z);secondRoom.add(lampFrame);
 const lampCrystal=new THREE.Mesh(new THREE.OctahedronGeometry(.60,1),
@@ -994,7 +996,7 @@ function responseStageVisuals(){
  const activeUrn=state.activeChamber===1;
  for(let i=0;i<3;i++){
   const strength=state.urnSourceValues[i]||0;
-  urnEchoRings[i].material.opacity=activeUrn?.06+.85*strength:0;
+  urnEchoRings[i].material.opacity=activeUrn?.045+.82*strength:0;
   urnChannels[i].material.opacity=state.lampLit?.85:.04+.68*strength;
  }
  urnObserverGlyph.material.opacity=activeUrn?.035+.72*state.urnCharge:0;
@@ -1136,13 +1138,24 @@ function computeFieldPlane(){
   const denom=Math.max(.48,peak*.85);
   for(let j=0;j<sampleCount;j++){
    const normalized=Math.min(1,rawAmplitude[j]/denom);
-   const elevation=Math.pow(normalized,1.65);
-   heightBuffer[j*3+1]=.11+elevation*1.45;
-   const mix=Math.min(1,normalized*.72);
-   shadeBuffer[j*4]=.11+.47*mix;
-   shadeBuffer[j*4+1]=.59-.12*mix;
-   shadeBuffer[j*4+2]=.76+.08*mix;
-   shadeBuffer[j*4+3]=normalized<.065?0:Math.min(.86,Math.pow(normalized,1.3)*.9);
+   // Localized spectral coherence becomes orderly rings near a sympathetic object.
+   const wx=heightBuffer[j*3],wz=heightBuffer[j*3+2];
+   const target=state.activeChamber===1?URN:{x:-4.12,z:0};
+   const distance=Math.hypot(wx-target.x,wz-target.z);
+   const coherence=state.activeChamber===1?state.urnCharge:state.poolCoupling;
+   const gathered=Math.exp(-Math.pow(distance/3.3,2))*coherence;
+   const harmonic=Math.pow(.5+.5*Math.cos(distance*3.2),2);
+   const energy=Math.min(1,normalized*.84+.32*gathered*harmonic);
+   const elevation=Math.pow(energy,1.62);
+   heightBuffer[j*3+1]=.11+elevation*1.42;
+   const brightness=.045+.955*Math.pow(energy,.86);
+   // Scattered waves remain cool; near coherent objects they become paler and
+   // slightly golden as the target begins to answer.
+   const pearl=Math.min(.90,gathered*.78);
+   shadeBuffer[j*4]=brightness*(.17+.49*pearl);
+   shadeBuffer[j*4+1]=brightness*(.72+.17*pearl);
+   shadeBuffer[j*4+2]=brightness*(.86-.24*pearl);
+   shadeBuffer[j*4+3]=Math.min(1,.10+energy*.86);
   }
   landscapeGeom.attributes.position.needsUpdate=true;
   landscapeGeom.attributes.color.needsUpdate=true;
@@ -1220,8 +1233,8 @@ function updateEmitterDock(){
  $('freqEditor').classList.toggle('expanded',chosen);
  $('selectedEmitter').textContent=chosen?'Source '+(selectedEmitterIndex+1)+' · Perimeter':'Select a source';
  $('railHint').textContent=chosen
-  ?'Drag colored marker around rail · Drag white tip to aim'
-  :'Select a source · Drag its position · Swipe background to orbit';
+  ?'Drag the horn on its rail · Pull the rear lever to aim'
+  :'Tap a horn · Slide its base along the rail · Drag the background to orbit';
  emitterButtons.forEach((button,i)=>{
   button.classList.toggle('selected',i===selectedEmitterIndex);
   button.classList.toggle('powered',state.osc[i].on);
@@ -1923,6 +1936,24 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
     camera.lookAt(camera.position.clone().add(direction));
   }
   const perceivedTime=state.mode==='immersion'?immersionTime:0;
+  // Visual scintillation expresses possible resonance, without advancing
+  // physical simulation time in Observer.
+  const shimmer=state.mode==='observer'?performance.now()*.001:immersionTime;
+  urnFlowRing.position.y=1.95+.055*Math.sin(shimmer*2.1);
+  urnFlowRing.scale.setScalar(1+.09*Math.sin(shimmer*1.35));
+  urnChannels.forEach((ring,i)=>{
+   ring.position.y=1.13+i*.29+.075*(state.urnSourceValues[i]||0)*
+     Math.sin(shimmer*2.8+i*2);
+   ring.scale.setScalar(1+.06*(state.urnSourceValues[i]||0)*
+     Math.cos(shimmer*2.3+i*2));
+  });
+  lampHalo.scale.setScalar(1+.1*Math.sin(shimmer*1.25));
+  lampCrystal.rotation.y=shimmer*.22;
+  railMarkers.forEach((m,i)=>{
+   if(state.osc[i].on){
+    m.head.scale.setScalar(1+.018*Math.sin(shimmer*6+i*2));
+   }else m.head.scale.setScalar(1);
+  });
   const discBeat=state.mode==='immersion'?(.5+.5*Math.sin(2*Math.PI*state.beatRate*immersionTime)):.5;
   const discResponse=state.beatCharge;
   discMaterial.emissiveIntensity=.08+.2*discResponse+
