@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.9.6</title>
+<title>Resonance: Worlds Within | Prototype 1.9.7</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -87,7 +87,7 @@ body.in-immersion #objective{display:none}
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.9.6</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.9.7</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
     <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER I · The submerged path</div>
@@ -170,6 +170,11 @@ const hiddenDoorMaterial=stoneMat.clone();hiddenDoorMaterial.transparent=true;
 makeBox(world,.48,3.8,5.75,6.03,1.75,-3.995,stoneMat);
 makeBox(world,.48,3.8,5.75,6.03,1.75, 3.995,stoneMat);
 const hiddenDoor=makeBox(world,.48,3.8,2.24,6.03,1.75,0,hiddenDoorMaterial);
+// Subdivide only this panel to let the wall's own surface deform on impact.
+// The box's dimensions remain unchanged for collision and acoustic geometry.
+hiddenDoor.geometry.dispose();
+hiddenDoor.geometry=new THREE.BoxGeometry(.48,3.8,2.24,1,20,20);
+const hiddenDoorBase=Float32Array.from(hiddenDoor.geometry.attributes.position.array);
 const doorSeam=new THREE.Mesh(new THREE.BoxGeometry(.505,3.63,.045),
  new THREE.MeshBasicMaterial({color:0x7ed0e6,transparent:true,opacity:.07,depthWrite:false}));
 doorSeam.position.set(5.76,1.75,1.09);world.add(doorSeam);
@@ -267,7 +272,7 @@ const tiltNeutral={beta:null,gamma:null};
 // No visible sphere in the plane Observer experiment.
 // Removed the decorative orbit ring: it looked like an unexplained wave reflection.
 // Observer focuses on the acoustic landscape rather than decorative stars.
-const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,wallSolved:false,wallProbeAt:-100,wallProbeRealAt:-100,wallProbeZ:0,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,wallBeatStrength:0,wallBeatRate:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false,beatProbeAt:-100};
+const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,wallSolved:false,wallProbeAt:-100,wallProbeRealAt:-100,wallProbeZ:0,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,wallBeatStrength:0,wallBeatRate:0,wallBeatPair:null,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false,beatProbeAt:-100};
 // Remember the far-shore checkpoint across refreshes. A direct testing link
 // with ?start=stone also resumes this stage without replaying the pond.
 const WALL_PROGRESS_KEY='resonance19FarShore';
@@ -949,7 +954,7 @@ function coneGain(i,point){
 function pressure2D(i,x,z){
  if(!state.osc[i].on)return {real:0,imag:0,mag:0};
  const source=railAt(i),target={x,z};
- const o=state.osc[i],k=2*Math.PI*o.freq/343;
+ const o=state.osc[i],k=2*Math.PI*o.freq/SOUND_SPEED;
  let real=0,imag=0;
  function add(length,weight){
   const phase=k*length+(o.phase||0);
@@ -1207,10 +1212,12 @@ function computeFieldPlane(){
  const begun=performance.now(),g=PLANE_GRID;
  const rawPressure=new Float32Array(sampleCount),rawAmplitude=new Float32Array(sampleCount);
  const sourceMagnitudes=Array.from({length:3},()=>new Float32Array(sampleCount));
+ const sourceReals=Array.from({length:3},()=>new Float32Array(sampleCount));
+ const sourceImags=Array.from({length:3},()=>new Float32Array(sampleCount));
  beatFieldCells.length=0;
  wallFieldCells.length=0;
  const active=state.osc.filter(o=>o.on).length;
- if(!active){
+ if(!active&&!(state.activeChamber===0&&state.hasCrossedGap)){
   landscape.visible=diagnosticLines.visible=false;
   $('planeStats').textContent='2D · 0 active sources · field silent';
   planeDirty=false;return;
@@ -1225,8 +1232,9 @@ function computeFieldPlane(){
    const p=pressure2D(i,px,pz);
    energy+=p.mag*p.mag;real+=p.real;
    sourceMagnitudes[i][j]=p.mag;
+   sourceReals[i][j]=p.real;sourceImags[i][j]=p.imag;
   }
-  rawPressure[j]=real;rawAmplitude[j]=Math.sqrt(energy/active);
+  rawPressure[j]=real;rawAmplitude[j]=Math.sqrt(energy/Math.max(1,active));
   peak=Math.max(peak,rawAmplitude[j]);
  }
  if(selectedFieldView==='field'){
@@ -1242,7 +1250,13 @@ function computeFieldPlane(){
     state.hasCrossedGap?state.wallCoupling:state.poolCoupling;
    const gathered=Math.exp(-Math.pow(distance/3.3,2))*coherence;
    const harmonic=Math.pow(.5+.5*Math.cos(distance*3.2),2);
-   const energy=Math.min(1,normalized*.84+.32*gathered*harmonic);
+   // With a single horn, the spatial phase comes from k=2πf/c, so
+   // turning the frequency dial changes actual node spacing. This is
+   // a stationary pressure snapshot, not a fabricated moving beat.
+   const showCarrier=state.activeChamber===0&&state.hasCrossedGap;
+   const carrier=Math.min(1,Math.abs(rawPressure[j])/denom);
+   const energy=Math.min(1,normalized*(showCarrier?.57:.84)+
+     (showCarrier?.33*carrier:0)+.32*gathered*harmonic);
    const elevation=Math.pow(energy,1.62);
    heightBuffer[j*3+1]=.11+elevation*1.42;
    const brightness=.045+.955*Math.pow(energy,.86);
@@ -1260,9 +1274,19 @@ function computeFieldPlane(){
     if(state.activeChamber===0&&state.hasCrossedGap){
       const r=Math.hypot(wx-5.82,wz);
       if(r<3.25&&wx<=5.98){
-        wallFieldCells.push({index:j,r,weight:
-          Math.exp(-.5*Math.pow(r/1.70,2))*
-          Math.min(1,Math.max(0,(5.98-wx)/.37))});
+        let phaseOffset=0,localBeat=0;
+        if(state.wallBeatPair){
+          const [a,b]=state.wallBeatPair;
+          const angleA=Math.atan2(sourceImags[a][j],sourceReals[a][j]);
+          const angleB=Math.atan2(sourceImags[b][j],sourceReals[b][j]);
+          const sign=state.osc[a].freq>=state.osc[b].freq?1:-1;
+          phaseOffset=sign*(angleA-angleB);
+          localBeat=Math.min(1,Math.sqrt(
+            sourceMagnitudes[a][j]*sourceMagnitudes[b][j])*2.2);
+        }
+        wallFieldCells.push({index:j,x:wx,z:wz,r,phaseOffset,localBeat,
+          weight:Math.exp(-.5*Math.pow(r/1.70,2))*
+           Math.min(1,Math.max(0,(5.98-wx)/.37))});
       }
     }
     // Only the meaningful area around a beat-requiring object moves. The
@@ -1338,43 +1362,28 @@ function animateBeatField(seconds){
   shadeBuffer[k+2]=Math.min(1,beatBaseColors[k+2]+.24*cell.weight*clock.clarity*beat);
   shadeBuffer[k+3]=Math.min(1,beatBaseColors[k+3]+.30*cell.weight*clock.clarity*beat);
  }
- // Material-specific response at the stone, integrated into the spatial
- // pressure landscape. The response strength comes from the same calculated
- // wallCoupling that controls the stone puzzle; a recent local Pulse contributes
- // a short-lived impulse even if the horns are detuned.
+ // The stone uses two distinct physical signals in this ONE surface:
+ // 1) a brief free response at its 224 Hz natural frequency after a thump;
+ // 2) the interference envelope of two overlapping driven sources.
+ // Both derive their spatial phases from the game's acoustic wave model.
  const probeAge=performance.now()*.001-state.wallProbeRealAt;
- const probeEcho=probeAge>=0&&probeAge<3.2?Math.exp(-probeAge*1.35):0;
- const realBeat=state.activeChamber===0&&state.hasCrossedGap?
+ const beatStrength=state.activeChamber===0&&state.hasCrossedGap?
    state.wallBeatStrength:0;
- // A steady resonant tone by itself is not a low-frequency beat: show the
- // static energy field, not invented oscillations. A recent local Pulse is
- // a brief, separate impulse and fades promptly.
- const driven=Math.min(1,Math.max(realBeat,probeEcho*.62));
- if(driven>.006){
-  for(const cell of wallFieldCells){
-    const j=cell.index,k=j*4;
-    // The wave height and light move with a real acoustic beat rate, or with
-    // a single fading wavefront when a player has just pulsed the stone.
-    const pressure=realBeat>.006?
-      Math.cos(2*Math.PI*state.wallBeatRate*seconds-cell.r*2.4):
-      Math.sin(probeAge*17-cell.r*3.15);
-    const motion=driven*cell.weight*pressure;
-    heightBuffer[j*3+1]=Math.max(.08,beatBaseHeights[j]+.72*motion);
-    const glow=driven*cell.weight*(.5+.5*pressure);
-    shadeBuffer[k]=Math.min(1,beatBaseColors[k]+.27*glow);
-    shadeBuffer[k+1]=Math.min(1,beatBaseColors[k+1]+.34*glow);
-    shadeBuffer[k+2]=Math.min(1,beatBaseColors[k+2]+.29*glow);
-    shadeBuffer[k+3]=Math.min(1,beatBaseColors[k+3]+.20*glow);
-  }
- }else{
-  // When the wall no longer responds, return every affected vertex exactly
-  // to its original pressure surface. No permanent rings or false resonance.
-  for(const cell of wallFieldCells){
-    const j=cell.index,k=j*4;
-    heightBuffer[j*3+1]=beatBaseHeights[j];
-    for(let channel=0;channel<4;channel++)
-      shadeBuffer[k+channel]=beatBaseColors[k+channel];
-  }
+ for(const cell of wallFieldCells){
+  const j=cell.index,k=j*4;
+  const range=Math.hypot(cell.x-5.82,cell.z-state.wallProbeZ);
+  const impulse=wallImpulseWave(probeAge,range);
+  const beat=beatStrength>.006?
+    beatStrength*cell.localBeat*Math.cos(
+      2*Math.PI*state.wallBeatRate*seconds+cell.phaseOffset):0;
+  const motion=cell.weight*(.76*impulse+.72*beat);
+  heightBuffer[j*3+1]=Math.max(.08,beatBaseHeights[j]+motion);
+  const glow=cell.weight*(.5+.5*Math.max(-1,Math.min(1,motion*1.4)))*
+    Math.min(1,Math.abs(impulse)+beatStrength*cell.localBeat);
+  shadeBuffer[k]=Math.min(1,beatBaseColors[k]+.32*glow);
+  shadeBuffer[k+1]=Math.min(1,beatBaseColors[k+1]+.35*glow);
+  shadeBuffer[k+2]=Math.min(1,beatBaseColors[k+2]+.29*glow);
+  shadeBuffer[k+3]=Math.min(1,beatBaseColors[k+3]+.30*glow);
  }
  landscapeGeom.attributes.position.needsUpdate=true;
  landscapeGeom.attributes.color.needsUpdate=true;
@@ -1484,6 +1493,15 @@ updateEmitterDock();
 // Spatial modal approximation. The resonant center is a property of each object,
 // not a password. Narrow, continuous response envelopes constrain solutions.
 const WATER_MODE_HZ=136,WALL_MODE_HZ=224;
+const WAVE_TIME_SLOWDOWN=80;
+function wallImpulseWave(displayAge,distanceMeters){
+ if(displayAge<0||displayAge>3.6)return 0;
+ const delayed=displayAge/WAVE_TIME_SLOWDOWN-distanceMeters/SOUND_SPEED;
+ if(delayed<=0)return 0;
+ const onset=Math.min(1,delayed*WAVE_TIME_SLOWDOWN*14);
+ return onset*Math.exp(-displayAge*.9)*
+  Math.sin(2*Math.PI*WALL_MODE_HZ*delayed);
+}
 function resonance(frequency,center,width){
  const detune=(frequency-center)/width;
  return Math.exp(-.5*detune*detune);
@@ -1519,7 +1537,8 @@ function updateCouplings(){
  if(state.activeChamber!==0){
   state.activeEmitters=state.osc.reduce((n,o)=>n+(o.on?1:0),0);
   state.poolCoupling=state.wallCoupling=0;
-  state.wallBeatStrength=state.wallBeatRate=0;return;
+  state.wallBeatStrength=state.wallBeatRate=0;
+  state.wallBeatPair=null;return;
  }
  const enabled=state.osc.reduce((n,o)=>n+(o.on?1:0),0);
  state.activeEmitters=enabled;
@@ -1539,7 +1558,7 @@ function updateCouplings(){
  // A single source tuned to 224 Hz can hold a stationary stone mode, but it
  // cannot create a slow beat. Only two active, spatially overlapping horns
  // with different nearby frequencies cause the Observer wave mesh to pulse.
- state.wallBeatStrength=0;state.wallBeatRate=0;
+ state.wallBeatStrength=0;state.wallBeatRate=0;state.wallBeatPair=null;
  for(let i=0;i<state.osc.length;i++)for(let j=i+1;j<state.osc.length;j++){
   const a=state.osc[i],b=state.osc[j];
   if(!a.on||!b.on)continue;
@@ -1553,6 +1572,7 @@ function updateCouplings(){
   if(strength>state.wallBeatStrength){
    state.wallBeatStrength=strength;
    state.wallBeatRate=difference;
+   state.wallBeatPair=[i,j];
   }
  }
 }
@@ -1645,7 +1665,7 @@ function renderField(time=0){
   ?'Urn: '+URN_HZ+' Hz · all three horns at the same frequency'
   :state.foundPoolTone||state.foundWallTone
    ?[(state.foundPoolTone?'Pool: '+WATER_MODE_HZ+' Hz':null),
-     (state.foundWallTone?'Hollow wall: '+WALL_MODE_HZ+' Hz':null)].filter(Boolean).join(' · ')
+     (state.foundWallTone?'Hollow wall: '+WALL_MODE_HZ+' Hz · ripple at 1/'+WAVE_TIME_SLOWDOWN+' speed':null)].filter(Boolean).join(' · ')
    :'Pulse near a material in Immersion to learn its tone';
  if(state.mode==='observer'){
   $('fieldStatus').textContent=state.activeChamber===1
@@ -2340,13 +2360,27 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
   beatHalo.scale.setScalar(.92+.26*drivenStrength*beatEnvelope);
   // A physical Pulse briefly makes the stone itself shimmer and wobble.
   // There are no separate wall rings in either mode.
-  const wallAge=immersionTime-state.wallProbeAt;
+  const wallAge=performance.now()*.001-state.wallProbeRealAt;
   const wallImpact=state.mode==='immersion'&&state.activeChamber===0&&
-    wallAge>=0&&wallAge<1.5;
-  const wallDecay=wallImpact?Math.exp(-wallAge*2.4):0;
-  const wallMotion=wallDecay*Math.sin(wallAge*24);
-  hiddenDoorMaterial.emissiveIntensity=wallDecay*(.25+.95*state.wallCoupling);
-  hiddenDoor.scale.z=1+wallMotion*(.012+.024*state.wallCoupling);
+    wallAge>=0&&wallAge<3.6;
+  const vertices=hiddenDoor.geometry.attributes.position;
+  const wallPosition=vertices.array;
+  let peakMotion=0;
+  for(let p=0;p<wallPosition.length;p+=3){
+    const x=hiddenDoorBase[p],y=hiddenDoorBase[p+1],z=hiddenDoorBase[p+2];
+    const face=x<-.235?1:0; // Front surface facing the approaching player
+    const edgeTaper=Math.max(0,Math.sin(Math.PI*(y+1.9)/3.8))*
+      Math.max(0,Math.sin(Math.PI*(z+1.12)/2.24));
+    const separation=Math.hypot(y,z-state.wallProbeZ);
+    const motion=wallImpact?face*edgeTaper*
+      wallImpulseWave(wallAge,separation):0;
+    wallPosition[p]=x-.095*motion; // exaggerated displacement for legibility
+    peakMotion=Math.max(peakMotion,Math.abs(motion));
+  }
+  vertices.needsUpdate=true;
+  if(wallImpact)hiddenDoor.geometry.computeVertexNormals();
+  hiddenDoorMaterial.emissiveIntensity=wallImpact?
+    peakMotion*(.20+.9*state.wallCoupling):0;
   // Only the meaningful two-source overlap around the disc receives
   // animated waves. The 2D solver remains static between user edits.
   animateBeatField(t);
