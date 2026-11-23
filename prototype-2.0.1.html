@@ -428,6 +428,67 @@ for(const radius of [1.8,2.4]){
 }
 const relicGlow=new THREE.PointLight(0x9ac6a9,3.8,12);
 relicGlow.position.set(-5.7,3.1,-1.3);scenicWorld.add(relicGlow);
+// Stone paving and inscriptions, all visual only. These overlays don't
+// contribute collision objects or artificial acoustic reflection geometry.
+const groutLines=[];
+function markJoint(ax,ay,az,bx,by,bz){
+ groutLines.push(new THREE.Vector3(ax,ay,az),new THREE.Vector3(bx,by,bz));
+}
+for(const span of [
+ {x0:-7.72,x1:-3.32,y:-.144},
+ {x0:3.34,x1:7.74,y:-.144},
+ {x0:8.18,x1:23.54,y:-.194}
+]){
+ const halfZ=span.x0>8?5.95:6.65;
+ let row=0;
+ for(let z=-halfZ+.12;z<halfZ;z+=1.24){
+  markJoint(span.x0,span.y,z,span.x1,span.y,z);
+  const offset=(row++%2)*.72;
+  for(let x=span.x0+.14+offset;x<span.x1;x+=1.45){
+   const stopZ=Math.min(halfZ,z+1.24);
+   markJoint(x,span.y,z,x,span.y,stopZ);
+  }
+ }
+}
+// Weathered mineral lines show use and age, instead of a uniform grid.
+const mortarMesh=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(groutLines),
+ new THREE.LineBasicMaterial({color:0x2c463d,transparent:true,opacity:.36,
+ depthWrite:false}));
+scenicWorld.add(mortarMesh);
+const crackLines=[];
+for(let i=0;i<44;i++){
+ const room=i<18?0:i<28?1:2;
+ const bounds=room===0?[-7.4,-3.6]:room===1?[3.6,7.3]:[9.2,22.8];
+ const x=bounds[0]+scenicRandom()*(bounds[1]-bounds[0]);
+ const z=-5.75+scenicRandom()*11.5,y=room===2?-.19:-.14;
+ const dir=scenicRandom()*Math.PI*2,length=.17+scenicRandom()*.60;
+ const midX=x+Math.cos(dir)*length*.52,midZ=z+Math.sin(dir)*length*.52;
+ crackLines.push(new THREE.Vector3(x,y,z),
+  new THREE.Vector3(midX,y,z+(midZ-z)*.92),
+  new THREE.Vector3(midX,y,z+(midZ-z)*.92),
+  new THREE.Vector3(x+Math.cos(dir)*length,y,z+Math.sin(dir)*length));
+}
+scenicWorld.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(crackLines),
+ new THREE.LineBasicMaterial({color:0x26382f,transparent:true,opacity:.40,depthWrite:false})));
+// Hand-cut stone inscriptions are shallow grooves, not luminous UI symbols.
+const inscriptionEdges=[];
+for(let n=0;n<9;n++){
+ const z=-.82+n*.205,level=-1.36+(n%3)*.11;
+ inscriptionEdges.push(new THREE.Vector3(-.250,level,z),
+  new THREE.Vector3(-.250,level+.06,z+.13));
+ if(n%2===0)inscriptionEdges.push(new THREE.Vector3(-.250,level+.07,z+.13),
+  new THREE.Vector3(-.250,level-.09,z+.20));
+}
+const inscriptions=new THREE.LineSegments(
+ new THREE.BufferGeometry().setFromPoints(inscriptionEdges),
+ new THREE.LineBasicMaterial({color:0x2b5249,transparent:true,opacity:.63,depthWrite:false}));
+hiddenDoor.add(inscriptions);
+// A ring of worn bronze around the urn plinth implies repeated rituals.
+const urnTrim=new THREE.Mesh(new THREE.TorusGeometry(1.30,.022,5,56),
+ new THREE.MeshStandardMaterial({color:0xc4ad7c,metalness:.74,roughness:.45}));
+urnTrim.rotation.x=-Math.PI/2;urnTrim.position.set(URN.x,.11,URN.z);
+scenicWorld.add(urnTrim);
+
 // Expressive but economical human figure, built from a few low-polygon
 // anatomical forms. GLB character support can replace this group later.
 const traveler=new THREE.Group();traveler.name='Traveler';physicalWorld.add(traveler);
