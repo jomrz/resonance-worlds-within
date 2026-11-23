@@ -337,6 +337,149 @@ const secondColumns=[...secondRoom.children].filter(m=>
  m.geometry.parameters.height>2&&m.geometry.parameters.width<1.1&&
  m.geometry.parameters.depth<1.1);
 
+// RESONANCE 2.0 PHYSICAL ART LAYER
+// All scenery lives in a separate group so it never changes the acoustic
+// collision, reflection, or resonance model. Libraries can replace these
+// placeholder meshes with GLB assets without changing the puzzle code.
+const scenicWorld=new THREE.Group();scenicWorld.name='ImmersionArt';
+physicalWorld.add(scenicWorld);
+const scenicStone=stoneMat.clone();
+scenicStone.color.setHex(0xd2d2bc);
+const plantMaterial=new THREE.MeshStandardMaterial({
+ color:0xffffff,roughness:1,metalness:0,flatShading:true,side:THREE.DoubleSide
+});
+const pebbleMaterial=new THREE.MeshStandardMaterial({
+ color:0xffffff,roughness:1,metalness:0,flatShading:true
+});
+let scenicSeed=20201123;
+function scenicRandom(){
+ scenicSeed=(Math.imul(scenicSeed,1664525)+1013904223)>>>0;
+ return scenicSeed/4294967296;
+}
+const specimenZones=[
+ {min:-7.4,max:-3.6,edge:3.25},
+ {min:3.55,max:7.6,edge:3.55},
+ {min:9.25,max:23.0,edge:3.85}
+];
+function specimenPoint(){
+ const zone=specimenZones[Math.floor(scenicRandom()*specimenZones.length)];
+ const x=zone.min+scenicRandom()*(zone.max-zone.min);
+ const side=scenicRandom()<.5?-1:1;
+ const z=side*(zone.edge+scenicRandom()*(5.88-zone.edge));
+ // Leave the stone doorway and ceremonial urn visibly clear.
+ if((x>4.3&&x<7.1&&Math.abs(z)<2.7)||
+    (x>13&&x<19&&Math.abs(z)<4.0))return specimenPoint();
+ return {x,z,y:x>8.2?-.195:-.14};
+}
+function growScenery(geometry,material,count,options){
+ const batch=new THREE.InstancedMesh(geometry,material,count),dummy=new THREE.Object3D();
+ const shade=new THREE.Color();
+ batch.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+ batch.frustumCulled=false; // low-count, broad foliage groups on mobile
+ for(let i=0;i<count;i++){
+  const p=specimenPoint(),size=options.min+scenicRandom()*(options.max-options.min);
+  dummy.position.set(p.x,p.y+options.offset*size,p.z);
+  dummy.rotation.set(options.flat?-Math.PI/2:0,scenicRandom()*Math.PI*2,
+    options.flat?0:(scenicRandom()-.5)*.38);
+  dummy.scale.set(size*(.72+scenicRandom()*.7),size,size*(.72+scenicRandom()*.7));
+  dummy.updateMatrix();batch.setMatrixAt(i,dummy.matrix);
+  shade.setHex(options.colors[Math.floor(scenicRandom()*options.colors.length)]);
+  batch.setColorAt(i,shade);
+ }
+ batch.instanceMatrix.needsUpdate=true;
+ if(batch.instanceColor)batch.instanceColor.needsUpdate=true;
+ scenicWorld.add(batch);return batch;
+}
+growScenery(new THREE.IcosahedronGeometry(.25,0),pebbleMaterial,165,{
+ min:.42,max:1.45,offset:.15,colors:[0x6b766b,0x939b88,0x495b50,0xb5b5a1]});
+growScenery(new THREE.ConeGeometry(.17,.55,4),plantMaterial,190,{
+ min:.50,max:1.55,offset:.28,colors:[0x426756,0x78916a,0x4b7968,0x9d9869]});
+growScenery(new THREE.CircleGeometry(.45,7),plantMaterial,110,{
+ min:.45,max:1.85,offset:.025,flat:true,
+ colors:[0x4b7054,0x638369,0x8b9070,0x355e52]});
+// Ruin architecture frames the wall as something that was built long ago.
+for(const z of [-1.47,1.47]){
+ makeBox(scenicWorld,.68,3.95,.57,5.68,1.84,z,scenicStone);
+ makeBox(scenicWorld,.88,.27,.82,5.68,3.89,z,scenicStone);
+}
+makeBox(scenicWorld,.86,.53,3.66,5.68,3.93,0,scenicStone);
+const carvingMaterial=new THREE.MeshBasicMaterial({
+ color:0xd0c198,transparent:true,opacity:.33,depthWrite:false
+});
+const carvingFrame=new THREE.Group();hiddenDoor.add(carvingFrame);
+const runeGeometry=new THREE.TorusGeometry(.43,.012,4,24);
+for(const z of [-.65,.65]){
+ const ring=new THREE.Mesh(runeGeometry,carvingMaterial);
+ ring.rotation.y=Math.PI/2;ring.position.set(-.25,.02,z);
+ carvingFrame.add(ring);
+ const dot=new THREE.Mesh(new THREE.OctahedronGeometry(.10,0),carvingMaterial);
+ dot.position.set(-.28,.02,z);carvingFrame.add(dot);
+}
+// Fine inlaid radial details make the lamp chamber feel ceremonial.
+const floorInlayMat=new THREE.MeshBasicMaterial({
+ color:0xc1ae81,transparent:true,opacity:.28,depthWrite:false
+});
+for(const radius of [1.8,2.4]){
+ const circle=new THREE.Mesh(new THREE.TorusGeometry(radius,.019,4,60),floorInlayMat);
+ circle.rotation.x=-Math.PI/2;circle.position.set(URN.x,-.17,URN.z);
+ scenicWorld.add(circle);
+}
+const relicGlow=new THREE.PointLight(0x9ac6a9,3.8,12);
+relicGlow.position.set(-5.7,3.1,-1.3);scenicWorld.add(relicGlow);
+// The traveler is intentionally simple, with expressive silhouette, fabric,
+// bag and warm colors. This is the low-polygon stand-in for a future GLB hero.
+const traveler=new THREE.Group();traveler.name='Traveler';physicalWorld.add(traveler);
+const travelerBody=new THREE.Group();traveler.add(travelerBody);
+const cloth=new THREE.MeshStandardMaterial({color:0x607966,roughness:1,flatShading:true});
+const cloak=new THREE.MeshStandardMaterial({color:0x8c7c57,roughness:1,flatShading:true});
+const skin=new THREE.MeshStandardMaterial({color:0xc8a584,roughness:.96,flatShading:true});
+const shoes=new THREE.MeshStandardMaterial({color:0x443f34,roughness:1,flatShading:true});
+const hair=new THREE.MeshStandardMaterial({color:0x403d32,roughness:1,flatShading:true});
+function travelerPart(geometry,material,x,y,z,parent=travelerBody){
+ const mesh=new THREE.Mesh(geometry,material);mesh.position.set(x,y,z);parent.add(mesh);
+ return mesh;
+}
+travelerPart(new THREE.CylinderGeometry(.28,.41,.84,6),cloth,0,1.06,0);
+travelerPart(new THREE.ConeGeometry(.41,.96,5),cloak,-.14,.99,0);
+travelerPart(new THREE.DodecahedronGeometry(.235,0),skin,.04,1.58,0);
+travelerPart(new THREE.ConeGeometry(.28,.25,6),hair,.005,1.82,0);
+travelerPart(new THREE.BoxGeometry(.24,.32,.28),shoes,-.18,1.12,.36);
+travelerPart(new THREE.OctahedronGeometry(.08,0),
+ new THREE.MeshStandardMaterial({color:0x9bd6ce,emissive:0x245a57,
+ emissiveIntensity:.35,metalness:.22,roughness:.42}),.33,1.20,0);
+const travelerArms=[],travelerLegs=[];
+for(const side of [-1,1]){
+ const arm=new THREE.Group();arm.position.set(0,1.35,side*.36);
+ travelerBody.add(arm);
+ travelerPart(new THREE.CylinderGeometry(.10,.13,.55,5),cloth,0,-.26,0,arm);
+ travelerPart(new THREE.DodecahedronGeometry(.105,0),skin,0,-.54,0,arm);
+ travelerArms.push(arm);
+ const leg=new THREE.Group();leg.position.set(0,.75,side*.18);
+ travelerBody.add(leg);
+ travelerPart(new THREE.CylinderGeometry(.12,.15,.54,5),shoes,0,-.27,0,leg);
+ travelerPart(new THREE.BoxGeometry(.26,.14,.22),shoes,.09,-.56,0,leg);
+ travelerLegs.push(leg);
+}
+const travelerShadow=new THREE.Mesh(
+ new THREE.CircleGeometry(.44,18),
+ new THREE.MeshBasicMaterial({color:0x111b16,transparent:true,opacity:.40,depthWrite:false})
+);
+travelerShadow.rotation.x=-Math.PI/2;
+travelerShadow.position.y=-.11;traveler.add(travelerShadow);
+function poseTraveler(t){
+ traveler.visible=state.mode==='immersion'&&immersionView==='overhead';
+ if(!traveler.visible)return;
+ traveler.position.set(state.playerX,0,state.playerZ);
+ traveler.rotation.y=-state.yaw;
+ const moving=Math.min(1,Math.hypot(state.moveX,state.moveY));
+ const gait=Math.sin(t*9.2)*moving;
+ travelerBody.position.y=.025*Math.sin(t*2.5)+.045*Math.abs(gait);
+ travelerArms[0].rotation.z=.55*gait;
+ travelerArms[1].rotation.z=-.55*gait;
+ travelerLegs[0].rotation.z=-.53*gait;
+ travelerLegs[1].rotation.z=.53*gait;
+}
+
 // Larger-on-the-inside illusion: outer shell shows the same world at miniature scale.
 const shellGroup=new THREE.Group();
 const globe=new THREE.Group();scene.add(globe);
