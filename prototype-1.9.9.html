@@ -131,6 +131,12 @@ const sun=new THREE.DirectionalLight(0xa8dfff,2.3);sun.position.set(4,13,8);scen
 const amber=new THREE.PointLight(0xe9a96a,18,30);amber.position.set(5,6,-1);scene.add(amber);
 const crystalMat=new THREE.MeshPhysicalMaterial({color:0x7acbdc,metalness:.25,roughness:.27,transparent:true,opacity:.35,side:THREE.DoubleSide,depthWrite:false});
 const stoneMat=new THREE.MeshStandardMaterial({color:0x6b91a1,roughness:.72,metalness:.12});
+const ACOUSTIC_MATERIALS={
+ water:{reflection:.32,absorption:.22,damping:.24,sparkColor:0xa2eefe},
+ stone:{reflection:.66,absorption:.12,damping:.10,sparkColor:0xffe1ad},
+ bronze:{reflection:.73,absorption:.08,damping:.07,sparkColor:0xffd6a0},
+ crystal:{reflection:.28,absorption:.09,damping:.04,sparkColor:0xe0faff}
+};
 const goldMat=new THREE.MeshStandardMaterial({color:0xf3c47e,emissive:0x886027,emissiveIntensity:.45,roughness:.3});
 const world=new THREE.Group();scene.add(world);
 function makeBox(parent,w,h,d,x,y,z,material){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);parent.add(m);return m}
@@ -888,10 +894,10 @@ for(const mesh of physicalWorld.children){
  const par=mesh.geometry.parameters;
  if(par.height>3&&par.width<.65&&par.depth>2.5
   &&Math.abs(mesh.position.x-6.03)<.1)
-  acousticSegments.push(segmentFromStone(mesh,.66));
+  acousticSegments.push(segmentFromStone(mesh,ACOUSTIC_MATERIALS.stone.reflection));
 }
 for(const mesh of secondStoneSegments){
- const seg=segmentFromStone(mesh,.60);seg.chamber=1;acousticSegments.push(seg);
+ const seg=segmentFromStone(mesh,ACOUSTIC_MATERIALS.stone.reflection*.9);seg.chamber=1;acousticSegments.push(seg);
 }
 const acousticColumns=[];
 for(const mesh of physicalWorld.children){
@@ -1638,12 +1644,6 @@ const WATER_MODE_HZ=136,WALL_MODE_HZ=224;
 const WALL_TARGET_BEAT_HZ=4;
 // World objects are parameterized materials and modes, not custom wave engines.
 // Their response is sampled from the same mesh-reflected 2D pressure field.
-const ACOUSTIC_MATERIALS={
- water:{reflection:.32,absorption:.22,damping:.24,sparkColor:0xa2eefe},
- stone:{reflection:.66,absorption:.12,damping:.10,sparkColor:0xffe1ad},
- bronze:{reflection:.73,absorption:.08,damping:.07,sparkColor:0xffd6a0},
- crystal:{reflection:.28,absorption:.09,damping:.04,sparkColor:0xe0faff}
-};
 const RESONATOR_PROFILES={
  pool:{id:'pool',region:0,material:'water',x:-4.12,z:0,modeHz:WATER_MODE_HZ,
   bandwidth:5.5,gain:1.82,aggregation:'sqrt',visualRadius:3.15,sparkFrom:.70,sparkTo:.96},
@@ -1675,7 +1675,8 @@ function acousticSignature(){
 function evaluateResonator(p){
  const channels=state.osc.map((o,i)=>{
   if(!o.on)return {level:0,spatial:0};
-  const spatial=localResponse2D(i,p),tuned=resonance(o.freq,p.modeHz,p.bandwidth);
+  const spatial=localResponse2D(i,p)*(1-ACOUSTIC_MATERIALS[p.material].absorption*.12);
+  const tuned=resonance(o.freq,p.modeHz,p.bandwidth);
   const gain=p.aggregation==='mean'?Math.min(1,spatial*p.gain):spatial*p.gain;
   return {spatial,level:gain*tuned};
  });
@@ -1733,7 +1734,7 @@ function wallImpulseWave(displayAge,distanceMeters){
  const delayed=displayAge/WAVE_TIME_SLOWDOWN-distanceMeters/SOUND_SPEED;
  if(delayed<=0)return 0;
  const onset=Math.min(1,delayed*WAVE_TIME_SLOWDOWN*14);
- return onset*Math.exp(-displayAge*.9)*
+ return onset*Math.exp(-displayAge*ACOUSTIC_MATERIALS.stone.damping*9)*
   Math.sin(2*Math.PI*WALL_MODE_HZ*delayed);
 }
 function resonance(frequency,center,width){
