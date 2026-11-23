@@ -428,46 +428,81 @@ for(const radius of [1.8,2.4]){
 }
 const relicGlow=new THREE.PointLight(0x9ac6a9,3.8,12);
 relicGlow.position.set(-5.7,3.1,-1.3);scenicWorld.add(relicGlow);
-// The traveler is intentionally simple, with expressive silhouette, fabric,
-// bag and warm colors. This is the low-polygon stand-in for a future GLB hero.
+// Expressive but economical human figure, built from a few low-polygon
+// anatomical forms. GLB character support can replace this group later.
 const traveler=new THREE.Group();traveler.name='Traveler';physicalWorld.add(traveler);
 const travelerBody=new THREE.Group();traveler.add(travelerBody);
-const cloth=new THREE.MeshStandardMaterial({color:0x607966,roughness:1,flatShading:true});
-const cloak=new THREE.MeshStandardMaterial({color:0x8c7c57,roughness:1,flatShading:true});
-const skin=new THREE.MeshStandardMaterial({color:0xc8a584,roughness:.96,flatShading:true});
-const shoes=new THREE.MeshStandardMaterial({color:0x443f34,roughness:1,flatShading:true});
-const hair=new THREE.MeshStandardMaterial({color:0x403d32,roughness:1,flatShading:true});
+const cloth=new THREE.MeshStandardMaterial({color:0x647a66,roughness:.98,flatShading:true});
+const cloak=new THREE.MeshStandardMaterial({color:0xa68a63,roughness:1,flatShading:true});
+const skin=new THREE.MeshStandardMaterial({color:0xcaa487,roughness:.95,flatShading:true});
+const shoes=new THREE.MeshStandardMaterial({color:0x3e3b35,roughness:1,flatShading:true});
+const hair=new THREE.MeshStandardMaterial({color:0x443b31,roughness:1,flatShading:true});
+const darkDetail=new THREE.MeshStandardMaterial({color:0x45392f,roughness:1});
+const braidMat=new THREE.MeshStandardMaterial({color:0xd1b77a,roughness:.82,metalness:.14});
 function travelerPart(geometry,material,x,y,z,parent=travelerBody){
- const mesh=new THREE.Mesh(geometry,material);mesh.position.set(x,y,z);parent.add(mesh);
- return mesh;
+ const mesh=new THREE.Mesh(geometry,material);
+ mesh.position.set(x,y,z);parent.add(mesh);return mesh;
 }
-travelerPart(new THREE.CylinderGeometry(.28,.41,.84,6),cloth,0,1.06,0);
-travelerPart(new THREE.ConeGeometry(.41,.96,5),cloak,-.14,.99,0);
-travelerPart(new THREE.DodecahedronGeometry(.235,0),skin,.04,1.58,0);
-travelerPart(new THREE.ConeGeometry(.28,.25,6),hair,.005,1.82,0);
-travelerPart(new THREE.BoxGeometry(.24,.32,.28),shoes,-.18,1.12,.36);
-travelerPart(new THREE.OctahedronGeometry(.08,0),
- new THREE.MeshStandardMaterial({color:0x9bd6ce,emissive:0x245a57,
- emissiveIntensity:.35,metalness:.22,roughness:.42}),.33,1.20,0);
+function travelerStrap(a,b,r=.035,mat=darkDetail){
+ const from=new THREE.Vector3(...a),to=new THREE.Vector3(...b);
+ const center=from.clone().add(to).multiplyScalar(.5),direction=to.clone().sub(from);
+ const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,direction.length(),6),mat);
+ mesh.position.copy(center);
+ mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());
+ travelerBody.add(mesh);return mesh;
+}
+// Human shoulders, waist, neck, face, hands, knees and feet.
+travelerPart(new THREE.CylinderGeometry(.23,.20,.67,8),cloth,0,1.25,0);
+travelerPart(new THREE.SphereGeometry(.29,10,7),cloth,0,1.49,0).scale.set(.88,.38,1.07);
+travelerPart(new THREE.CylinderGeometry(.23,.24,.23,8),cloak,0,.83,0);
+travelerPart(new THREE.ConeGeometry(.36,.64,8),cloak,-.105,.89,0).rotation.z=-.12;
+travelerPart(new THREE.CylinderGeometry(.075,.09,.13,8),skin,0,1.64,0);
+const humanHead=travelerPart(new THREE.SphereGeometry(.224,12,9),skin,.012,1.84,0);
+humanHead.scale.set(.95,1.08,.93);
+for(const side of [-1,1]){
+ travelerPart(new THREE.SphereGeometry(.065,7,5),skin,0,1.82,side*.205);
+ // The two eyes face the direction of travel, not the camera.
+ travelerPart(new THREE.SphereGeometry(.020,6,5),darkDetail,.215,1.87,side*.080);
+}
+travelerPart(new THREE.ConeGeometry(.043,.10,5),skin,.225,1.82,0).rotation.z=-Math.PI/2;
+travelerPart(new THREE.SphereGeometry(.230,12,6,0,Math.PI*2,0,Math.PI*.46),
+ hair,.002,1.859,0);
+travelerPart(new THREE.CylinderGeometry(.248,.251,.082,10),cloak,0,1.565,0);
+// Belt, woven trim, a satchel and strap: clothes that suggest exploration.
+travelerPart(new THREE.CylinderGeometry(.252,.256,.07,8),darkDetail,0,.965,0);
+travelerPart(new THREE.BoxGeometry(.12,.085,.10),braidMat,.26,.97,0);
+travelerStrap([.03,1.53,.24],[-.17,.97,-.28],.029,braidMat);
+const satchel=travelerPart(new THREE.BoxGeometry(.22,.44,.36),cloak,-.17,.94,-.30);
+satchel.rotation.x=-.11;
+travelerPart(new THREE.BoxGeometry(.045,.19,.26),darkDetail,-.048,1.05,-.30);
+travelerPart(new THREE.SphereGeometry(.065,6,5),braidMat,-.01,1.09,-.30);
+// Small resonant pendant worn on the chest.
+travelerPart(new THREE.OctahedronGeometry(.073,1),
+ new THREE.MeshStandardMaterial({color:0x9ed7cf,emissive:0x24645b,
+ emissiveIntensity:.40,metalness:.24,roughness:.42}),.26,1.32,.07);
 const travelerArms=[],travelerLegs=[];
 for(const side of [-1,1]){
- const arm=new THREE.Group();arm.position.set(0,1.35,side*.36);
+ const arm=new THREE.Group();arm.position.set(0,1.46,side*.33);
  travelerBody.add(arm);
- travelerPart(new THREE.CylinderGeometry(.10,.13,.55,5),cloth,0,-.26,0,arm);
- travelerPart(new THREE.DodecahedronGeometry(.105,0),skin,0,-.54,0,arm);
+ travelerPart(new THREE.SphereGeometry(.135,8,6),cloth,0,-.07,0,arm);
+ travelerPart(new THREE.CylinderGeometry(.108,.088,.42,7),cloth,0,-.31,0,arm);
+ travelerPart(new THREE.CylinderGeometry(.082,.071,.22,7),cloak,.005,-.54,0,arm);
+ travelerPart(new THREE.SphereGeometry(.088,8,6),skin,.015,-.67,0,arm);
  travelerArms.push(arm);
- const leg=new THREE.Group();leg.position.set(0,.75,side*.18);
+ const leg=new THREE.Group();leg.position.set(0,.80,side*.145);
  travelerBody.add(leg);
- travelerPart(new THREE.CylinderGeometry(.12,.15,.54,5),shoes,0,-.27,0,leg);
- travelerPart(new THREE.BoxGeometry(.26,.14,.22),shoes,.09,-.56,0,leg);
+ travelerPart(new THREE.CylinderGeometry(.137,.116,.49,8),cloth,0,-.25,0,leg);
+ travelerPart(new THREE.CylinderGeometry(.122,.094,.27,8),shoes,0,-.62,0,leg);
+ travelerPart(new THREE.BoxGeometry(.31,.125,.20),shoes,.11,-.75,0,leg);
  travelerLegs.push(leg);
 }
 const travelerShadow=new THREE.Mesh(
- new THREE.CircleGeometry(.44,18),
- new THREE.MeshBasicMaterial({color:0x111b16,transparent:true,opacity:.40,depthWrite:false})
+ new THREE.CircleGeometry(.34,18),
+ new THREE.MeshBasicMaterial({color:0x111b16,transparent:true,opacity:.32,depthWrite:false})
 );
 travelerShadow.rotation.x=-Math.PI/2;
-travelerShadow.position.y=-.11;traveler.add(travelerShadow);
+travelerShadow.position.y=-.105;traveler.add(travelerShadow);
+
 // Camera-obstruction fading is separate from collisions and acoustic physics.
 // Every future room may register its own scenic meshes or ceiling geometry.
 // Shared materials are NEVER changed: an occluding mesh gets its own clone,
