@@ -103,7 +103,7 @@ body.in-immersion #objective{display:none}
     <div id="dockSettings" class="hidden" aria-label="Instrument settings">
       <div id="dockSettingActions"><button id="audio">🔈 Sound off</button><button id="soundTest">♪ Test</button><button id="save">Save</button><button id="restore">Restore</button></div>
       <div id="viewControls"><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div>
-      <div id="powerHint">Perimeter emitters can move and aim toward the chamber.</div><div id="planeStats">2D field · waiting for source</div><small id="modeHint">Thump materials inside to discover natural tones.</small>
+      <div id="powerHint">Perimeter emitters can move and aim toward the chamber.</div><div id="planeStats">2D field · waiting for source</div><small id="modeHint">Pulse nearby materials to hear their resonances.</small>
       <p id="help">Observer uses one horizontal acoustic plane, approximately 33 degrees below an orbiting camera. Tap a source, drag its marker along the conceptual rail or drag the direction handle, which turns only through the inward-facing 180 degrees. Frequency and power remain in the dock. Floors and decorations are excluded from the field model. In Immersion, tap Pulse to probe an object or hold to provide sustained impulses. This is an approximate 2D acoustic model, not a full wave-equation solver.</p>
     </div>
   </section>
@@ -1211,31 +1211,31 @@ function renderField(time=0){
  $('modeHint').textContent=state.foundPoolTone||state.foundWallTone
    ?[(state.foundPoolTone?'Pool: '+WATER_MODE_HZ+' Hz':null),
      (state.foundWallTone?'Hollow wall: '+WALL_MODE_HZ+' Hz':null)].filter(Boolean).join(' · ')
-   :'Thump near a material in Immersion to learn its tone';
+   :'Pulse near a material in Immersion to learn its tone';
  if(state.mode==='observer'){
   $('fieldStatus').textContent=state.activeEmitters===0
    ?'NO EMITTERS ACTIVE · Acoustic field is silent'
    :state.beatCharge>.56
-   ?'DISC POTENTIAL · Shift inside and CHIME near the disc'
+   ?'DISC POTENTIAL · Shift inside and PULSE near the disc'
    :state.poolCoupling>.78
    ?'POOL RESONATES · Go inside and PULSE near the rim'
-   :state.wallCoupling>.78?'WALL RESONATES · Go inside and CHIME near the seam'
-   :'TUNE A RESONANT MODE · Thump materials to hear their tones';
+   :state.wallCoupling>.78?'WALL RESONATES · Go inside and PULSE near the seam'
+   :'TUNE THE 2D FIELD · Pulse materials to learn their tone';
  }else if(Math.hypot(state.playerX-DISC.x,state.playerZ-DISC.z)<2.3){
   $('fieldStatus').textContent=state.beatOpenUntil>immersionTime
    ?'BEAT VAULT OPEN · Explore the northern alcove'
-   :state.beatCharge>.56?'DISC BEATING · CHIME TO ACTIVATE'
+   :state.beatCharge>.56?'DISC BEATING · PULSE TO ACTIVATE'
    :state.beatOverlap>.35?'TWO BEAMS OVERLAP · TUNE THEIR BEAT RATE'
    :'DISC IS QUIET · AIM TWO SOURCES IN OBSERVER';
  }else if(state.playerX< -3.1){
   const remaining=Math.max(0,Math.ceil(state.waterRaisedUntil-immersionTime));
   $('fieldStatus').textContent=crossingActive?'WATER PATH RAISED · '+remaining+' seconds left'
    :state.poolCoupling>.78?'POOL IS RESONATING · PULSE to raise the path'
-   :'POOL IS QUIET · Thump the rim and retune outside';
+   :'POOL IS QUIET · Pulse the rim and retune outside';
  }else{
   $('fieldStatus').textContent=doorwayActive?'HIDDEN DOOR OPEN · Reach the gate'
-   :state.wallCoupling>.78?'HOLLOW WALL RESONATES · CHIME near it'
-   :'STONE WALL BLOCKS THE EXIT · Thump it to investigate';
+   :state.wallCoupling>.78?'HOLLOW WALL RESONATES · PULSE near it'
+   :'STONE WALL BLOCKS THE EXIT · Pulse to investigate';
  }
 }
 // A route exists only when adjacent stable cells connect the two anchored islands.
