@@ -1123,7 +1123,7 @@ function updateRailGraphics(){
   obj.head.rotation.y=-aimRadians(i);
   obj.headMaterial.emissiveIntensity=state.osc[i].on?.46:.035;
   obj.headMaterial.opacity=state.osc[i].on?1:.42;
-  obj.halo.material.opacity=i===selectedEmitterIndex?.89:.23;
+  obj.halo.material.opacity=i===selectedEmitterIndex?(obj.bumped?1:.89):.23;
   const lever=leverAt(i);
   obj.handle.position.set(lever.x,CONTROL_HEIGHT,lever.z);
   obj.handle.visible=i===selectedEmitterIndex;
@@ -1941,8 +1941,8 @@ canvas.addEventListener('pointermove',e=>{
    const angle=railAngleFromPoint(p);
    if(gesture.previousRailAngle!==null){
     const delta=wrapAngle(angle-gesture.previousRailAngle);
-    const collided=!constrainRailMove(selectedEmitterIndex,delta);
-    if(collided&&Math.abs(delta)>.012)railMarkers[selectedEmitterIndex].halo.material.opacity=1;
+    const moved=constrainRailMove(selectedEmitterIndex,delta);
+    railMarkers[selectedEmitterIndex].bumped=!moved&&Math.abs(delta)>.012;
    }
    gesture.previousRailAngle=angle;
   }else if(gesture.kind==='aim'){
@@ -1960,9 +1960,13 @@ canvas.addEventListener('pointermove',e=>{
 function releasePointer(e){
  pointers.delete(e.pointerId);
  if(gesture?.id===e.pointerId){
-  if(gesture.kind==='aim'&&selectedEmitterIndex>=0)
-   railMarkers[selectedEmitterIndex].handle.scale.setScalar(1);
+  if(selectedEmitterIndex>=0){
+   railMarkers[selectedEmitterIndex].bumped=false;
+   if(gesture.kind==='aim')
+    railMarkers[selectedEmitterIndex].handle.scale.setScalar(1);
+  }
   gesture=null;
+  updateRailGraphics();
  }
  if(pointers.size<2)pinchDistance=0;
 }
