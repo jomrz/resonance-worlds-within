@@ -208,6 +208,10 @@ for(const x of [10.3,21.55])for(const z of [-5.3,5.3]){
  roomBox(.60,3.4,.60,x,1.15,z,stoneMat);
  roomBox(1.0,.22,1.0,x,2.9,z,stoneMat);
 }
+// One interior acoustic reflector and scattering columns. Perimeter walls
+// remain visual boundaries so the external horns can excite the chamber.
+const urnReflector=roomBox(2.75,2.65,.22,19.65,1.08,3.45,stoneMat);
+urnReflector.rotation.y=-.38;
 const urnBronze=new THREE.MeshStandardMaterial({color:0x8b7982,metalness:.77,roughness:.29,
  emissive:0x271f36,emissiveIntensity:.06});
 const urnGlowMat=new THREE.MeshBasicMaterial({color:0xa6edff,transparent:true,opacity:.08,depthWrite:false});
@@ -241,10 +245,7 @@ const lampHalo=new THREE.Mesh(new THREE.SphereGeometry(.98,24,16),
 lampHalo.position.copy(lampCrystal.position);secondRoom.add(lampHalo);
 const urnFlowRing=new THREE.Mesh(new THREE.TorusGeometry(1.55,.03,6,72),urnGlowMat);
 urnFlowRing.rotation.x=Math.PI/2;urnFlowRing.position.set(URN.x,1.95,URN.z);secondRoom.add(urnFlowRing);
-const secondStoneSegments=[...secondRoom.children].filter(m=>
- m.isMesh&&m.geometry.type==='BoxGeometry'&&
- m.material===stoneMat&&m.geometry.parameters.height>=3.0&&
- (m.geometry.parameters.width>2||m.geometry.parameters.depth>2));
+const secondStoneSegments=[urnReflector];
 const secondColumns=[...secondRoom.children].filter(m=>
  m.isMesh&&m.geometry.type==='BoxGeometry'&&m.material===stoneMat&&
  m.geometry.parameters.height>2&&m.geometry.parameters.width<1.1&&
@@ -1196,6 +1197,33 @@ function resonance(frequency,center,width){
  const detune=(frequency-center)/width;
  return Math.exp(-.5*detune*detune);
 }
+// One horn can reveal the urn; two make interlocking filaments; three
+// matched frequencies and meaningful local pressure form a coherent mode.
+// The object has a natural frequency, while ALL three inputs must match.
+function updateUrnResponse(){
+ if(state.activeChamber!==1){
+  state.urnCharge=0;state.urnReady=false;state.urnStage=0;
+  state.urnSourceValues=[0,0,0];return;
+ }
+ const strengths=state.osc.map((o,i)=>{
+  if(!o.on)return 0;
+  const spatial=localResponse2D(i,URN);
+  const frequencyResponse=resonance(o.freq,URN_HZ,5.5);
+  return Math.min(1,spatial*2.05)*frequencyResponse;
+ });
+ state.urnSourceValues=strengths;
+ const present=strengths.filter(s=>s>.23).length;
+ const live=state.osc.every(o=>o.on);
+ const frequencies=state.osc.map(o=>o.freq);
+ const spread=Math.max(...frequencies)-Math.min(...frequencies);
+ const matching=live&&spread<=1&&frequencies.every(f=>Math.abs(f-URN_HZ)<=5.5);
+ const weakest=Math.min(...strengths);
+ const coherence=matching?weakest:0;
+ // Continuous illumination depends on contributions, not an arbitrary three-way switch.
+ state.urnCharge=Math.min(1,(strengths[0]+strengths[1]+strengths[2])/3);
+ state.urnReady=matching&&coherence>.34;
+ state.urnStage=state.lampLit?4:state.urnReady?3:present;
+}
 function updateCouplings(){
  if(state.activeChamber!==0){
   state.activeEmitters=state.osc.reduce((n,o)=>n+(o.on?1:0),0);
@@ -1242,6 +1270,7 @@ function sampleField(x,z,time=0){
 function renderField(time=0){
  updateCouplings();
  updateBeatResponse();
+ updateUrnResponse();
  if(state.mode==='observer'&&planeDirty&&
     (lastPlaneBuild<0||performance.now()-lastPlaneBuild>76))
     computeFieldPlane();
@@ -1340,7 +1369,7 @@ function groundAt(x,z){
  if(Math.abs(z)>6.72)return false;
  // Navigable matter: prevent the player from walking through the extra
  // resonant columns, scattering blocks, angled mirror or closed northern vault.
- const obstacles=[...physicalWorld.children].filter(mesh=>
+ const obstacles=[...physicalWorld.children,...secondRoom.children].filter(mesh=>
    mesh.isMesh&&mesh.material===stoneMat&&mesh.geometry.type==='BoxGeometry');
  for(const mesh of obstacles){
   const p=mesh.geometry.parameters;
@@ -1358,7 +1387,11 @@ function groundAt(x,z){
    const open=state.wallOpenUntil>immersionTime;
    if(!open||Math.abs(z)>1.02)return false;
  }
- if(Math.abs(z)<=6.72 && x>=-7.82&&x<=-3.29)return true;
+ if(x>=SECOND_START&&x<=SECOND_END&&Math.abs(z)<5.95){
+   // The freestanding urn is not traversable, but can be pulsed beside it.
+   return Math.hypot(x-URN.x,z-URN.z)>1.45;
+  }
+  if(Math.abs(z)<=6.72 && x>=-7.82&&x<=-3.29)return true;
  if(Math.abs(z)<=6.72 && x>=3.29&&x<=7.82)return true;
  const ix=Math.round((x+3.45)/.69),iz=Math.round((z+2.4)/.8);
  if(ix<0||ix>=NX||iz<0||iz>=NZ)return false;
