@@ -1173,7 +1173,7 @@ function updateRailGraphics(){
 function computeFieldPlane(){
  const begun=performance.now(),g=PLANE_GRID;
  const rawPressure=new Float32Array(sampleCount),rawAmplitude=new Float32Array(sampleCount);
- const rawOverlap=new Float32Array(sampleCount);
+ const sourceMagnitudes=Array.from({length:3},()=>new Float32Array(sampleCount));
  beatFieldCells.length=0;
  const active=state.osc.filter(o=>o.on).length;
  if(!active){
@@ -1185,15 +1185,13 @@ function computeFieldPlane(){
  for(let x=0;x<g.nx;x++)for(let z=0;z<g.nz;z++){
   const j=x*g.nz+z,px=activeFocus()+g.x0+x*g.dx,pz=g.z0+z*g.dz;
   heightBuffer[j*3]=px;
-  let energy=0,real=0,first=0,second=0;
+  let energy=0,real=0;
   for(let i=0;i<3;i++){
    if(!state.osc[i].on)continue;
    const p=pressure2D(i,px,pz);
    energy+=p.mag*p.mag;real+=p.real;
-   if(i===0)first=p.mag;
-   else if(i===1)second=p.mag;
+   sourceMagnitudes[i][j]=p.mag;
   }
-  rawOverlap[j]=Math.min(1,Math.sqrt(first*second)*2.2);
   rawPressure[j]=real;rawAmplitude[j]=Math.sqrt(energy/active);
   peak=Math.max(peak,rawAmplitude[j]);
  }
@@ -1223,12 +1221,18 @@ function computeFieldPlane(){
     for(let k=0;k<4;k++)beatBaseColors[j*4+k]=shadeBuffer[j*4+k];
     // Only the meaningful area around a beat-requiring object moves. The
     // overlap uses acoustic pressures already calculated above.
-    for(const site of BEAT_SITES){
-      if(site.chamber!==state.activeChamber||!state.osc[0].on||!state.osc[1].on)continue;
+    for(let siteIndex=0;siteIndex<BEAT_SITES.length;siteIndex++){
+      const site=BEAT_SITES[siteIndex],a=site.sources[0],b=site.sources[1];
+      if(site.chamber!==state.activeChamber||
+         !state.osc[a].on||!state.osc[b].on)continue;
       const r=Math.hypot(wx-site.x,wz-site.z);
       if(r>site.radius*1.85)continue;
-      const local=rawOverlap[j]*Math.exp(-.5*Math.pow(r/site.radius,2));
-      if(local>.028)beatFieldCells.push({index:j,weight:local,radialPhase:r*2.45});
+      const paired=Math.min(1,Math.sqrt(
+        sourceMagnitudes[a][j]*sourceMagnitudes[b][j])*2.2);
+      const local=paired*Math.exp(-.5*Math.pow(r/site.radius,2));
+      if(local>.028)beatFieldCells.push({
+        index:j,weight:local,radialPhase:r*2.45,siteIndex
+      });
     }
   }
   landscapeGeom.attributes.position.needsUpdate=true;
@@ -1267,20 +1271,25 @@ function computeFieldPlane(){
 function animateBeatField(seconds){
  if(state.mode!=='observer'||selectedFieldView!=='field'||
     !landscape.visible||!beatFieldCells.length)return;
- const difference=state.beatRate;
- const animated=difference>.12&&difference<=9;
- const closeToMode=Math.exp(-.5*Math.pow((difference-BEAT_HZ)/2.2,2));
- const clarity=.43+.57*closeToMode;
+ // Each landmark has a separate source pair and preferred beat rate. This
+ // supports future rhythm-responsive objects without another visualization.
+ const clocks=BEAT_SITES.map(site=>{
+  const a=state.osc[site.sources[0]],b=state.osc[site.sources[1]];
+  const difference=Math.abs(a.freq-b.freq);
+  return {difference,animated:difference>.12&&difference<=9,
+   clarity:.43+.57*Math.exp(-.5*Math.pow(
+     (difference-site.naturalBeatHz)/2.2,2))};
+ });
  for(const cell of beatFieldCells){
-  const j=cell.index,k=j*4;
-  const beat=animated?.5+.5*Math.cos(2*Math.PI*difference*seconds-
-                        cell.radialPhase):.5;
-  const swell=cell.weight*clarity*(beat-.2);
+  const j=cell.index,k=j*4,clock=clocks[cell.siteIndex];
+  const beat=clock.animated?.5+.5*Math.cos(
+    2*Math.PI*clock.difference*seconds-cell.radialPhase):.5;
+  const swell=cell.weight*clock.clarity*(beat-.2);
   heightBuffer[j*3+1]=beatBaseHeights[j]+.28*swell;
-  shadeBuffer[k]=Math.min(1,beatBaseColors[k]+.44*cell.weight*clarity*beat);
-  shadeBuffer[k+1]=Math.min(1,beatBaseColors[k+1]+.16*cell.weight*clarity*beat);
-  shadeBuffer[k+2]=Math.min(1,beatBaseColors[k+2]+.24*cell.weight*clarity*beat);
-  shadeBuffer[k+3]=Math.min(1,beatBaseColors[k+3]+.30*cell.weight*clarity*beat);
+  shadeBuffer[k]=Math.min(1,beatBaseColors[k]+.44*cell.weight*clock.clarity*beat);
+  shadeBuffer[k+1]=Math.min(1,beatBaseColors[k+1]+.16*cell.weight*clock.clarity*beat);
+  shadeBuffer[k+2]=Math.min(1,beatBaseColors[k+2]+.24*cell.weight*clock.clarity*beat);
+  shadeBuffer[k+3]=Math.min(1,beatBaseColors[k+3]+.30*cell.weight*clock.clarity*beat);
  }
  landscapeGeom.attributes.position.needsUpdate=true;
  landscapeGeom.attributes.color.needsUpdate=true;
