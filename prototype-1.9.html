@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.9</title>
+<title>Resonance: Worlds Within | Prototype 1.9.1</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -87,7 +87,7 @@ body.in-immersion #objective{display:none}
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.9</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.9.1</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
     <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER I · The submerged path</div>
@@ -194,6 +194,19 @@ for(let i=0;i<6;i++){
 const physicalWorld=new THREE.Group();
 for(const object of [...world.children])physicalWorld.add(object);
 world.add(physicalWorld);
+// Stone impact is visibly attached to the wall, not to the distant disc or pool.
+// The rings appear after any nearby Pulse, with amplitude indicating resonance.
+hiddenDoorMaterial.emissive.setHex(0x377f9e);
+hiddenDoorMaterial.emissiveIntensity=0;
+const wallImpactRings=[];
+for(let i=0;i<3;i++){
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.025,6,64),
+  new THREE.MeshBasicMaterial({color:0x9ceaff,transparent:true,opacity:0,
+   side:THREE.DoubleSide,depthWrite:false}));
+ ring.rotation.y=Math.PI/2; // Vertical YZ plane, facing the approaching player.
+ ring.position.set(5.755,1.65,0);
+ ring.visible=false;physicalWorld.add(ring);wallImpactRings.push(ring);
+}
 // CHAMBER II: Beyond the stone door waits an urn and a lamp.
 const URN={x:16,z:0},URN_HZ=208,SECOND_START=8.15,SECOND_END=23.65;
 const secondRoom=new THREE.Group();physicalWorld.add(secondRoom);
@@ -263,7 +276,7 @@ const tiltNeutral={beta:null,gamma:null};
 // No visible sphere in the plane Observer experiment.
 // Removed the decorative orbit ring: it looked like an unexplained wave reflection.
 // Observer focuses on the acoustic landscape rather than decorative stars.
-const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false,beatProbeAt:-100};
+const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,wallProbeAt:-100,wallProbeZ:0,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false,beatProbeAt:-100};
 const observerPan=new THREE.Vector2(0,0); // Camera-space pan; globe pivot stays at origin.
 let invertLookY=false;
 try{invertLookY=localStorage.getItem('resonanceInvertY')==='1'}catch(e){}
@@ -1020,6 +1033,19 @@ const wallEcho=new THREE.Line(new THREE.BufferGeometry().setFromPoints([
  new THREE.Vector3(5.85,.20,-1.04),new THREE.Vector3(5.85,.20,1.04)
 ]),new THREE.LineBasicMaterial({color:0xb9ebff,transparent:true,opacity:.025,depthWrite:false}));
 observer2D.add(wallEcho);
+// Observer wall echoes are anchored at the stone seam in chamber coordinates.
+// They express WALL coupling; the disc's 4 Hz beat remains over the disc.
+const wallObserverRings=[];
+for(let i=0;i<3;i++){
+ const points=Array.from({length:56},(_,j)=>{
+  const a=2*Math.PI*j/56;
+  return new THREE.Vector3(Math.cos(a),0,Math.sin(a));
+ });
+ const ring=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points),
+  new THREE.LineBasicMaterial({color:0x94e4fb,transparent:true,opacity:0,depthWrite:false}));
+ ring.position.set(5.65,.28,0);
+ ring.visible=false;observer2D.add(ring);wallObserverRings.push(ring);
+}
 const urnEchoRings=[];
 for(let i=0;i<3;i++){
  const material=new THREE.LineBasicMaterial({color:[0x73d2eb,0xe9c597,0xc8a8ec][i],
@@ -1201,9 +1227,11 @@ function computeFieldPlane(){
    const normalized=Math.min(1,rawAmplitude[j]/denom);
    // Localized spectral coherence becomes orderly rings near a sympathetic object.
    const wx=heightBuffer[j*3],wz=heightBuffer[j*3+2];
-   const target=state.activeChamber===1?URN:{x:-4.12,z:0};
+   const target=state.activeChamber===1?URN:
+    state.hasCrossedGap?{x:5.82,z:0}:{x:-4.12,z:0};
    const distance=Math.hypot(wx-target.x,wz-target.z);
-   const coherence=state.activeChamber===1?state.urnCharge:state.poolCoupling;
+   const coherence=state.activeChamber===1?state.urnCharge:
+    state.hasCrossedGap?state.wallCoupling:state.poolCoupling;
    const gathered=Math.exp(-Math.pow(distance/3.3,2))*coherence;
    const harmonic=Math.pow(.5+.5*Math.cos(distance*3.2),2);
    const energy=Math.min(1,normalized*.84+.32*gathered*harmonic);
@@ -1523,7 +1551,8 @@ function renderField(time=0){
    ?(state.lampLit?'Three voices · One flame':
      state.urnReady?'All three in harmony · Pulse':
      state.urnStage+'/3 horns · '+URN_HZ+' Hz')
-   :(state.osc[0].on&&state.osc[1].on?state.beatRate+' Hz beat':'Two horns needed');
+   :(state.osc[0].on&&state.osc[1].on?
+     state.beatRate+' Hz · at disc':'Two horns needed');
  $('aimTip').textContent=selectedEmitterIndex>=0
    ?'Head '+Math.round(state.osc[selectedEmitterIndex].aim||0)+'° inward'
    :state.activeEmitters===0?'Silent plane':'Select a source to move it';
@@ -1546,6 +1575,14 @@ function renderField(time=0){
      :state.urnStage===2?'TWO CHANNELS RESPOND · Find a third matching voice'
      :state.urnStage===1?'THE URN STIRS · Add a second voice'
      :'URN DORMANT · Pulse it to hear its natural tone')
+   :state.hasCrossedGap
+   ?(state.wallOpenUntil>immersionTime
+     ?'STONE PASSAGE OPEN · Shift inside and continue'
+     :state.wallCoupling>.78
+      ?'STONE RESONATES · Shift inside and PULSE near the seam'
+      :state.foundWallTone
+       ?'STONE WALL NEXT · Tune horns near '+WALL_MODE_HZ+' Hz'
+       :'STONE WALL NEXT · PULSE beside it to learn its tone')
    :state.activeEmitters===0
    ?'NO EMITTERS ACTIVE · Acoustic field is silent'
    :state.beatCharge>.56
@@ -1769,6 +1806,8 @@ function playImpulse(sustained=false){
   }
  }else if(nearWall){
   state.foundWallTone=true;
+  state.wallProbeAt=immersionTime;
+  state.wallProbeZ=Math.max(-.93,Math.min(.93,state.playerZ));
   if(state.wallCoupling>.78){
    state.wallOpenUntil=immersionTime+30;
    response='The hollow cavity resonates · Stone passage opens';
@@ -1810,6 +1849,16 @@ pulseButton.addEventListener('pointerdown',e=>{
 function stopPulse(){pulseHolding=false}
 for(const event of ['pointerup','pointercancel','lostpointercapture'])
  pulseButton.addEventListener(event,stopPulse);
+function updateObjective(){
+ $('objective').textContent=state.activeChamber===1
+  ?(state.mode==='observer'?'CHAMBER II · Three horns, one frequency':
+    'CHAMBER II · The urn and the sleeping lamp')
+  :state.hasCrossedGap
+   ?(state.mode==='observer'?'CHAMBER I · Tune the hidden stone':
+     'CHAMBER I · Find the seam in the stone')
+   :(state.mode==='observer'?'CHAMBER I · Reveal the submerged path':
+     'CHAMBER I · Water crossing and the hidden stone');
+}
 function changeMode(mode){
  stopJoystick(null);stopLookJoystick(null);stopPulse();
  state.mode=mode;
@@ -1817,11 +1866,7 @@ function changeMode(mode){
  $('shiftMode').textContent=mode==='observer'?'Enter Immersion':'Enter Observer';
  /* No tool choice in 1.8. */
  physicalWorld.visible=mode==='immersion';
- $('objective').textContent=state.activeChamber===1
-   ?(mode==='observer'?'CHAMBER II · Three horns, one frequency'
-       :'CHAMBER II · The urn and the sleeping lamp')
-   :(mode==='observer'?'CHAMBER I · Reveal the submerged path'
-       :'CHAMBER I · Water crossing and the hidden stone');
+ updateObjective();
  for(const p of state.pulses)if(p.visual)p.visual.visible=mode==='immersion';
  $('observer').classList.toggle('active',mode==='observer');
  $('immerse').classList.toggle('active',mode==='immersion');
@@ -2057,8 +2102,7 @@ $('previewRoom').addEventListener('click',()=>{
  state.activeChamber=next;state.playerX=next?11:-5.5;state.playerZ=0;
  state.yaw=next?0:0;state.pitch=-.07;
  $('previewRoom').textContent=next?'Test Room I':'Test Room II';
- $('objective').textContent=next?'CHAMBER II · The urn and the sleeping lamp':
-   'CHAMBER I · The submerged path';
+ updateObjective();
  updateRailGraphics();planeDirty=true;renderField();
  toast(next?'Testing Chamber II · Three horns, one frequency':
    'Testing Chamber I · Water and concealed stone');
@@ -2100,20 +2144,26 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
        toast(state.playerX>5?'Stone wall · Try a Pulse to diagnose it':'No footing · Tune the pool, then PULSE');
      }
    }
-   if(Math.abs(state.playerX)<3.29)state.hasCrossedGap=true;
+   if(state.activeChamber===0&&!state.hasCrossedGap&&state.playerX>3.33&&state.playerX<7.6){
+     state.hasCrossedGap=true;
+     setPlaneDirty();updateObjective();
+     toast('CROSSING COMPLETE · The hidden stone is next');
+   }
    const chamber=state.playerX>8.45?1:state.playerX<7.6?0:state.activeChamber;
    if(chamber!==state.activeChamber){
     state.activeChamber=chamber;
     $('previewRoom').textContent=chamber?'Test Room I':'Test Room II';
     updateRailGraphics();planeDirty=true;
-    $('objective').textContent=chamber?'CHAMBER II · The urn and the sleeping lamp'
-      :'CHAMBER I · The submerged path';
+    updateObjective();
     toast(chamber?'CHAMBER II · The urn awaits three voices':'CHAMBER I · The submerged path');
    }
    if(groundAt(state.playerX,state.playerZ))state.lastGrounded=t;
    else if(t-state.lastGrounded>1){
-     state.playerX=-5.5;state.playerZ=0;state.hasCrossedGap=false;
-     state.lastGrounded=t;toast('Field collapsed · Returned to entrance');
+     const beyond=state.hasCrossedGap&&state.activeChamber===0;
+     state.playerX=beyond?4.25:-5.5;state.playerZ=0;
+     state.lastGrounded=t;
+     toast(beyond?'Field collapsed · Returned to far shore':
+       'Field collapsed · Returned to entrance');
    }
  }
   if(state.mode==='observer'){
@@ -2186,6 +2236,30 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
   beatHalo.material.opacity=state.mode==='observer'&&canSeeBeat?
     .09+(.24+.44*matchingBeat)*drivenStrength*beatEnvelope:0;
   beatHalo.scale.setScalar(.92+.26*drivenStrength*beatEnvelope);
+  const wallCoherence=state.activeChamber===0?state.wallCoupling:0;
+  wallObserverRings.forEach((ring,i)=>{
+    const active=state.mode==='observer'&&state.activeChamber===0&&
+     (state.hasCrossedGap||wallCoherence>.045);
+    const swell=.5+.5*Math.sin(t*5.2-i*.9);
+    ring.visible=active;
+    ring.scale.setScalar(.42+i*.31+.06*wallCoherence*swell);
+    ring.material.opacity=active?(.04+.40*wallCoherence*swell):0;
+  });
+  const wallAge=immersionTime-state.wallProbeAt;
+  const wallImpact=state.mode==='immersion'&&state.activeChamber===0&&
+    wallAge>=0&&wallAge<1.45;
+  wallImpactRings.forEach((ring,i)=>{
+    const phase=wallAge-i*.15;
+    const travel=Math.max(0,Math.min(1,phase/1.12));
+    ring.visible=wallImpact&&phase>=0&&phase<1.12;
+    if(ring.visible){
+      ring.position.z=state.wallProbeZ;
+      ring.scale.setScalar(.33+1.22*travel);
+      ring.material.opacity=(.28+.5*wallCoherence)*(1-travel);
+    }
+  });
+  hiddenDoorMaterial.emissiveIntensity=wallImpact?
+    (.18+.9*wallCoherence)*Math.exp(-2.1*wallAge):0;
   // Only the meaningful two-source overlap around the disc receives
   // animated waves. The 2D solver remains static between user edits.
   animateBeatField(t);
