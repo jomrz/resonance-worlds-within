@@ -972,6 +972,11 @@ for(let ix=0;ix<11;ix++){
  const line=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(outline),material);
  observer2D.add(line);poolPathEcho.push(line);
 }
+// The hidden wall expresses alignment as one continuous hairline seam.
+const wallEcho=new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+ new THREE.Vector3(5.85,.20,-1.04),new THREE.Vector3(5.85,.20,1.04)
+]),new THREE.LineBasicMaterial({color:0xb9ebff,transparent:true,opacity:.025,depthWrite:false}));
+observer2D.add(wallEcho);
 const urnEchoRings=[];
 for(let i=0;i<3;i++){
  const material=new THREE.LineBasicMaterial({color:[0x73d2eb,0xe9c597,0xc8a8ec][i],
@@ -993,6 +998,8 @@ function responseStageVisuals(){
   const section=Math.max(0,Math.min(1,(state.poolCoupling-.08-ix*.051)/.29));
   poolPathEcho[ix].material.opacity=state.activeChamber===0?.015+.78*section:0;
  }
+ wallEcho.material.opacity=state.activeChamber===0?.025+
+  .82*Math.pow(state.wallCoupling,1.7):0;
  const activeUrn=state.activeChamber===1;
  for(let i=0;i<3;i++){
   const strength=state.urnSourceValues[i]||0;
@@ -1383,7 +1390,8 @@ function renderField(time=0){
  beatVaultSeam.material.opacity=beatOpened?.8:.10+.45*state.beatCharge;
  hiddenDoor.position.y=doorwayActive?5.8:1.75;
  hiddenDoor.material.opacity=doorwayActive?.12:1;
- doorSeam.material.opacity=doorwayActive?.64:state.wallCoupling*.24;
+ doorSeam.material.opacity=doorwayActive?.78:
+   .035+.62*Math.pow(state.wallCoupling,1.5);
  poolSurface.material.emissiveIntensity=crossingActive?.62:.10+.29*state.poolCoupling;
  poolRim.material.emissiveIntensity=.15+state.poolCoupling*.85;
  portal.material.emissiveIntensity=doorwayActive?1.8:.15;
@@ -1969,6 +1977,10 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
   });
   const discBeat=state.mode==='immersion'?(.5+.5*Math.sin(2*Math.PI*state.beatRate*immersionTime)):.5;
   const discResponse=state.beatCharge;
+  // The disc expresses beat resonance through rhythmic motion rather than a
+  // generic halo, unlike the pool's forming path and the wall's revealing seam.
+  beatHalo.rotation.z=state.mode==='immersion'?
+    Math.sin(2*Math.PI*state.beatRate*immersionTime)*discResponse*.10:0;
   discMaterial.emissiveIntensity=.08+.2*discResponse+
     (state.mode==='immersion'?discBeat*discResponse*.85:0);
   beatDisc.scale.setScalar(1+(state.mode==='immersion'?(discBeat-.5)*discResponse*.04:0));
