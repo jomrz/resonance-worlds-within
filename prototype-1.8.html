@@ -204,7 +204,7 @@ const tiltNeutral={beta:null,gamma:null};
 // No visible sphere in the plane Observer experiment.
 // Removed the decorative orbit ring: it looked like an unexplained wave reflection.
 // Observer focuses on the acoustic landscape rather than decorative stars.
-const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:16.8,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false};
+const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:18.7,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false};
 const observerPan=new THREE.Vector2(0,0); // Camera-space pan; globe pivot stays at origin.
 let invertLookY=false;
 try{invertLookY=localStorage.getItem('resonanceInvertY')==='1'}catch(e){}
@@ -1438,7 +1438,7 @@ function stopPulse(){pulseHolding=false}
 for(const event of ['pointerup','pointercancel','lostpointercapture'])
  pulseButton.addEventListener(event,stopPulse);
 function changeMode(mode){
- stopJoystick(null);stopLookJoystick(null);
+ stopJoystick(null);stopLookJoystick(null);stopPulse();
  state.mode=mode;
  document.body.classList.toggle('in-immersion',mode==='immersion');
  $('shiftMode').textContent=mode==='observer'?'Enter Immersion':'Enter Observer';
@@ -1506,7 +1506,7 @@ lookJoystick.addEventListener('pointerdown',e=>{
 });
 lookJoystick.addEventListener('pointermove',e=>{if(e.pointerId===lookPointer)updateLookStick(e)});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])lookJoystick.addEventListener(type,stopLookJoystick);
-window.addEventListener('blur',()=>{stopJoystick(null);stopLookJoystick(null)});
+window.addEventListener('blur',()=>{stopJoystick(null);stopLookJoystick(null);stopPulse()});
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function minFitDistance(){
  const aspect=(canvas.clientWidth||window.innerWidth)/
@@ -1621,10 +1621,14 @@ canvas.addEventListener('wheel',e=>{
  if(state.mode==='observer'){e.preventDefault();zoom(e.deltaY>0?1.1:.9)}
 },{passive:false});
 // Tilt controls are intentionally omitted: the landscape remains upright.
-$('save').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');notes.push({saved:new Date().toISOString(),osc:state.osc.map(o=>({...o}))});localStorage.setItem('resonanceDiscoveries',JSON.stringify(notes.slice(-20)));toast(`Discovery saved (${Math.min(notes.length,20)})`)});
-$('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonanceDiscoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;
- state.osc.forEach(o=>{if(!Number.isFinite(o.aim))o.aim=0});
- updateEmitterDock();atlasDirty=true;beamGuideDirty=true;syncAudio();renderField();toast('Latest discovery restored')});
+$('save').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonancePlane18Discoveries')||'[]');notes.push({saved:new Date().toISOString(),osc:state.osc.map(o=>({...o}))});localStorage.setItem('resonancePlane18Discoveries',JSON.stringify(notes.slice(-20)));toast(`Discovery saved (${Math.min(notes.length,20)})`)});
+$('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonancePlane18Discoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;
+ state.osc.forEach((o,i)=>{
+  if(!Number.isFinite(o.aim))o.aim=0;
+  o.aim=Math.max(-90,Math.min(90,o.aim));
+  if(!Number.isFinite(o.rail))o.rail=[Math.PI,0,-Math.PI/2][i];
+ });
+ updateEmitterDock();setPlaneDirty();syncAudio();renderField();toast('Latest plane configuration restored')});
 let toastTimer=0;function toast(txt){$('toast').textContent=txt;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),1750)}
 const clock=new THREE.Clock();let frame=0,immersionTime=0;
 let previousFrame=0;
