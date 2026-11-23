@@ -550,80 +550,119 @@ const urnTrim=new THREE.Mesh(new THREE.TorusGeometry(1.30,.022,5,56),
 urnTrim.rotation.x=-Math.PI/2;urnTrim.position.set(URN.x,.11,URN.z);
 scenicWorld.add(urnTrim);
 
-// Expressive but economical human figure, built from a few low-polygon
-// anatomical forms. GLB character support can replace this group later.
-const traveler=new THREE.Group();traveler.name='Traveler';physicalWorld.add(traveler);
+// A FUTURE FIELD EXPLORER in a very old world.
+// No medieval cape: fitted technical fabric, lightweight body armor,
+// visible face, expeditions pack and a hand-held acoustic probe.
+const traveler=new THREE.Group();traveler.name='FieldExplorer';physicalWorld.add(traveler);
 const travelerBody=new THREE.Group();traveler.add(travelerBody);
-const cloth=new THREE.MeshStandardMaterial({color:0x647a66,roughness:.98,flatShading:true});
-const cloak=new THREE.MeshStandardMaterial({color:0xa68a63,roughness:1,flatShading:true});
-const skin=new THREE.MeshStandardMaterial({color:0xcaa487,roughness:.95,flatShading:true});
-const shoes=new THREE.MeshStandardMaterial({color:0x3e3b35,roughness:1,flatShading:true});
-const hair=new THREE.MeshStandardMaterial({color:0x443b31,roughness:1,flatShading:true});
-const darkDetail=new THREE.MeshStandardMaterial({color:0x45392f,roughness:1});
-const braidMat=new THREE.MeshStandardMaterial({color:0xd1b77a,roughness:.82,metalness:.14});
+const cloth=new THREE.MeshStandardMaterial({color:0x465967,roughness:.93,flatShading:true});
+const cloak=new THREE.MeshStandardMaterial({color:0x82948e,roughness:.92,flatShading:true});
+const skin=new THREE.MeshStandardMaterial({color:0xcba78d,roughness:.91,flatShading:true});
+const shoes=new THREE.MeshStandardMaterial({color:0x252e32,roughness:.86,flatShading:true});
+const hair=new THREE.MeshStandardMaterial({color:0x302f31,roughness:1,flatShading:true});
+const darkDetail=new THREE.MeshStandardMaterial({color:0x222f32,roughness:.88,metalness:.12});
+const braidMat=new THREE.MeshStandardMaterial({color:0x87d2d1,roughness:.41,metalness:.31,
+ emissive:0x144b53,emissiveIntensity:.16});
+const techPanel=new THREE.MeshStandardMaterial({color:0x9ca6a3,metalness:.38,roughness:.62});
+const probeBodyMat=new THREE.MeshStandardMaterial({color:0x3b4d54,metalness:.59,roughness:.38});
+const probeGlowMat=new THREE.MeshStandardMaterial({color:0xadf5ff,emissive:0x61bce0,
+ emissiveIntensity:.45,metalness:.15,roughness:.18});
 function travelerPart(geometry,material,x,y,z,parent=travelerBody){
  const mesh=new THREE.Mesh(geometry,material);
  mesh.position.set(x,y,z);parent.add(mesh);return mesh;
 }
 function travelerStrap(a,b,r=.035,mat=darkDetail){
  const from=new THREE.Vector3(...a),to=new THREE.Vector3(...b);
- const center=from.clone().add(to).multiplyScalar(.5),direction=to.clone().sub(from);
+ const direction=to.clone().sub(from);
  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,direction.length(),6),mat);
- mesh.position.copy(center);
+ mesh.position.copy(from).add(to).multiplyScalar(.5);
  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());
  travelerBody.add(mesh);return mesh;
 }
-// Human shoulders, waist, neck, face, hands, knees and feet.
-travelerPart(new THREE.CylinderGeometry(.23,.20,.67,8),cloth,0,1.25,0);
-travelerPart(new THREE.SphereGeometry(.29,10,7),cloth,0,1.49,0).scale.set(.88,.38,1.07);
-travelerPart(new THREE.CylinderGeometry(.23,.24,.23,8),cloak,0,.83,0);
-travelerPart(new THREE.ConeGeometry(.36,.64,8),cloak,-.105,.89,0).rotation.z=-.12;
-travelerPart(new THREE.CylinderGeometry(.075,.09,.13,8),skin,0,1.64,0);
-const humanHead=travelerPart(new THREE.SphereGeometry(.224,12,9),skin,.012,1.84,0);
-humanHead.scale.set(.95,1.08,.93);
+// Anatomically readable proportions at both close and distant camera views.
+travelerPart(new THREE.CylinderGeometry(.27,.20,.62,10),cloth,0,1.25,0);
+travelerPart(new THREE.SphereGeometry(.31,10,8),cloak,0,1.48,0).scale.set(.96,.38,1.13);
+travelerPart(new THREE.CylinderGeometry(.20,.235,.28,9),cloth,0,.85,0);
+travelerPart(new THREE.CylinderGeometry(.08,.09,.15,8),skin,0,1.65,0);
+const humanHead=travelerPart(new THREE.SphereGeometry(.222,12,10),skin,.013,1.84,0);
+humanHead.scale.set(.98,1.10,.95);
 for(const side of [-1,1]){
- travelerPart(new THREE.SphereGeometry(.065,7,5),skin,0,1.82,side*.205);
- // The two eyes face the direction of travel, not the camera.
- travelerPart(new THREE.SphereGeometry(.020,6,5),darkDetail,.215,1.87,side*.080);
+ travelerPart(new THREE.SphereGeometry(.063,8,6),skin,0,1.83,side*.205);
+ travelerPart(new THREE.SphereGeometry(.019,6,5),darkDetail,.221,1.86,side*.083);
 }
-travelerPart(new THREE.ConeGeometry(.043,.10,5),skin,.225,1.82,0).rotation.z=-Math.PI/2;
-travelerPart(new THREE.SphereGeometry(.230,12,6,0,Math.PI*2,0,Math.PI*.46),
- hair,.002,1.859,0);
-travelerPart(new THREE.CylinderGeometry(.248,.251,.082,10),cloak,0,1.565,0);
-// Belt, woven trim, a satchel and strap: clothes that suggest exploration.
-travelerPart(new THREE.CylinderGeometry(.252,.256,.07,8),darkDetail,0,.965,0);
-travelerPart(new THREE.BoxGeometry(.12,.085,.10),braidMat,.26,.97,0);
-travelerStrap([.03,1.53,.24],[-.17,.97,-.28],.029,braidMat);
-const satchel=travelerPart(new THREE.BoxGeometry(.22,.44,.36),cloak,-.17,.94,-.30);
-satchel.rotation.x=-.11;
-travelerPart(new THREE.BoxGeometry(.045,.19,.26),darkDetail,-.048,1.05,-.30);
-travelerPart(new THREE.SphereGeometry(.065,6,5),braidMat,-.01,1.09,-.30);
-// Small resonant pendant worn on the chest.
-travelerPart(new THREE.OctahedronGeometry(.073,1),
- new THREE.MeshStandardMaterial({color:0x9ed7cf,emissive:0x24645b,
- emissiveIntensity:.40,metalness:.24,roughness:.42}),.26,1.32,.07);
+travelerPart(new THREE.ConeGeometry(.040,.09,6),skin,.221,1.80,0).rotation.z=-Math.PI/2;
+travelerPart(new THREE.SphereGeometry(.23,10,7,0,Math.PI*2,0,Math.PI*.36),
+ hair,.006,1.872,0);
+// A lightweight scanner visor, not a fantasy hood or combat helmet.
+const visor=travelerPart(new THREE.BoxGeometry(.075,.050,.44),braidMat,.224,1.955,0);
+visor.material=braidMat;
+travelerPart(new THREE.CylinderGeometry(.264,.264,.085,10),darkDetail,0,1.57,0);
+// Seam panels, small luminous stripes and a protective knee-length field jacket.
+for(const side of [-1,1]){
+ const jacket=travelerPart(new THREE.BoxGeometry(.090,.53,.16),cloak,
+  -.095,1.21,side*.245);
+ jacket.rotation.z=-.08;
+ travelerPart(new THREE.BoxGeometry(.039,.27,.025),braidMat,
+  -.004,1.26,side*.302);
+}
+travelerPart(new THREE.CylinderGeometry(.247,.252,.085,8),darkDetail,0,.99,0);
+travelerPart(new THREE.BoxGeometry(.14,.10,.095),techPanel,.265,.98,0);
+// Compact expedition pack with scanning instruments and a shoulder strap.
+const expeditionPack=travelerPart(new THREE.BoxGeometry(.31,.50,.53),probeBodyMat,
+ -.30,1.31,0);
+expeditionPack.rotation.z=.04;
+travelerPart(new THREE.BoxGeometry(.055,.19,.36),techPanel,-.49,1.44,0);
+travelerStrap([.09,1.60,.21],[-.12,1.03,-.26],.031,techPanel);
+travelerPart(new THREE.OctahedronGeometry(.055,0),braidMat,.260,1.39,0);
 const travelerArms=[],travelerLegs=[];
 for(const side of [-1,1]){
- const arm=new THREE.Group();arm.position.set(0,1.46,side*.33);
+ const arm=new THREE.Group();arm.position.set(0,1.47,side*.33);
  travelerBody.add(arm);
- travelerPart(new THREE.SphereGeometry(.135,8,6),cloth,0,-.07,0,arm);
- travelerPart(new THREE.CylinderGeometry(.108,.088,.42,7),cloth,0,-.31,0,arm);
- travelerPart(new THREE.CylinderGeometry(.082,.071,.22,7),cloak,.005,-.54,0,arm);
- travelerPart(new THREE.SphereGeometry(.088,8,6),skin,.015,-.67,0,arm);
+ travelerPart(new THREE.SphereGeometry(.146,9,6),cloak,.012,-.075,0,arm);
+ travelerPart(new THREE.CylinderGeometry(.12,.105,.39,8),cloth,0,-.30,0,arm);
+ travelerPart(new THREE.CylinderGeometry(.096,.082,.22,7),darkDetail,0,-.55,0,arm);
+ travelerPart(new THREE.SphereGeometry(.090,8,6),skin,.01,-.685,0,arm);
  travelerArms.push(arm);
- const leg=new THREE.Group();leg.position.set(0,.80,side*.145);
+ const leg=new THREE.Group();leg.position.set(0,.79,side*.15);
  travelerBody.add(leg);
- travelerPart(new THREE.CylinderGeometry(.137,.116,.49,8),cloth,0,-.25,0,leg);
- travelerPart(new THREE.CylinderGeometry(.122,.094,.27,8),shoes,0,-.62,0,leg);
- travelerPart(new THREE.BoxGeometry(.31,.125,.20),shoes,.11,-.75,0,leg);
+ travelerPart(new THREE.CylinderGeometry(.14,.118,.47,8),cloth,0,-.255,0,leg);
+ travelerPart(new THREE.CylinderGeometry(.127,.101,.27,8),shoes,0,-.61,0,leg);
+ travelerPart(new THREE.BoxGeometry(.33,.14,.22),shoes,.115,-.75,0,leg);
  travelerLegs.push(leg);
 }
+// PROBE: actual physical instrument held in the explorer's right hand.
+function makeProbe(parent,scale=1){
+ const group=new THREE.Group();group.scale.setScalar(scale);parent.add(group);
+ const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.052,.045,.65,8),probeBodyMat);
+ barrel.rotation.z=Math.PI/2;barrel.position.x=.28;group.add(barrel);
+ const grip=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.16,8),darkDetail);
+ grip.rotation.z=Math.PI/2;grip.position.x=.05;group.add(grip);
+ const sensor=new THREE.Mesh(new THREE.TorusGeometry(.09,.017,6,22),braidMat);
+ sensor.rotation.y=Math.PI/2;sensor.position.x=.59;group.add(sensor);
+ const tip=new THREE.Mesh(new THREE.SphereGeometry(.072,10,8),probeGlowMat);
+ tip.position.x=.65;group.add(tip);
+ return group;
+}
+const wandRig=new THREE.Group();
+wandRig.position.set(.06,-.69,.03);
+travelerArms[1].add(wandRig);
+const handProbe=makeProbe(wandRig,.93);
+// First-person inspection uses the same probe model, attached to the camera,
+// while its real physical pulse is still sourced at the player position.
+const eyeProbe=new THREE.Group();camera.add(eyeProbe);
+eyeProbe.position.set(.35,-.38,-.75);
+const nearProbe=makeProbe(eyeProbe,1.05);
+eyeProbe.rotation.set(0,-.42,-.38);
+let probeScanStarted=-100;
+function startProbeScan(){
+ if(immersionTime-probeScanStarted>.32)probeScanStarted=immersionTime;
+}
 const travelerShadow=new THREE.Mesh(
- new THREE.CircleGeometry(.34,18),
- new THREE.MeshBasicMaterial({color:0x111b16,transparent:true,opacity:.32,depthWrite:false})
+ new THREE.CircleGeometry(.35,18),
+ new THREE.MeshBasicMaterial({color:0x111b16,transparent:true,opacity:.33,depthWrite:false})
 );
 travelerShadow.rotation.x=-Math.PI/2;
-travelerShadow.position.y=-.105;traveler.add(travelerShadow);
+travelerShadow.position.y=-.10;traveler.add(travelerShadow);
 
 // Camera-obstruction fading is separate from collisions and acoustic physics.
 // Every future room may register its own scenic meshes or ceiling geometry.
@@ -699,17 +738,24 @@ function updateCameraOcclusion(dt,now){
  }
 }
 function poseTraveler(t){
+ const elapsed=immersionTime-probeScanStarted;
+ const scan=elapsed>=0&&elapsed<.84?Math.sin(Math.PI*elapsed/.84):0;
+ probeGlowMat.emissiveIntensity=.28+3.2*scan*scan;
+ eyeProbe.visible=state.mode==='immersion'&&immersionView==='firstperson';
+ eyeProbe.position.set(.35-scan*.035,-.40+scan*.12,-.75-scan*.20);
+ eyeProbe.rotation.set(0,-.42+scan*.22,-.38+scan*.33);
  traveler.visible=state.mode==='immersion'&&immersionView==='overhead';
  if(!traveler.visible)return;
  traveler.position.set(state.playerX,0,state.playerZ);
  traveler.rotation.y=-state.yaw;
  const moving=Math.min(1,Math.hypot(state.moveX,state.moveY));
  const gait=Math.sin(t*9.2)*moving;
- travelerBody.position.y=.025*Math.sin(t*2.5)+.045*Math.abs(gait);
- travelerArms[0].rotation.z=.55*gait;
- travelerArms[1].rotation.z=-.55*gait;
- travelerLegs[0].rotation.z=-.53*gait;
- travelerLegs[1].rotation.z=.53*gait;
+ travelerBody.position.y=.025*Math.sin(t*2.5)+.03*Math.abs(gait);
+ travelerArms[0].rotation.z=.42*gait;
+ // Raise the probe-bearing forearm toward the tested surface, then lower it.
+ travelerArms[1].rotation.z=-.40*gait+1.16*scan;
+ travelerLegs[0].rotation.z=-.51*gait;
+ travelerLegs[1].rotation.z=.51*gait;
 }
 
 // Larger-on-the-inside illusion: outer shell shows the same world at miniature scale.
@@ -2555,6 +2601,7 @@ document.addEventListener('visibilitychange',()=>{
 // excites them. Holding the button repeatedly introduces energy over time.
 function playImpulse(sustained=false){
  if(state.mode!=='immersion')return;
+ startProbeScan();
  const cfg={hz:272,length:sustained?.38:.45,speed:6.6,
   strength:sustained?1.15:1.4,reach:12.5,color:0x84ddef,label:'Pulse'};
  const source={x:state.playerX,z:state.playerZ},t=immersionTime;
