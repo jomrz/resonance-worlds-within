@@ -1174,7 +1174,7 @@ function computeFieldPlane(){
  const begun=performance.now(),g=PLANE_GRID;
  const rawPressure=new Float32Array(sampleCount),rawAmplitude=new Float32Array(sampleCount);
  const rawOverlap=new Float32Array(sampleCount);
- beatFieldCells=[];
+ beatFieldCells.length=0;
  const active=state.osc.filter(o=>o.on).length;
  if(!active){
   landscape.visible=diagnosticLines.visible=false;
