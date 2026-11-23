@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.9.4</title>
+<title>Resonance: Worlds Within | Prototype 1.9.5</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -87,7 +87,7 @@ body.in-immersion #objective{display:none}
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.9.4</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.9.5</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
     <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER I · The submerged path</div>
@@ -267,16 +267,33 @@ const tiltNeutral={beta:null,gamma:null};
 // No visible sphere in the plane Observer experiment.
 // Removed the decorative orbit ring: it looked like an unexplained wave reflection.
 // Observer focuses on the acoustic landscape rather than decorative stars.
-const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,wallProbeAt:-100,wallProbeRealAt:-100,wallProbeZ:0,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false,beatProbeAt:-100};
+const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,wallSolved:false,wallProbeAt:-100,wallProbeRealAt:-100,wallProbeZ:0,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false,beatProbeAt:-100};
 // Remember the far-shore checkpoint across refreshes. A direct testing link
 // with ?start=stone also resumes this stage without replaying the pond.
 const WALL_PROGRESS_KEY='resonance19FarShore';
+const WALL_SOLVED_KEY='resonance19StoneSolved';
+const CHAMBER_TWO_KEY='resonance19ChamberTwoReached';
 try{
  const params=new URLSearchParams(window.location.search);
- if(params.get('reset')==='1')localStorage.removeItem(WALL_PROGRESS_KEY);
- if(params.get('start')==='stone'||localStorage.getItem(WALL_PROGRESS_KEY)==='1'){
+ if(params.get('reset')==='1'){
+  for(const key of [WALL_PROGRESS_KEY,WALL_SOLVED_KEY,CHAMBER_TWO_KEY])
+   localStorage.removeItem(key);
+ }
+ const resume=params.get('start');
+ if(resume==='stone'||localStorage.getItem(WALL_PROGRESS_KEY)==='1'){
   state.hasCrossedGap=true;state.playerX=4.25;state.playerZ=0;
+ }
+ if(localStorage.getItem(WALL_SOLVED_KEY)==='1'){
+  state.wallSolved=true;state.hasCrossedGap=true;
+ }
+ if(resume==='lamp'||localStorage.getItem(CHAMBER_TWO_KEY)==='1'){
+  state.hasCrossedGap=true;state.wallSolved=true;
+  state.activeChamber=1;state.playerX=10.3;state.playerZ=0;
+ }
+ if(resume==='lamp'){
   localStorage.setItem(WALL_PROGRESS_KEY,'1');
+  localStorage.setItem(WALL_SOLVED_KEY,'1');
+  localStorage.setItem(CHAMBER_TWO_KEY,'1');
  }
 }catch(e){}
 const observerPan=new THREE.Vector2(0,0); // Camera-space pan; globe pivot stays at origin.
@@ -1545,7 +1562,7 @@ function renderField(time=0){
     computeFieldPlane();
  // Material memory: the world holds its recent state for a limited immersed time.
  const crossingActive=state.waterRaisedUntil>immersionTime;
- const doorwayActive=state.wallOpenUntil>immersionTime;
+ const doorwayActive=state.wallSolved||state.wallOpenUntil>immersionTime;
  let stableCount=0;
  for(const tile of tiles){
   // The raised walkway follows a fixed mineral lattice: three parallel lanes.
@@ -1611,7 +1628,7 @@ function renderField(time=0){
      :state.urnStage===1?'THE URN STIRS · Add a second voice'
      :'URN DORMANT · Pulse it to hear its natural tone')
    :state.hasCrossedGap
-   ?(state.wallOpenUntil>immersionTime
+   ?(state.wallSolved||state.wallOpenUntil>immersionTime
      ?'STONE PASSAGE OPEN · Shift inside and continue'
      :state.wallCoupling>.78
       ?'STONE RESONATES · Shift inside and PULSE near the seam'
@@ -1686,9 +1703,13 @@ function groundAt(x,z){
  }
  // The far wall blocks progress until its central concealed door is opened.
  if(x>5.75&&x<6.35){
-   const open=state.wallOpenUntil>immersionTime;
+   const open=state.wallSolved||state.wallOpenUntil>immersionTime;
    if(!open||Math.abs(z)>1.02)return false;
  }
+ // There is a small physical join (7.82 to 8.15) between the first
+ // chamber's platform and the second chamber floor. It must be navigable;
+ // otherwise the player hits an invisible gap despite passing the gate.
+ if(x>7.79&&x<SECOND_START&&Math.abs(z)<1.60&&state.wallSolved)return true;
  if(x>=SECOND_START&&x<=SECOND_END&&Math.abs(z)<5.95){
    // The freestanding urn is not traversable, but can be pulsed beside it.
    return Math.hypot(x-URN.x,z-URN.z)>1.45;
@@ -1721,7 +1742,9 @@ $('keepExploring').addEventListener('click',()=>$('discovery').classList.add('hi
 $('anotherRoute').addEventListener('click',()=>{
  $('discovery').classList.add('hidden');
  state.finished=false;state.hasCrossedGap=false;
- try{localStorage.removeItem(WALL_PROGRESS_KEY)}catch(e){}
+ try{for(const key of [WALL_PROGRESS_KEY,WALL_SOLVED_KEY,CHAMBER_TWO_KEY])
+  localStorage.removeItem(key)}catch(e){}
+ state.wallSolved=false;
  state.playerX=-5.5;state.playerZ=0;state.yaw=0;state.pitch=-.07;
  state.waterRaisedUntil=-1;state.wallOpenUntil=-1;state.beatOpenUntil=-1;
  state.lampLit=false;state.urnCharge=0;state.urnStage=0;state.urnReady=false;
@@ -1802,7 +1825,7 @@ function playImpulse(sustained=false){
  const nearPool=state.playerX>-6.6&&state.playerX<-3.1&&Math.abs(state.playerZ)<2.5;
  const nearWall=state.playerX>3.7&&state.playerX<6.1&&Math.abs(state.playerZ)<2.2;
  let response='Pulse spreads and scatters through the chamber';
- let kindled=false;
+ let kindled=false,wallOpenedNow=false;
  if(nearUrn){
   if(!sustained)playMaterialEcho(URN_HZ);
   if(state.lampLit)response='The lamp burns steadily · Three voices remember one frequency';
@@ -1845,9 +1868,15 @@ function playImpulse(sustained=false){
   state.wallProbeAt=immersionTime;
   state.wallProbeRealAt=performance.now()*.001;
   state.wallProbeZ=Math.max(-.93,Math.min(.93,state.playerZ));
-  if(state.wallCoupling>.78){
-   state.wallOpenUntil=immersionTime+30;
-   response='The hollow cavity resonates · Stone passage opens';
+  if(state.wallSolved){
+   response='The stone passage remains open · Continue toward the urn';
+  }else if(state.wallCoupling>.78){
+   state.wallSolved=true;wallOpenedNow=true;
+   try{
+    localStorage.setItem(WALL_SOLVED_KEY,'1');
+    localStorage.setItem(WALL_PROGRESS_KEY,'1');
+   }catch(e){}
+   response='The hollow cavity resonates · Stone passage unlocked';
   }else{
    if(!sustained)playMaterialEcho(WALL_MODE_HZ);
    response='Hollow wall answers near '+WALL_MODE_HZ+' Hz · Retune in Observer';
@@ -1861,7 +1890,7 @@ function playImpulse(sustained=false){
   return;
  }
  if(!sustained||state.beatOpenUntil===immersionTime+28||
-   state.waterRaisedUntil===immersionTime+38||state.wallOpenUntil===immersionTime+30)toast(response);
+   state.waterRaisedUntil===immersionTime+38||wallOpenedNow)toast(response);
 }
 function playMaterialEcho(hz){
  if(!soundOn||!audioCtx||audioCtx.state!=='running')return;
@@ -2192,6 +2221,14 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
     state.activeChamber=chamber;
     $('previewRoom').textContent=chamber?'Test Room I':'Test Room II';
     updateRailGraphics();planeDirty=true;
+    if(chamber===1){
+     state.wallSolved=true;
+     try{
+      localStorage.setItem(WALL_PROGRESS_KEY,'1');
+      localStorage.setItem(WALL_SOLVED_KEY,'1');
+      localStorage.setItem(CHAMBER_TWO_KEY,'1');
+     }catch(e){}
+    }
     updateObjective();
     toast(chamber?'CHAMBER II · The urn awaits three voices':'CHAMBER I · The submerged path');
    }
