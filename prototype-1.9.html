@@ -1405,7 +1405,13 @@ function renderField(time=0){
      (state.foundWallTone?'Hollow wall: '+WALL_MODE_HZ+' Hz':null)].filter(Boolean).join(' · ')
    :'Pulse near a material in Immersion to learn its tone';
  if(state.mode==='observer'){
-  $('fieldStatus').textContent=state.activeEmitters===0
+  $('fieldStatus').textContent=state.activeChamber===1
+   ?(state.lampLit?'LAMP KINDLED · Three horns remain in harmony'
+     :state.urnReady?'THE URN IS COHERENT · Return and Pulse beside it'
+     :state.urnStage===2?'TWO CHANNELS RESPOND · Find a third matching voice'
+     :state.urnStage===1?'THE URN STIRS · Add a second voice'
+     :'URN DORMANT · Pulse it to hear its natural tone')
+   :state.activeEmitters===0
    ?'NO EMITTERS ACTIVE · Acoustic field is silent'
    :state.beatCharge>.56
    ?'DISC POTENTIAL · Shift inside and PULSE near the disc'
@@ -1413,6 +1419,12 @@ function renderField(time=0){
    ?'POOL RESONATES · Go inside and PULSE near the rim'
    :state.wallCoupling>.78?'WALL RESONATES · Go inside and PULSE near the seam'
    :'TUNE THE 2D FIELD · Pulse materials to learn their tone';
+ }else if(state.activeChamber===1){
+  $('fieldStatus').textContent=state.lampLit?'THE LAMP IS BURNING · Explore'
+   :state.urnReady?'THREE HORNS IN UNISON · Pulse the urn'
+   :state.urnStage>=2?'THE URN IS WAKING · Find its third voice at '+URN_HZ+' Hz'
+   :state.urnStage===1?'ONE VOICE SHIMMERS · Tune the other horns'
+   :'THE BRONZE URN IS QUIET · Pulse beside it to hear its tone';
  }else if(Math.hypot(state.playerX-DISC.x,state.playerZ-DISC.z)<2.3){
   $('fieldStatus').textContent=state.beatOpenUntil>immersionTime
    ?'BEAT VAULT OPEN · Explore the northern alcove'
@@ -1483,25 +1495,30 @@ function groundAt(x,z){
 }
 function finishPassage(){
  if(state.finished)return;
- state.finished=true;
- stopJoystick(null);stopLookJoystick(null);
- const config=state.osc.map(o=>({hz:o.freq,on:o.on,phase:o.phase,aim:o.aim||0}));
- const saved=JSON.parse(localStorage.getItem('resonanceCrossings')||'[]');
- const key=config.map(o=>o.on?o.hz:'off').join('-');
+ state.finished=true;stopJoystick(null);stopLookJoystick(null);stopPulse();
+ const config=state.osc.map(o=>({hz:o.freq,on:o.on,aim:o.aim||0,rail:o.rail}));
+ const saved=JSON.parse(localStorage.getItem('resonanceKindling19')||'[]');
+ const key=config.map(o=>o.on?o.hz+':'+Math.round(o.rail*100):'off').join('-');
  if(!saved.some(entry=>entry.key===key)){
-   saved.push({key,date:new Date().toISOString(),config});
-   localStorage.setItem('resonanceCrossings',JSON.stringify(saved.slice(-25)));
+  saved.push({key,date:new Date().toISOString(),config});
+  localStorage.setItem('resonanceKindling19',JSON.stringify(saved.slice(-25)));
  }
- $('discoveryText').textContent=
-   `You coupled a standing mode to the mineral pool, raised the stepping stones with a pulse, and revealed the concealed passage with a chime. Configuration (${key}) recorded. ${saved.length} distinct crossing solution${saved.length===1?'':'s'} discovered.`;
+ $('discoveryTitle').textContent='The lamp awakens';
+ $('discoveryText').textContent='You crossed the submerged path, opened the hidden wall, '+
+  'and brought three horns into unison at '+URN_HZ+' Hz. '+
+  'One final Pulse made their shared resonance tangible. '+
+  saved.length+' distinct kindling arrangement'+(saved.length===1?'':'s')+' recorded.';
  $('discovery').classList.remove('hidden');
 }
 $('keepExploring').addEventListener('click',()=>$('discovery').classList.add('hidden'));
 $('anotherRoute').addEventListener('click',()=>{
- $('discovery').classList.add('hidden');state.finished=false;state.hasCrossedGap=false;
+ $('discovery').classList.add('hidden');
+ state.finished=false;state.hasCrossedGap=false;
  state.playerX=-5.5;state.playerZ=0;state.yaw=0;state.pitch=-.07;
  state.waterRaisedUntil=-1;state.wallOpenUntil=-1;state.beatOpenUntil=-1;
- toast('Both mechanisms reset. Test another configuration');
+ state.lampLit=false;state.urnCharge=0;state.urnStage=0;state.urnReady=false;
+ state.activeChamber=0;updateRailGraphics();planeDirty=true;
+ renderField();toast('Both chambers reset · Discover another arrangement');
 });
 let audioCtx=null,voices=[],soundOn=false,masterGain=null;
 async function toggleSound(){
@@ -1571,11 +1588,26 @@ function playImpulse(sustained=false){
   o.connect(gain);gain.connect(masterGain);
   o.start(at);o.stop(at+cfg.length+.025);
  }
+ const nearUrn=state.activeChamber===1&&Math.hypot(state.playerX-URN.x,state.playerZ-URN.z)<3.0;
  const nearDisc=Math.hypot(state.playerX-DISC.x,state.playerZ-DISC.z)<2.1;
  const nearPool=state.playerX>-6.6&&state.playerX<-3.1&&Math.abs(state.playerZ)<2.5;
  const nearWall=state.playerX>3.7&&state.playerX<6.1&&Math.abs(state.playerZ)<2.2;
  let response='Pulse spreads and scatters through the chamber';
- if(nearDisc){
+ let kindled=false;
+ if(nearUrn){
+  if(!sustained)playMaterialEcho(URN_HZ);
+  if(state.lampLit)response='The lamp burns steadily · Three voices remember one frequency';
+  else if(state.urnReady){
+   state.lampLit=true;kindled=true;
+   response='THREE HORNS IN UNISON · The urn kindles the suspended lamp';
+  }else if(state.urnStage===2){
+   response='Two channels shimmer around the urn · The third horn must join at '+URN_HZ+' Hz';
+  }else if(state.urnStage===1){
+   response='One ribbon answers the urn · It wants three horns singing together at '+URN_HZ+' Hz';
+  }else{
+   response='The bronze urn rings at '+URN_HZ+' Hz · Three horns must share the same tone';
+  }
+ }else if(nearDisc){
   state.foundDisc=true;
   if(state.beatCharge>.56){
    state.beatOpenUntil=immersionTime+28;
@@ -1607,6 +1639,7 @@ function playImpulse(sustained=false){
   }
  }
  planeDirty=true;renderField(immersionTime);
+ if(kindled){finishPassage();return;}
  if(!sustained||state.beatOpenUntil===immersionTime+28||
    state.waterRaisedUntil===immersionTime+38||state.wallOpenUntil===immersionTime+30)toast(response);
 }
@@ -1640,9 +1673,11 @@ function changeMode(mode){
  $('shiftMode').textContent=mode==='observer'?'Enter Immersion':'Enter Observer';
  /* No tool choice in 1.8. */
  physicalWorld.visible=mode==='immersion';
- $('objective').textContent=mode==='observer'
-   ?'OBSERVER · A world perceived through resonance'
-   :'IMMERSION · Time flows · Waves travel · Reach the gate';
+ $('objective').textContent=state.activeChamber===1
+   ?(mode==='observer'?'CHAMBER II · Three horns, one frequency'
+       :'CHAMBER II · The urn and the sleeping lamp')
+   :(mode==='observer'?'CHAMBER I · Reveal the submerged path'
+       :'CHAMBER I · Water crossing and the hidden stone');
  for(const p of state.pulses)if(p.visual)p.visual.visible=mode==='immersion';
  $('observer').classList.toggle('active',mode==='observer');
  $('immerse').classList.toggle('active',mode==='immersion');
@@ -1860,6 +1895,8 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
    if(chamber!==state.activeChamber){
     state.activeChamber=chamber;
     updateRailGraphics();planeDirty=true;
+    $('objective').textContent=chamber?'CHAMBER II · The urn and the sleeping lamp'
+      :'CHAMBER I · The submerged path';
     toast(chamber?'CHAMBER II · The urn awaits three voices':'CHAMBER I · The submerged path');
    }
    if(groundAt(state.playerX,state.playerZ))state.lastGrounded=t;
