@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.9.5</title>
+<title>Resonance: Worlds Within | Prototype 1.9.6</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -87,7 +87,7 @@ body.in-immersion #objective{display:none}
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.9.5</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.9.6</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
     <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER I · The submerged path</div>
@@ -267,7 +267,7 @@ const tiltNeutral={beta:null,gamma:null};
 // No visible sphere in the plane Observer experiment.
 // Removed the decorative orbit ring: it looked like an unexplained wave reflection.
 // Observer focuses on the acoustic landscape rather than decorative stars.
-const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,wallSolved:false,wallProbeAt:-100,wallProbeRealAt:-100,wallProbeZ:0,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false,beatProbeAt:-100};
+const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,wallSolved:false,wallProbeAt:-100,wallProbeRealAt:-100,wallProbeZ:0,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,wallBeatStrength:0,wallBeatRate:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false,beatProbeAt:-100};
 // Remember the far-shore checkpoint across refreshes. A direct testing link
 // with ?start=stone also resumes this stage without replaying the pond.
 const WALL_PROGRESS_KEY='resonance19FarShore';
@@ -1343,15 +1343,21 @@ function animateBeatField(seconds){
  // wallCoupling that controls the stone puzzle; a recent local Pulse contributes
  // a short-lived impulse even if the horns are detuned.
  const probeAge=performance.now()*.001-state.wallProbeRealAt;
- const probeEcho=probeAge>=0&&probeAge<5?Math.exp(-probeAge*.75):0;
- const driven=state.activeChamber===0&&state.hasCrossedGap?
-   Math.min(1,Math.max(state.wallCoupling,probeEcho*.76)):0;
+ const probeEcho=probeAge>=0&&probeAge<3.2?Math.exp(-probeAge*1.35):0;
+ const realBeat=state.activeChamber===0&&state.hasCrossedGap?
+   state.wallBeatStrength:0;
+ // A steady resonant tone by itself is not a low-frequency beat: show the
+ // static energy field, not invented oscillations. A recent local Pulse is
+ // a brief, separate impulse and fades promptly.
+ const driven=Math.min(1,Math.max(realBeat,probeEcho*.62));
  if(driven>.006){
   for(const cell of wallFieldCells){
     const j=cell.index,k=j*4;
-    // The slow visual envelope reveals how a much faster sound excites the
-    // surface. The wave still belongs to the existing 2D acoustic field.
-    const pressure=Math.sin(seconds*7.1-cell.r*3.15);
+    // The wave height and light move with a real acoustic beat rate, or with
+    // a single fading wavefront when a player has just pulsed the stone.
+    const pressure=realBeat>.006?
+      Math.cos(2*Math.PI*state.wallBeatRate*seconds-cell.r*2.4):
+      Math.sin(probeAge*17-cell.r*3.15);
     const motion=driven*cell.weight*pressure;
     heightBuffer[j*3+1]=Math.max(.08,beatBaseHeights[j]+.72*motion);
     const glow=driven*cell.weight*(.5+.5*pressure);
@@ -1512,7 +1518,8 @@ function updateUrnResponse(){
 function updateCouplings(){
  if(state.activeChamber!==0){
   state.activeEmitters=state.osc.reduce((n,o)=>n+(o.on?1:0),0);
-  state.poolCoupling=state.wallCoupling=0;return;
+  state.poolCoupling=state.wallCoupling=0;
+  state.wallBeatStrength=state.wallBeatRate=0;return;
  }
  const enabled=state.osc.reduce((n,o)=>n+(o.on?1:0),0);
  state.activeEmitters=enabled;
@@ -1527,7 +1534,27 @@ function updateCouplings(){
   return Math.min(1,coupling);
  }
  state.poolCoupling=response(WATER_MODE_HZ,5.5,{x:-4.12,z:0});
- state.wallCoupling=response(WALL_MODE_HZ,7,{x:5.82,z:0});
+ const stone={x:5.82,z:0};
+ state.wallCoupling=response(WALL_MODE_HZ,7,stone);
+ // A single source tuned to 224 Hz can hold a stationary stone mode, but it
+ // cannot create a slow beat. Only two active, spatially overlapping horns
+ // with different nearby frequencies cause the Observer wave mesh to pulse.
+ state.wallBeatStrength=0;state.wallBeatRate=0;
+ for(let i=0;i<state.osc.length;i++)for(let j=i+1;j<state.osc.length;j++){
+  const a=state.osc[i],b=state.osc[j];
+  if(!a.on||!b.on)continue;
+  const difference=Math.abs(a.freq-b.freq);
+  if(difference<.15||difference>9)continue;
+  const localA=localResponse2D(i,stone),localB=localResponse2D(j,stone);
+  const overlap=Math.min(1,Math.sqrt(localA*localB)*2.2);
+  const sympathetic=Math.sqrt(
+    resonance(a.freq,WALL_MODE_HZ,11)*resonance(b.freq,WALL_MODE_HZ,11));
+  const strength=overlap*sympathetic;
+  if(strength>state.wallBeatStrength){
+   state.wallBeatStrength=strength;
+   state.wallBeatRate=difference;
+  }
+ }
 }
 function waterMode(x,y,z){
  const envelope=Math.exp(-Math.pow(x/5.5,4));
