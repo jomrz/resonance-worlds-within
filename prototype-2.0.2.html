@@ -109,7 +109,7 @@ body.in-immersion #inspectZoom{display:none}
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 2.0.2</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 2.0.2</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · Temple Threshold</div></div>
     <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button><button id="cameraMode" aria-label="Switch Immersion perspective" aria-pressed="false">Eye view</button>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER I · The submerged path</div>
@@ -151,6 +151,7 @@ const scene=new THREE.Scene();
 scene.background=new THREE.Color('#121f20');
 scene.fog=new THREE.FogExp2('#152626',.019);
 const camera=new THREE.PerspectiveCamera(56,(canvas.clientWidth||window.innerWidth)/(canvas.clientHeight||window.innerHeight),.035,180);
+scene.add(camera); // Render the first-person resonance probe attached to the camera.
 scene.add(new THREE.HemisphereLight(0xc6dfd1,0x26362f,1.9));
 const sun=new THREE.DirectionalLight(0xffe2ac,2.45);sun.position.set(-5,15,9);scene.add(sun);
 const amber=new THREE.PointLight(0xe4ba84,12,26);amber.position.set(5,6,-1);scene.add(amber);
@@ -2720,10 +2721,10 @@ function updateObjective(){
   ?(state.mode==='observer'?'CHAMBER II · Three horns, one frequency':
     'CHAMBER II · The urn and the sleeping lamp')
   :state.hasCrossedGap
-   ?(state.mode==='observer'?'CHAMBER I · Tune the hidden stone':
-     'CHAMBER I · Find the seam in the stone')
-   :(state.mode==='observer'?'CHAMBER I · Reveal the submerged path':
-     'CHAMBER I · Water crossing and the hidden stone');
+   ?(state.mode==='observer'?'TEMPLE THRESHOLD · Tune the ancient gate':
+     'TEMPLE THRESHOLD · Find the resonant seam')
+   :(state.mode==='observer'?'TEMPLE ENTRANCE · Reveal the hidden path':
+     'TEMPLE ENTRANCE · Cross the resonant water');
 }
 function changeMode(mode){
  endInspect();
