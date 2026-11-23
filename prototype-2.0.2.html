@@ -132,7 +132,7 @@ body.in-immersion #inspectZoom{display:none}
   <button id="inspectZoom" aria-label="Hold for close Observer inspection, drag to pan">⌕ <span>Hold to inspect</span></button>
    <div id="crosshair" aria-hidden="true">·</div>
   <section id="immersionTools" aria-label="Local physical instruments">
-    <button id="actionButton" aria-label="Pulse, hold for sustained waves"><span id="actionGlyph">◎</span><small id="actionName">Pulse</small></button>
+    <button id="actionButton" aria-label="Probe nearby surfaces, hold for sustained scans"><span id="actionGlyph">⌁</span><small id="actionName">Probe</small></button>
     
     </section>
 </div>
@@ -642,6 +642,7 @@ function makeProbe(parent,scale=1){
  sensor.rotation.y=Math.PI/2;sensor.position.x=.59;group.add(sensor);
  const tip=new THREE.Mesh(new THREE.SphereGeometry(.072,10,8),probeGlowMat);
  tip.position.x=.65;group.add(tip);
+ group.userData.sensorTip=tip;
  return group;
 }
 const wandRig=new THREE.Group();
@@ -655,6 +656,35 @@ eyeProbe.position.set(.35,-.38,-.75);
 const nearProbe=makeProbe(eyeProbe,1.05);
 eyeProbe.rotation.set(0,-.42,-.38);
 let probeScanStarted=-100;
+const probeScanTarget=new THREE.Vector3();
+const probeBeamGeometry=new THREE.BufferGeometry();
+const probeBeamPositions=new Float32Array(6);
+probeBeamGeometry.setAttribute('position',new THREE.BufferAttribute(probeBeamPositions,3));
+const probeBeamMaterial=new THREE.LineBasicMaterial({
+ color:0xa7ebea,transparent:true,opacity:0,depthWrite:false,
+ blending:THREE.AdditiveBlending
+});
+const probeBeam=new THREE.Line(probeBeamGeometry,probeBeamMaterial);
+probeBeam.visible=false;physicalWorld.add(probeBeam);
+const probeWorldTip=new THREE.Vector3();
+function updateProbeBeam(){
+ const elapsed=immersionTime-probeScanStarted;
+ const on=state.mode==='immersion'&&elapsed>=0&&elapsed<.65;
+ probeBeam.visible=on;
+ if(!on)return;
+ const sensor=immersionView==='overhead'?
+  handProbe.userData.sensorTip:nearProbe.userData.sensorTip;
+ sensor.getWorldPosition(probeWorldTip);
+ probeBeamPositions[0]=probeWorldTip.x;
+ probeBeamPositions[1]=probeWorldTip.y;
+ probeBeamPositions[2]=probeWorldTip.z;
+ probeBeamPositions[3]=probeScanTarget.x;
+ probeBeamPositions[4]=probeScanTarget.y;
+ probeBeamPositions[5]=probeScanTarget.z;
+ probeBeamGeometry.attributes.position.needsUpdate=true;
+ const envelope=Math.sin(Math.PI*Math.min(1,elapsed/.65));
+ probeBeamMaterial.opacity=.27*Math.max(0,envelope);
+}
 function startProbeScan(){
  if(immersionTime-probeScanStarted>.32)probeScanStarted=immersionTime;
 }
@@ -2452,11 +2482,11 @@ function renderField(time=0){
  }else if(state.playerX< -3.1){
   const remaining=Math.max(0,Math.ceil(state.waterRaisedUntil-immersionTime));
   $('fieldStatus').textContent=crossingActive?'WATER PATH RAISED · '+remaining+' seconds left'
-   :state.poolCoupling>.78?'POOL IS RESONATING · PULSE to raise the path'
+   :state.poolCoupling>.78?'POOL IS RESONATING · PROBE to raise the path'
    :'POOL IS QUIET · Pulse the rim and retune outside';
  }else{
   $('fieldStatus').textContent=doorwayActive?'HIDDEN DOOR OPEN · Reach the gate'
-   :stoneReady()?'HOLLOW WALL RESONATES · PULSE near it'
+   :stoneReady()?'HOLLOW WALL RESONATES · PROBE near it'
    :'STONE WALL BLOCKS THE EXIT · Pulse to investigate';
  }
 }
@@ -2625,6 +2655,14 @@ function playImpulse(sustained=false){
  const nearDisc=Math.hypot(state.playerX-DISC.x,state.playerZ-DISC.z)<2.1;
  const nearPool=state.playerX>-6.6&&state.playerX<-3.1&&Math.abs(state.playerZ)<2.5;
  const nearWall=state.playerX>3.7&&state.playerX<6.1&&Math.abs(state.playerZ)<2.2;
+ // Scan only a surface near the explorer; its own existing acoustic model
+ // generates the response. The beam is feedback, not a second physics engine.
+ if(nearUrn)probeScanTarget.set(URN.x,1.58,URN.z);
+ else if(nearWall)probeScanTarget.set(5.77,1.64,Math.max(-.84,Math.min(.84,state.playerZ)));
+ else if(nearDisc)probeScanTarget.set(DISC.x,DISC.y,DISC.z);
+ else if(nearPool)probeScanTarget.set(-4.12,.18,0);
+ else probeScanTarget.set(state.playerX+2.1*Math.cos(state.yaw),1.1,
+  state.playerZ+2.1*Math.sin(state.yaw));
  let response='Pulse spreads and scatters through the chamber';
  let kindled=false,wallOpenedNow=false;
  if(nearUrn){
@@ -3234,6 +3272,7 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
     if(age>=3){world.remove(p.visual);p.visual.geometry.dispose();p.visual.material.dispose();}
   }
   state.pulses=state.pulses.filter(p=>immersionTime-p.t<3);
+  updateProbeBeam();
   updateCameraOcclusion(dt,t);
   if(frame++%3===0)renderField(state.mode==='immersion'?immersionTime:0);
   renderer.render(scene,camera);
