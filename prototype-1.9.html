@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#09101b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Resonance" />
-<title>Resonance: Worlds Within | Prototype 1.9.1</title>
+<title>Resonance: Worlds Within | Prototype 1.9.2</title>
 <style>
 :root {color-scheme:dark; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; --ink:#eaf2ff; --muted:#91a7be; --edge:rgba(155,191,219,.2)}
 * {box-sizing:border-box} body {margin:0; background:#09101b;color:var(--ink);overscroll-behavior:none;overflow:hidden;}
@@ -87,7 +87,7 @@ body.in-immersion #objective{display:none}
 <canvas id="world"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="identity"><div class="kicker">PROTOTYPE 1.9.1</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
+    <div id="identity"><div class="kicker">PROTOTYPE 1.9.2</div><div class="name">RESONANCE</div><div class="sub">Worlds Within · The Kindling Chamber</div></div>
     <div id="mode" hidden><button id="observer" class="active">Observer</button><button id="immerse">Immersion</button></div><button id="shiftMode" aria-label="Shift between Observer and Immersion">Enter Immersion</button>
   </div>
   <div id="status"><span id="fieldStatus">Tune the field to discover stable formations</span></div><div id="objective">CHAMBER I · The submerged path</div>
@@ -276,7 +276,7 @@ const tiltNeutral={beta:null,gamma:null};
 // No visible sphere in the plane Observer experiment.
 // Removed the decorative orbit ring: it looked like an unexplained wave reflection.
 // Observer focuses on the acoustic landscape rather than decorative stars.
-const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,wallProbeAt:-100,wallProbeZ:0,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false,beatProbeAt:-100};
+const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,wallProbeAt:-100,wallProbeRealAt:-100,wallProbeZ:0,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false,beatProbeAt:-100};
 // Remember the far-shore checkpoint across refreshes. A direct testing link
 // with ?start=stone also resumes this stage without replaying the pond.
 const WALL_PROGRESS_KEY='resonance19FarShore';
@@ -1048,15 +1048,20 @@ observer2D.add(wallEcho);
 // They express WALL coupling; the disc's 4 Hz beat remains over the disc.
 const wallObserverRings=[];
 for(let i=0;i<3;i++){
- const points=Array.from({length:56},(_,j)=>{
-  const a=2*Math.PI*j/56;
-  return new THREE.Vector3(Math.cos(a),0,Math.sin(a));
- });
- const ring=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points),
-  new THREE.LineBasicMaterial({color:0x94e4fb,transparent:true,opacity:0,depthWrite:false}));
- ring.position.set(5.65,.28,0);
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(1,.046,8,72),
+  new THREE.MeshBasicMaterial({color:0x7ee6ff,transparent:true,opacity:0,
+   side:THREE.DoubleSide,depthWrite:false,depthTest:false}));
+ ring.rotation.x=-Math.PI/2;
+ ring.position.set(5.85,1.92,0); // Exactly at the hidden wall's center.
+ ring.renderOrder=24;
  ring.visible=false;observer2D.add(ring);wallObserverRings.push(ring);
 }
+const wallObserverAnchor=new THREE.Mesh(new THREE.SphereGeometry(.15,12,10),
+ new THREE.MeshBasicMaterial({color:0xd0f5ff,transparent:true,opacity:.2,
+  depthWrite:false,depthTest:false}));
+wallObserverAnchor.position.set(5.85,1.94,0);
+wallObserverAnchor.renderOrder=25;
+wallObserverAnchor.visible=false;observer2D.add(wallObserverAnchor);
 const urnEchoRings=[];
 for(let i=0;i<3;i++){
  const material=new THREE.LineBasicMaterial({color:[0x73d2eb,0xe9c597,0xc8a8ec][i],
@@ -1263,6 +1268,7 @@ function computeFieldPlane(){
     for(let siteIndex=0;siteIndex<BEAT_SITES.length;siteIndex++){
       const site=BEAT_SITES[siteIndex],a=site.sources[0],b=site.sources[1];
       if(site.chamber!==state.activeChamber||
+         (state.activeChamber===0&&state.hasCrossedGap)||
          !state.osc[a].on||!state.osc[b].on)continue;
       const r=Math.hypot(wx-site.x,wz-site.z);
       if(r>site.radius*1.85)continue;
@@ -1567,7 +1573,8 @@ function renderField(time=0){
  $('aimTip').textContent=selectedEmitterIndex>=0
    ?'Head '+Math.round(state.osc[selectedEmitterIndex].aim||0)+'° inward'
    :state.activeEmitters===0?'Silent plane':'Select a source to move it';
- beatHalo.visible=state.activeChamber===0&&state.beatOverlap>.03;
+ beatHalo.visible=state.activeChamber===0&&!state.hasCrossedGap&&
+  state.beatOverlap>.03;
  beatHalo.material.opacity=.05+.35*state.beatCharge;
  $('powerHint').textContent=state.activeEmitters===0
    ?'No active sources. The acoustic plane is silent.'
@@ -1819,6 +1826,7 @@ function playImpulse(sustained=false){
  }else if(nearWall){
   state.foundWallTone=true;
   state.wallProbeAt=immersionTime;
+  state.wallProbeRealAt=performance.now()*.001;
   state.wallProbeZ=Math.max(-.93,Math.min(.93,state.playerZ));
   if(state.wallCoupling>.78){
    state.wallOpenUntil=immersionTime+30;
@@ -2246,17 +2254,27 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
     ring.material.opacity=Math.min(.66,strength*(.48-i*.095));
     ring.scale.setScalar(1+.08*i+.19*strength);
   });
-  beatHalo.material.opacity=state.mode==='observer'&&canSeeBeat?
+  beatHalo.material.opacity=state.mode==='observer'&&!state.hasCrossedGap&&canSeeBeat?
     .09+(.24+.44*matchingBeat)*drivenStrength*beatEnvelope:0;
   beatHalo.scale.setScalar(.92+.26*drivenStrength*beatEnvelope);
   const wallCoherence=state.activeChamber===0?state.wallCoupling:0;
+  const wallFocused=state.mode==='observer'&&state.activeChamber===0&&
+    state.hasCrossedGap;
+  const wallProbeAge=performance.now()*.001-state.wallProbeRealAt;
+  const wallProbeMemory=wallProbeAge>=0&&wallProbeAge<5?
+    Math.exp(-wallProbeAge*.67):0;
+  const wallDisplayEnergy=Math.max(wallCoherence,wallProbeMemory*.85);
+  wallObserverAnchor.visible=wallFocused;
+  wallObserverAnchor.material.opacity=wallFocused?.32+.58*wallDisplayEnergy:0;
+  wallObserverAnchor.scale.setScalar(1+.27*wallDisplayEnergy*Math.sin(t*5));
   wallObserverRings.forEach((ring,i)=>{
-    const active=state.mode==='observer'&&state.activeChamber===0&&
-     (state.hasCrossedGap||wallCoherence>.045);
-    const swell=.5+.5*Math.sin(t*5.2-i*.9);
-    ring.visible=active;
-    ring.scale.setScalar(.42+i*.31+.06*wallCoherence*swell);
-    ring.material.opacity=active?(.04+.40*wallCoherence*swell):0;
+    // Three expanding wavefronts originate at the stone, not the disc.
+    // A wrong-frequency test produces a short echo; coupling sustains it.
+    const progress=((t*1.18-i/3)%1+1)%1;
+    ring.visible=wallFocused;
+    ring.scale.setScalar(.24+1.12*progress);
+    ring.material.opacity=wallFocused?
+      (.12+.76*wallDisplayEnergy)*(1-progress)*(.52+.48*wallDisplayEnergy):0;
   });
   const wallAge=immersionTime-state.wallProbeAt;
   const wallImpact=state.mode==='immersion'&&state.activeChamber===0&&
