@@ -699,6 +699,338 @@ function refreshBeamGuides(){
  }
  beamGuideDirty=false;
 }
+// EXPERIMENT 1.8 - 2D ACOUSTIC OBSERVER
+// One horizontal calculation plane, selective material objects, and a
+// fixed elliptical emitter rail. Geometry and responses are in chamber
+// coordinates; the orbiting camera never rotates the physical world.
+const OBSERVER_SCALE=.38;
+const RAIL={rx:9.70,rz:8.80};
+const PLANE_GRID={nx:76,nz:68,x0:-8.05,z0:-7.05,dx:16.10/75,dz:14.10/67};
+const observer2D=new THREE.Group();world.add(observer2D);
+let selectedFieldView='field',planeDirty=true,lastPlaneBuild=-1;
+const deg=Math.PI/180;
+function wrapAngle(a){return Math.atan2(Math.sin(a),Math.cos(a))}
+function railAt(i){
+ const t=Number.isFinite(state.osc[i].rail)?state.osc[i].rail:[Math.PI,0,-Math.PI/2][i];
+ return {x:RAIL.rx*Math.cos(t),z:RAIL.rz*Math.sin(t)};
+}
+function aimRadians(i){
+ const p=railAt(i);
+ return Math.atan2(-p.z,-p.x)+Math.max(-90,Math.min(90,state.osc[i].aim||0))*deg;
+}
+function emitterDirection(i){const a=aimRadians(i);return {x:Math.cos(a),z:Math.sin(a)}}
+function refreshSourceCoordinates(){
+ for(let i=0;i<3;i++){const p=railAt(i);EMITTERS[i].x=p.x;EMITTERS[i].z=p.z}
+}
+refreshSourceCoordinates();
+// Active acoustic objects come from actual geometry, not scenery.
+// Floor, water plane, thin ornaments, and the decorative shell are omitted.
+function segmentFromStone(mesh,coeff){
+ const par=mesh.geometry.parameters,ang=mesh.rotation.y;
+ const alongWidth=par.width>par.depth;
+ const half=(alongWidth?par.width:par.depth)/2;
+ const dx=(alongWidth?Math.cos(ang):-Math.sin(ang))*half;
+ const dz=(alongWidth?Math.sin(ang):Math.cos(ang))*half;
+ return {ax:mesh.position.x-dx,az:mesh.position.z-dz,
+  bx:mesh.position.x+dx,bz:mesh.position.z+dz,
+  mesh,reflection:coeff,initialY:mesh.position.y};
+}
+const acousticSegments=[
+ segmentFromStone(acousticMirror,.78),
+ segmentFromStone(acousticBaffle,.58),
+ segmentFromStone(hiddenDoor,.62),
+ segmentFromStone(beatVault,.7)
+];
+for(const mesh of physicalWorld.children){
+ if(!mesh.isMesh||mesh.geometry.type!=='BoxGeometry'||mesh.material!==stoneMat)continue;
+ const par=mesh.geometry.parameters;
+ if(par.height>3&&par.width<.65&&par.depth>2.5
+  &&Math.abs(mesh.position.x-6.03)<.1)
+  acousticSegments.push(segmentFromStone(mesh,.66));
+}
+const acousticColumns=[];
+for(const mesh of physicalWorld.children){
+ if(!mesh.isMesh||mesh.geometry.type!=='BoxGeometry'||mesh.material!==stoneMat)continue;
+ const p=mesh.geometry.parameters;
+ if(mesh===acousticBaffle||mesh===acousticMirror)continue;
+ if(p.height<1.8||p.width>1.15||p.depth>1.2)continue;
+ acousticColumns.push({x:mesh.position.x,z:mesh.position.z,
+  radius:Math.max(p.width,p.depth)*.47,reflection:.42});
+}
+function activeSegment(seg){
+ return Math.abs(seg.mesh.position.y-seg.initialY)<.9;
+}
+function cross2(ax,az,bx,bz){return ax*bz-az*bx}
+function segmentHit2(a,b,c,d){
+ const ux=b.x-a.x,uz=b.z-a.z,vx=d.x-c.x,vz=d.z-c.z;
+ const den=cross2(ux,uz,vx,vz);
+ if(Math.abs(den)<1e-9)return null;
+ const qx=c.x-a.x,qz=c.z-a.z;
+ const t=cross2(qx,qz,vx,vz)/den,u=cross2(qx,qz,ux,uz)/den;
+ if(t>.008&&t<.992&&u>=0&&u<=1)return {t,u,x:a.x+t*ux,z:a.z+t*uz};
+ return null;
+}
+function blockedByStone(a,b,exclude=null){
+ for(const seg of acousticSegments){
+  if(seg===exclude||!activeSegment(seg))continue;
+  if(segmentHit2(a,b,{x:seg.ax,z:seg.az},{x:seg.bx,z:seg.bz}))return true;
+ }
+ return false;
+}
+function bounce2D(source,target,seg){
+ if(!activeSegment(seg))return null;
+ const dx=seg.bx-seg.ax,dz=seg.bz-seg.az,L=Math.hypot(dx,dz);
+ if(L<.01)return null;
+ const nx=-dz/L,nz=dx/L;
+ const ds=(source.x-seg.ax)*nx+(source.z-seg.az)*nz;
+ const dt=(target.x-seg.ax)*nx+(target.z-seg.az)*nz;
+ if(ds*dt<=.005)return null;
+ const mirror={x:source.x-2*ds*nx,z:source.z-2*ds*nz};
+ const rayX=target.x-mirror.x,rayZ=target.z-mirror.z,den=rayX*nx+rayZ*nz;
+ if(Math.abs(den)<1e-8)return null;
+ const t=-((mirror.x-seg.ax)*nx+(mirror.z-seg.az)*nz)/den;
+ if(t<=0||t>=1)return null;
+ const hit={x:mirror.x+t*rayX,z:mirror.z+t*rayZ};
+ const projection=(hit.x-seg.ax)*dx/L+(hit.z-seg.az)*dz/L;
+ if(projection<0||projection>L)return null;
+ if(blockedByStone(source,hit,seg)||blockedByStone(hit,target,seg))return null;
+ return {hit,length:Math.hypot(hit.x-source.x,hit.z-source.z)+
+                    Math.hypot(hit.x-target.x,hit.z-target.z)};
+}
+function coneGain(i,point){
+ const p=railAt(i),d=Math.atan2(point.z-p.z,point.x-p.x);
+ const err=wrapAngle(d-aimRadians(i));
+ return Math.exp(-.5*Math.pow(err/.36,2));
+}
+// Complex phasor pressure at one plane point from one source. This uses real
+// direct and finite specular one-bounce paths plus weak column scattering.
+// It is a 2D acoustic path approximation, not a full PDE wave solver.
+function pressure2D(i,x,z){
+ if(!state.osc[i].on)return {real:0,imag:0,mag:0};
+ const source=railAt(i),target={x,z};
+ const o=state.osc[i],k=2*Math.PI*o.freq/343;
+ let real=0,imag=0;
+ function add(length,weight){
+  const phase=k*length+(o.phase||0);
+  real+=weight*Math.cos(phase);imag+=weight*Math.sin(phase);
+ }
+ const directLen=Math.hypot(x-source.x,z-source.z);
+ if(!blockedByStone(source,target))
+  add(directLen,coneGain(i,target)/(1+.11*directLen));
+ for(const seg of acousticSegments){
+  const bounce=bounce2D(source,target,seg);
+  if(!bounce)continue;
+  add(bounce.length,seg.reflection*.63*coneGain(i,bounce.hit)/(1+.11*bounce.length));
+ }
+ // A limited set of genuine columns reradiates a much weaker scattered
+ // component. This makes material landmarks affect the field without
+ // including ordinary floor geometry.
+ for(const column of acousticColumns){
+  const originDistance=Math.hypot(column.x-source.x,column.z-source.z);
+  const targetDistance=Math.hypot(x-column.x,z-column.z);
+  if(targetDistance>7.5)continue;
+  const gain=coneGain(i,column)*column.reflection*.18/
+   ((1+.1*originDistance)*(1+.16*targetDistance));
+  if(gain>.0001)add(originDistance+targetDistance,gain);
+  if(targetDistance<column.radius*1.35){
+   real*=.48;imag*=.48;
+  }
+ }
+ return {real,imag,mag:Math.hypot(real,imag)};
+}
+// The same source-to-target function drives both Observer feedback and
+// Immersion puzzle coupling. The visual field is not a disconnected effect.
+function localResponse2D(i,target){return pressure2D(i,target.x,target.z).mag;}
+const landMat=new THREE.MeshBasicMaterial({
+ vertexColors:true,transparent:true,opacity:.92,side:THREE.DoubleSide,depthWrite:false
+});
+const sampleCount=PLANE_GRID.nx*PLANE_GRID.nz;
+const heightBuffer=new Float32Array(sampleCount*3);
+const shadeBuffer=new Float32Array(sampleCount*4);
+const meshIndices=[];
+for(let x=0;x<PLANE_GRID.nx-1;x++)for(let z=0;z<PLANE_GRID.nz-1;z++){
+ const n=x*PLANE_GRID.nz+z,m=n+PLANE_GRID.nz;
+ meshIndices.push(n,m,n+1,m,m+1,n+1);
+}
+for(let x=0;x<PLANE_GRID.nx;x++)for(let z=0;z<PLANE_GRID.nz;z++){
+ const idx=x*PLANE_GRID.nz+z;
+ heightBuffer[idx*3]=PLANE_GRID.x0+x*PLANE_GRID.dx;
+ heightBuffer[idx*3+1]=.13;
+ heightBuffer[idx*3+2]=PLANE_GRID.z0+z*PLANE_GRID.dz;
+ shadeBuffer[idx*4+3]=0;
+}
+const landscapeGeom=new THREE.BufferGeometry();
+landscapeGeom.setAttribute('position',new THREE.BufferAttribute(heightBuffer,3));
+landscapeGeom.setAttribute('color',new THREE.BufferAttribute(shadeBuffer,4));
+landscapeGeom.setIndex(meshIndices);
+const landscape=new THREE.Mesh(landscapeGeom,landMat);
+landscape.frustumCulled=false;observer2D.add(landscape);
+const diagnosticLines=new THREE.LineSegments(new THREE.BufferGeometry(),
+ new THREE.LineBasicMaterial({color:0xd1e9f1,transparent:true,opacity:.58,depthWrite:false}));
+observer2D.add(diagnosticLines);
+let diagnosticPositions=[];
+function acousticEdge(points,color,opacity=.20){
+ const geom=new THREE.BufferGeometry().setFromPoints(points.map(p=>new THREE.Vector3(p.x,.12,p.z)));
+ const line=points.length>2?new THREE.LineLoop(geom,new THREE.LineBasicMaterial({color,transparent:true,opacity,depthWrite:false})):
+  new THREE.Line(geom,new THREE.LineBasicMaterial({color,transparent:true,opacity,depthWrite:false}));
+ observer2D.add(line);return line;
+}
+for(const seg of acousticSegments)acousticEdge([{x:seg.ax,z:seg.az},{x:seg.bx,z:seg.bz}],
+ seg.mesh===acousticMirror?0xa5bedb:0x719eb9,seg.mesh===acousticMirror?.36:.19);
+for(const col of acousticColumns){
+ const outline=[];
+ for(let n=0;n<16;n++){
+  const a=2*Math.PI*n/16;
+  outline.push({x:col.x+(col.radius+.09)*Math.cos(a),
+                z:col.z+(col.radius+.09)*Math.sin(a)});
+ }
+ acousticEdge(outline,0x84b9cc,.20);
+}
+acousticEdge(Array.from({length:28},(_,n)=>{
+ const a=2*Math.PI*n/28;return {x:DISC.x+.9*Math.cos(a),z:DISC.z+.9*Math.sin(a)}
+}),0xc7a4e9,.36);
+// Conceptual perimeter rail, visible only as a ghost unless a source is
+// selected. It does not collide or reflect any acoustic energy.
+const railMaterial=new THREE.LineBasicMaterial({
+ color:0x91dcf3,transparent:true,opacity:.055,depthWrite:false});
+const railPoints=Array.from({length:128},(_,n)=>{
+ const a=2*Math.PI*n/128;
+ return new THREE.Vector3(RAIL.rx*Math.cos(a),.16,RAIL.rz*Math.sin(a));
+});
+const railLine=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(railPoints),railMaterial);
+observer2D.add(railLine);
+const railMarkers=[];
+for(let i=0;i<3;i++){
+ const p=EMITTERS[i];
+ const group=new THREE.Group();observer2D.add(group);
+ const head=new THREE.Mesh(new THREE.OctahedronGeometry(.28,0),
+  new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:.9}));
+ head.position.y=.65;group.add(head);
+ const halo=new THREE.Mesh(new THREE.TorusGeometry(.43,.022,6,40),
+  new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:.55,depthWrite:false}));
+ halo.rotation.x=Math.PI/2;halo.position.y=.2;group.add(halo);
+ const handle=new THREE.Mesh(new THREE.SphereGeometry(.14,12,8),
+  new THREE.MeshBasicMaterial({color:0xf5f8ff,transparent:true,opacity:.85}));
+ observer2D.add(handle);
+ const stem=new THREE.Line(new THREE.BufferGeometry(),
+  new THREE.LineBasicMaterial({color:p.color,transparent:true,opacity:.55,depthWrite:false}));
+ observer2D.add(stem);
+ railMarkers.push({group,head,halo,handle,stem});
+}
+const aimingArc=new THREE.Line(new THREE.BufferGeometry(),
+ new THREE.LineBasicMaterial({color:0x9bd9ec,transparent:true,opacity:.47,depthWrite:false}));
+observer2D.add(aimingArc);
+const aimRay=new THREE.Line(new THREE.BufferGeometry(),
+ new THREE.LineBasicMaterial({color:0x9be8f2,transparent:true,opacity:.72,depthWrite:false}));
+observer2D.add(aimRay);
+function updateRailGraphics(){
+ refreshSourceCoordinates();
+ railMaterial.opacity=selectedEmitterIndex>=0?.39:.065;
+ for(let i=0;i<3;i++){
+  const p=railAt(i),d=emitterDirection(i),obj=railMarkers[i];
+  obj.group.position.set(p.x,0,p.z);
+  obj.group.scale.setScalar(i===selectedEmitterIndex?1.27:1);
+  obj.head.material.opacity=state.osc[i].on?1:.42;
+  obj.halo.material.opacity=i===selectedEmitterIndex?.89:.23;
+  obj.handle.position.set(p.x+d.x*1.28,.62,p.z+d.z*1.28);
+  obj.handle.visible=i===selectedEmitterIndex;
+  obj.stem.visible=i===selectedEmitterIndex;
+  if(obj.stem.visible){
+   obj.stem.geometry.dispose();
+   obj.stem.geometry=new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(p.x,.62,p.z),new THREE.Vector3(p.x+d.x*1.28,.62,p.z+d.z*1.28)]);
+  }
+ }
+ const selected=selectedEmitterIndex;
+ aimingArc.visible=aimRay.visible=selected>=0;
+ if(selected>=0){
+  const p=railAt(selected);
+  const c=Math.atan2(-p.z,-p.x);
+  const arc=[];
+  for(let n=0;n<=36;n++){
+   const a=c-Math.PI/2+n*Math.PI/36;
+   arc.push(new THREE.Vector3(p.x+Math.cos(a)*2.25,.14,p.z+Math.sin(a)*2.25));
+  }
+  aimingArc.geometry.dispose();aimingArc.geometry=new THREE.BufferGeometry().setFromPoints(arc);
+  const bearing=aimRadians(selected),direction={x:Math.cos(bearing),z:Math.sin(bearing)};
+  const far={x:p.x+direction.x*17,z:p.z+direction.z*17};
+  let best=17;
+  for(const seg of acousticSegments){
+   if(!activeSegment(seg))continue;
+   const hit=segmentHit2(p,far,{x:seg.ax,z:seg.az},{x:seg.bx,z:seg.bz});
+   if(hit&&hit.t*17<best)best=hit.t*17;
+  }
+  const end=new THREE.Vector3(p.x+direction.x*best,.52,p.z+direction.z*best);
+  aimRay.geometry.dispose();aimRay.geometry=new THREE.BufferGeometry().setFromPoints([
+   new THREE.Vector3(p.x,.52,p.z),end]);
+ }
+ planeDirty=true;
+}
+function computeFieldPlane(){
+ const begun=performance.now(),g=PLANE_GRID;
+ const rawPressure=new Float32Array(sampleCount),rawAmplitude=new Float32Array(sampleCount);
+ const active=state.osc.filter(o=>o.on).length;
+ if(!active){
+  landscape.visible=diagnosticLines.visible=false;
+  $('planeStats').textContent='2D · 0 active sources · field silent';
+  planeDirty=false;return;
+ }
+ let peak=0;
+ for(let x=0;x<g.nx;x++)for(let z=0;z<g.nz;z++){
+  const j=x*g.nz+z,px=g.x0+x*g.dx,pz=g.z0+z*g.dz;
+  let energy=0,real=0;
+  for(let i=0;i<3;i++){
+   if(!state.osc[i].on)continue;
+   const p=pressure2D(i,px,pz);
+   energy+=p.mag*p.mag;real+=p.real;
+  }
+  rawPressure[j]=real;rawAmplitude[j]=Math.sqrt(energy/active);
+  peak=Math.max(peak,rawAmplitude[j]);
+ }
+ if(selectedFieldView==='field'){
+  const denom=Math.max(.48,peak*.85);
+  for(let j=0;j<sampleCount;j++){
+   const normalized=Math.min(1,rawAmplitude[j]/denom);
+   const elevation=Math.pow(normalized,1.65);
+   heightBuffer[j*3+1]=.11+elevation*1.45;
+   const mix=Math.min(1,normalized*.72);
+   shadeBuffer[j*4]=.11+.47*mix;
+   shadeBuffer[j*4+1]=.59-.12*mix;
+   shadeBuffer[j*4+2]=.76+.08*mix;
+   shadeBuffer[j*4+3]=normalized<.065?0:Math.min(.86,Math.pow(normalized,1.3)*.9);
+  }
+  landscapeGeom.attributes.position.needsUpdate=true;
+  landscapeGeom.attributes.color.needsUpdate=true;
+  landscape.visible=true;diagnosticLines.visible=false;
+ }else{
+  // A lightweight 2D zero-crossing diagnostic, no 3D nodal sheets.
+  diagnosticPositions=[];
+  for(let x=0;x<g.nx-1;x++)for(let z=0;z<g.nz-1;z++){
+   const ids=[x*g.nz+z,(x+1)*g.nz+z,
+    (x+1)*g.nz+z+1,x*g.nz+z+1];
+   const vals=ids.map(j=>rawPressure[j]);
+   const hits=[];
+   for(const [a,b] of [[0,1],[1,2],[2,3],[3,0]]){
+    if((vals[a]>=0)===(vals[b]>=0))continue;
+    const t=vals[a]/(vals[a]-vals[b]);
+    const ax=x+(a===1||a===2?1:0),az=z+(a>=2?1:0);
+    const bx=x+(b===1||b===2?1:0),bz=z+(b>=2?1:0);
+    hits.push(new THREE.Vector3(g.x0+(ax+t*(bx-ax))*g.dx,
+      .21,g.z0+(az+t*(bz-az))*g.dz));
+   }
+   for(let n=0;n+1<hits.length;n+=2)diagnosticPositions.push(hits[n],hits[n+1]);
+  }
+  diagnosticLines.geometry.dispose();
+  diagnosticLines.geometry=new THREE.BufferGeometry().setFromPoints(diagnosticPositions);
+  landscape.visible=false;diagnosticLines.visible=true;
+ }
+ const duration=performance.now()-begun;
+ $('planeStats').textContent='2D '+g.nx+'×'+g.nz+' · '+active+' source'+(active===1?'':'s')+
+   ' · calculation '+duration.toFixed(0)+' ms';
+ planeDirty=false;lastPlaneBuild=performance.now();
+}
+function setPlaneDirty(){planeDirty=true}
+
 // An acoustic imprint makes the physical player legible in Observer.
 const avatarGroup=new THREE.Group();topologyGroup.add(avatarGroup);
 const avatarMaterial=new THREE.MeshBasicMaterial({color:0xe4f6ff,transparent:true,opacity:.88,depthWrite:false});
