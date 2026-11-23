@@ -93,6 +93,16 @@ body.in-immersion #identity .name{color:#e6e9d8}
 @media(max-width:385px){body.in-immersion #identity .name{font-size:11px}
  body.in-immersion #shiftMode{font-size:10px;padding:9px 7px}
  #cameraMode{font-size:10px;padding:9px 7px}}
+#inspectZoom{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 175px);
+  display:flex;align-items:center;gap:5px;pointer-events:auto;
+  background:rgba(17,47,62,.9);border:1px solid rgba(123,196,217,.56);
+  border-radius:999px;padding:10px 12px;font-size:21px;color:#d8f6ff;
+  touch-action:none;user-select:none;-webkit-user-select:none;z-index:2}
+#inspectZoom span{font-size:10px;letter-spacing:.03em;color:#bedce9;white-space:nowrap}
+#inspectZoom.pressed{background:#416a73;border-color:#b9ecf1;box-shadow:0 0 16px #5bc7df44}
+body.in-immersion #inspectZoom{display:none}
+@media(max-width:400px){#inspectZoom{top:calc(env(safe-area-inset-top,0px) + 164px);padding:8px 10px}
+ #inspectZoom span{font-size:9px}}
 </style>
 </head>
 <body>
@@ -119,7 +129,8 @@ body.in-immersion #identity .name{color:#e6e9d8}
       <p id="help">Observer uses one horizontal acoustic plane, approximately 33 degrees below an orbiting camera. Tap a source, drag its marker along the conceptual rail or drag the direction handle, which turns only through the inward-facing 180 degrees. Frequency and power remain in the dock. Floors and decorations are excluded from the field model. In Immersion, tap Pulse to probe an object or hold to provide sustained impulses. This is an approximate 2D acoustic model, not a full wave-equation solver.</p>
     </div>
   </section>
-  <div id="crosshair" aria-hidden="true">·</div>
+  <button id="inspectZoom" aria-label="Hold for close Observer inspection, drag to pan">⌕ <span>Hold to inspect</span></button>
+   <div id="crosshair" aria-hidden="true">·</div>
   <section id="immersionTools" aria-label="Local physical instruments">
     <button id="actionButton" aria-label="Pulse, hold for sustained waves"><span id="actionGlyph">◎</span><small id="actionName">Pulse</small></button>
     
@@ -2668,6 +2679,7 @@ function updateObjective(){
      'CHAMBER I · Water crossing and the hidden stone');
 }
 function changeMode(mode){
+ endInspect();
  stopJoystick(null);stopLookJoystick(null);stopPulse();
  state.mode=mode;
  document.body.classList.toggle('in-immersion',mode==='immersion');
@@ -2746,11 +2758,64 @@ function minFitDistance(){
  return 7.6;
 }
 function zoom(factor){
+ if(inspectZoomState.active)return;
  state.observerDistance=clamp(state.observerDistance*factor,minFitDistance(),39);
 }
-$('zoomIn').addEventListener('click',()=>zoom(.87));
+// Temporary magnification, not permanent zoom. The button itself can drag
+// (captured pointer), or one finger can hold while another pans the canvas.
+// Release restores the original magnification, angle and framing.
+const inspectZoomState={active:false,id:null,distance:0,azimuth:0,pan:new THREE.Vector2(),
+ lastX:0,lastY:0};
+function inspectPan(dx,dy){
+ const az=state.observerAzimuth;
+ const px=2*state.observerDistance*
+  Math.tan(THREE.MathUtils.degToRad(camera.fov)*.5)/
+  Math.max(1,canvas.clientHeight||window.innerHeight);
+ observerPan.x+=px*(dx*Math.sin(az)-dy*Math.cos(az));
+ observerPan.y+=px*(-dx*Math.cos(az)-dy*Math.sin(az));
+ const radius=activeRail().rx*OBSERVER_SCALE+3.2;
+ observerPan.x=clamp(observerPan.x,-radius,radius);
+ observerPan.y=clamp(observerPan.y,-radius,radius);
+}
+function beginInspect(e){
+ if(state.mode!=='observer'||inspectZoomState.active)return;
+ if(e)e.preventDefault();
+ inspectZoomState.active=true;inspectZoomState.id=e?.pointerId??null;
+ inspectZoomState.distance=state.observerDistance;
+ inspectZoomState.azimuth=state.observerAzimuth;
+ inspectZoomState.pan.copy(observerPan);
+ inspectZoomState.lastX=e?.clientX??0;
+ inspectZoomState.lastY=e?.clientY??0;
+ state.observerDistance=Math.max(minFitDistance(),
+  Math.min(9.4,inspectZoomState.distance*.45));
+ $('inspectZoom').classList.add('pressed');
+ if(e)try{e.currentTarget.setPointerCapture(e.pointerId)}catch(err){}
+}
+function endInspect(){
+ if(!inspectZoomState.active)return;
+ state.observerDistance=inspectZoomState.distance;
+ state.observerAzimuth=inspectZoomState.azimuth;
+ observerPan.copy(inspectZoomState.pan);
+ inspectZoomState.active=false;inspectZoomState.id=null;
+ $('inspectZoom').classList.remove('pressed');
+}
+for(const id of ['inspectZoom','zoomIn']){
+ const button=$(id);
+ button.addEventListener('pointerdown',beginInspect);
+ button.addEventListener('pointermove',e=>{
+  if(!inspectZoomState.active||e.pointerId!==inspectZoomState.id)return;
+  e.preventDefault();
+  inspectPan(e.clientX-inspectZoomState.lastX,e.clientY-inspectZoomState.lastY);
+  inspectZoomState.lastX=e.clientX;inspectZoomState.lastY=e.clientY;
+ });
+ for(const type of ['pointerup','pointercancel','lostpointercapture'])
+  button.addEventListener(type,endInspect);
+ button.addEventListener('click',e=>e.preventDefault());
+}
+window.addEventListener('blur',endInspect);
 $('zoomOut').addEventListener('click',()=>zoom(1.16));
 $('resetView').addEventListener('click',()=>{
+ endInspect();observerPan.set(0,0);
  state.observerAzimuth=-Math.PI/2;state.observerDistance=Math.max(22.1,minFitDistance());
  toast('Observer camera level · 33° elevation');
 });
@@ -2831,7 +2896,7 @@ canvas.addEventListener('pointerdown',e=>{
  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
  try{canvas.setPointerCapture(e.pointerId)}catch{}
  if(pointers.size===1&&state.mode==='observer'){
-  const kind=selectGesture(e);
+  const kind=inspectZoomState.active?'inspect-pan':selectGesture(e);
   gesture={id:e.pointerId,kind};
   if(kind==='aim'&&selectedEmitterIndex>=0){
    gesture.startAim=state.osc[selectedEmitterIndex].aim||0;
@@ -2859,6 +2924,7 @@ canvas.addEventListener('pointermove',e=>{
  }
  if(state.mode==='observer'){
   if(!gesture||gesture.id!==e.pointerId)return;
+  if(gesture.kind==='inspect-pan'){inspectPan(dx,dy);return;}
   if(gesture.kind==='orbit'){
    state.observerAzimuth=wrapAngle(state.observerAzimuth+dx*.006);
    return;
@@ -3001,10 +3067,11 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
     globe.quaternion.identity();
     const elevation=33*Math.PI/180,azimuth=state.observerAzimuth;
     const distance=state.observerDistance,horizontal=Math.cos(elevation)*distance;
-    camera.position.set(activeFocus()*OBSERVER_SCALE+horizontal*Math.cos(azimuth),
-      distance*Math.sin(elevation),horizontal*Math.sin(azimuth));
+    camera.position.set(activeFocus()*OBSERVER_SCALE+observerPan.x+
+       horizontal*Math.cos(azimuth),
+      distance*Math.sin(elevation),observerPan.y+horizontal*Math.sin(azimuth));
     camera.up.set(0,1,0);
-    camera.lookAt(activeFocus()*OBSERVER_SCALE,.05,0);
+    camera.lookAt(activeFocus()*OBSERVER_SCALE+observerPan.x,.05,observerPan.y);
   }else{
     globe.quaternion.identity();
     camera.up.set(0,1,0);
