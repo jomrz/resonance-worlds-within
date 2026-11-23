@@ -1003,6 +1003,18 @@ let beatFieldCells=[];
 let wallFieldCells=[]; // A compact set of vertices ON the existing wave landscape.
 const heightBuffer=new Float32Array(sampleCount*3);
 const shadeBuffer=new Float32Array(sampleCount*4);
+// Expensive geometric reflection is solved only when a source or region changes.
+// Phase motion is derived from these three cached complex-pressure fields.
+const waveCache={
+ re:Array.from({length:3},()=>new Float32Array(sampleCount)),
+ im:Array.from({length:3},()=>new Float32Array(sampleCount)),
+ mag:Array.from({length:3},()=>new Float32Array(sampleCount)),
+ energy:new Float32Array(sampleCount),
+ crest:new Float32Array(sampleCount),
+ active:[],peak:.48,coherence:0,
+ phase:new Float64Array(3),lastMotionAt:0,lastDrawAt:0,
+ landmarks:{}
+};
 const meshIndices=[];
 for(let x=0;x<PLANE_GRID.nx-1;x++)for(let z=0;z<PLANE_GRID.nz-1;z++){
  const n=x*PLANE_GRID.nz+z,m=n+PLANE_GRID.nz;
@@ -1214,12 +1226,15 @@ function updateRailGraphics(){
 function computeFieldPlane(){
  const begun=performance.now(),g=PLANE_GRID;
  const rawPressure=new Float32Array(sampleCount),rawAmplitude=new Float32Array(sampleCount);
- const sourceMagnitudes=Array.from({length:3},()=>new Float32Array(sampleCount));
- const sourceReals=Array.from({length:3},()=>new Float32Array(sampleCount));
- const sourceImags=Array.from({length:3},()=>new Float32Array(sampleCount));
+ const sourceMagnitudes=waveCache.mag,sourceReals=waveCache.re,sourceImags=waveCache.im;
  beatFieldCells.length=0;
  wallFieldCells.length=0;
- const active=state.osc.filter(o=>o.on).length;
+ const activeIndices=state.osc.map((o,i)=>o.on?i:-1).filter(i=>i>=0);
+ waveCache.active=activeIndices;
+ const active=activeIndices.length;
+ const frequencies=activeIndices.map(i=>state.osc[i].freq);
+ const spread=active?Math.max(...frequencies)-Math.min(...frequencies):0;
+ waveCache.coherence=active>1?Math.exp(-.5*Math.pow(spread/8,2)):0;
  if(!active&&!(state.activeChamber===0&&state.hasCrossedGap)){
   landscape.visible=diagnosticLines.visible=false;
   $('planeStats').textContent='2D · 0 active sources · field silent';
@@ -1229,19 +1244,35 @@ function computeFieldPlane(){
  for(let x=0;x<g.nx;x++)for(let z=0;z<g.nz;z++){
   const j=x*g.nz+z,px=activeFocus()+g.x0+x*g.dx,pz=g.z0+z*g.dz;
   heightBuffer[j*3]=px;
-  let energy=0,real=0;
+  let energy=0,real=0,imag=0;
   for(let i=0;i<3;i++){
    if(!state.osc[i].on)continue;
    const p=pressure2D(i,px,pz);
-   energy+=p.mag*p.mag;real+=p.real;
+   energy+=p.mag*p.mag;real+=p.real;imag+=p.imag;
    sourceMagnitudes[i][j]=p.mag;
    sourceReals[i][j]=p.real;sourceImags[i][j]=p.imag;
   }
-  rawPressure[j]=real;rawAmplitude[j]=Math.sqrt(energy/Math.max(1,active));
+  // Coherent horns produce a true constructive/destructive standing field.
+  // The previous RMS-only display erased this information in Chamber II.
+  const rms=Math.sqrt(energy/Math.max(1,active));
+  const phasor=Math.hypot(real,imag)/Math.max(1,active);
+  rawPressure[j]=real;
+  rawAmplitude[j]=(1-.65*waveCache.coherence)*rms+
+   .65*waveCache.coherence*phasor;
   peak=Math.max(peak,rawAmplitude[j]);
  }
+ waveCache.peak=Math.max(.48,peak*.85);
+ waveCache.landmarks={};
+ for(const id of activeRegion().resonators){
+  const profile=RESONATOR_PROFILES[id],indices=[];
+  for(let j=0;j<sampleCount;j++){
+   const x=heightBuffer[j*3],z=heightBuffer[j*3+2];
+   if(j%2===0&&Math.hypot(x-profile.x,z-profile.z)<profile.visualRadius)indices.push(j);
+  }
+  waveCache.landmarks[id]=indices;
+ }
  if(selectedFieldView==='field'){
-  const denom=Math.max(.48,peak*.85);
+  const denom=waveCache.peak;
   for(let j=0;j<sampleCount;j++){
    const normalized=Math.min(1,rawAmplitude[j]/denom);
    // Localized spectral coherence becomes orderly rings near a sympathetic object.
@@ -1260,8 +1291,10 @@ function computeFieldPlane(){
    const carrier=Math.min(1,Math.abs(rawPressure[j])/denom);
    const energy=Math.min(1,normalized*(showCarrier?.57:.84)+
      (showCarrier?.33*carrier:0)+.32*gathered*harmonic);
-   const elevation=Math.pow(energy,1.62);
-   heightBuffer[j*3+1]=.11+elevation*1.42;
+   const elevation=Math.pow(energy,1.48);
+   waveCache.energy[j]=energy;
+   // A stationary energy scaffold persists underneath animated pressure.
+   heightBuffer[j*3+1]=.15+elevation*(1.43+.16*waveCache.coherence);
    const brightness=.045+.955*Math.pow(energy,.86);
    // Scattered waves remain cool; near coherent objects they become paler and
    // slightly golden as the target begins to answer.
@@ -1342,52 +1375,55 @@ function computeFieldPlane(){
 // Beat frequency changes the VISUAL ENVELOPE, not the acoustic solver.
 // A 4 Hz difference produces 4 gentle swell cycles per second. Frequencies
 // too far apart to visually track do not create artificial slow flashing.
+// Universal 2D wave visualizer. All regions use exactly this movement model.
+// Frequencies are mixed around a slow visual carrier; differences within the
+// trackable band remain actual source differences (e.g., 4 Hz stays 4 Hz).
 function animateBeatField(seconds){
- if(state.mode!=='observer'||selectedFieldView!=='field'||
-    !landscape.visible||(!beatFieldCells.length&&!wallFieldCells.length))return;
- // Each landmark has a separate source pair and preferred beat rate. This
- // supports future rhythm-responsive objects without another visualization.
- const clocks=BEAT_SITES.map(site=>{
-  const a=state.osc[site.sources[0]],b=state.osc[site.sources[1]];
-  const difference=Math.abs(a.freq-b.freq);
-  return {difference,animated:difference>.12&&difference<=9,
-   clarity:.43+.57*Math.exp(-.5*Math.pow(
-     (difference-site.naturalBeatHz)/2.2,2))};
- });
- for(const cell of beatFieldCells){
-  const j=cell.index,k=j*4,clock=clocks[cell.siteIndex];
-  const beat=clock.animated?.5+.5*Math.cos(
-    2*Math.PI*clock.difference*seconds-cell.radialPhase):.5;
-  const swell=cell.weight*clock.clarity*(beat-.2);
-  heightBuffer[j*3+1]=beatBaseHeights[j]+.28*swell;
-  shadeBuffer[k]=Math.min(1,beatBaseColors[k]+.44*cell.weight*clock.clarity*beat);
-  shadeBuffer[k+1]=Math.min(1,beatBaseColors[k+1]+.16*cell.weight*clock.clarity*beat);
-  shadeBuffer[k+2]=Math.min(1,beatBaseColors[k+2]+.24*cell.weight*clock.clarity*beat);
-  shadeBuffer[k+3]=Math.min(1,beatBaseColors[k+3]+.30*cell.weight*clock.clarity*beat);
+ if(state.mode!=='observer'||selectedFieldView!=='field'||!landscape.visible)return;
+ const now=performance.now();
+ if(now-waveCache.lastDrawAt<32)return; // limit vertex upload to ~30 fps
+ const dt=waveCache.lastMotionAt?Math.min(.06,Math.max(0,(now-waveCache.lastMotionAt)/1000)):0;
+ waveCache.lastMotionAt=now;
+ waveCache.lastDrawAt=now;
+ const active=waveCache.active,amount=active.length;
+ const ref=amount?active.reduce((v,i)=>v+state.osc[i].freq,0)/amount:0;
+ const cosines=[0,0,0],sines=[0,0,0];
+ for(const i of active){
+  const delta=state.osc[i].freq-ref;
+  // Fast detuning is compressed to avoid iPhone-frame-rate aliasing.
+  const shown=Math.abs(delta)<=9?delta:Math.sign(delta)*(9+Math.log1p(Math.abs(delta)-9));
+  waveCache.phase[i]=(waveCache.phase[i]+2*Math.PI*(1.35+shown)*dt)%(Math.PI*2);
+  cosines[i]=Math.cos(waveCache.phase[i]);
+  sines[i]=Math.sin(waveCache.phase[i]);
  }
- // The stone uses two distinct physical signals in this ONE surface:
- // 1) a brief free response at its 224 Hz natural frequency after a thump;
- // 2) the interference envelope of two overlapping driven sources.
- // Both derive their spatial phases from the game's acoustic wave model.
- const probeAge=performance.now()*.001-state.wallProbeRealAt;
- const beatStrength=state.activeChamber===0&&state.hasCrossedGap?
-   state.wallBeatStrength:0;
- for(const cell of wallFieldCells){
-  const j=cell.index,k=j*4;
-  const range=Math.hypot(cell.x-5.82,cell.z-state.wallProbeZ);
-  const impulse=wallImpulseWave(probeAge,range);
-  const beat=beatStrength>.006?
-    beatStrength*cell.localBeat*Math.cos(
-      2*Math.PI*state.wallBeatRate*seconds+cell.phaseOffset):0;
-  const motion=cell.weight*(.76*impulse+.72*beat);
-  heightBuffer[j*3+1]=Math.max(.08,beatBaseHeights[j]+motion);
-  const glow=cell.weight*(.5+.5*Math.max(-1,Math.min(1,motion*1.4)))*
-    Math.min(1,Math.abs(impulse)+beatStrength*cell.localBeat);
-  shadeBuffer[k]=Math.min(1,beatBaseColors[k]+.32*glow);
-  shadeBuffer[k+1]=Math.min(1,beatBaseColors[k+1]+.35*glow);
-  shadeBuffer[k+2]=Math.min(1,beatBaseColors[k+2]+.29*glow);
-  shadeBuffer[k+3]=Math.min(1,beatBaseColors[k+3]+.30*glow);
+ const gain=1/Math.max(1,amount),denom=waveCache.peak;
+ for(let j=0;j<sampleCount;j++){
+  let pressure=0;
+  for(const i of active)
+   pressure+=waveCache.re[i][j]*cosines[i]-waveCache.im[i][j]*sines[i];
+  const instantaneous=Math.max(-1,Math.min(1,pressure*gain/denom));
+  const energy=waveCache.energy[j],k=j*4;
+  // Static scaffold keeps coherent fields alive even at pressure zero crossings.
+  heightBuffer[j*3+1]=Math.max(.065,beatBaseHeights[j]+
+   instantaneous*(.10+.33*energy)*(.76+.24*waveCache.coherence));
+  waveCache.crest[j]=Math.max(0,instantaneous);
+  const shimmer=Math.max(0,instantaneous)*energy;
+  shadeBuffer[k]=Math.min(1,beatBaseColors[k]+.17*shimmer);
+  shadeBuffer[k+1]=Math.min(1,beatBaseColors[k+1]+.15*shimmer);
+  shadeBuffer[k+2]=Math.min(1,beatBaseColors[k+2]+.17*shimmer);
+  shadeBuffer[k+3]=Math.min(1,beatBaseColors[k+3]+.11*shimmer);
  }
+ // Immersion thump leaves a short surface disturbance on the very same field.
+ const age=performance.now()*.001-state.wallProbeRealAt;
+ if(state.activeChamber===0&&state.hasCrossedGap&&age>=0&&age<3.6)
+  for(const cell of wallFieldCells){
+   const distance=Math.hypot(cell.x-5.82,cell.z-state.wallProbeZ);
+   const impulse=wallImpulseWave(age,distance)*cell.weight;
+   heightBuffer[cell.index*3+1]+=.46*impulse;
+   const k=cell.index*4,value=Math.min(1,Math.abs(impulse));
+   shadeBuffer[k]=Math.min(1,shadeBuffer[k]+.20*value);
+   shadeBuffer[k+1]=Math.min(1,shadeBuffer[k+1]+.24*value);
+  }
  landscapeGeom.attributes.position.needsUpdate=true;
  landscapeGeom.attributes.color.needsUpdate=true;
 }
@@ -2487,8 +2523,7 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
   vertices.needsUpdate=true;
   if(wallImpact)hiddenDoor.geometry.computeVertexNormals();
   hiddenDoorMaterial.emissiveIntensity=Math.min(.85,peakMotion*(.20+.9*state.wallCoupling));
-  // Only the meaningful two-source overlap around the disc receives
-  // animated waves. The 2D solver remains static between user edits.
+  // Cached phasors animate the entire field without re-solving reflections.
   animateBeatField(t);
   animateStoneGlints(t);
   core.rotation.y=perceivedTime*.3;portal.rotation.z=perceivedTime*.06;
