@@ -101,7 +101,7 @@ body.in-immersion #objective{display:none}
     <div id="dockReadout"><span>Pool <strong id="poolLevel">0%</strong></span><div class="potentialTrack"><span id="poolBar"></span></div><span>Stone <strong id="wallLevel">0%</strong></span><div class="potentialTrack wall"><span id="wallBar"></span></div></div>
     <div id="beatReadout"><span id="targetLabel">Disc <strong id="beatMeter">0%</strong></span><span id="beatInfo">2 horns · 4 Hz beat</span><span id="aimTip">Select a horn to aim it</span></div>
     <div id="dockSettings" class="hidden" aria-label="Instrument settings">
-      <div id="dockSettingActions"><button id="audio">🔈 Sound off</button><button id="soundTest">♪ Test</button><button id="save">Save</button><button id="restore">Restore</button></div>
+      <div id="dockSettingActions"><button id="audio">🔈 Sound off</button><button id="soundTest">♪ Test</button><button id="save">Save</button><button id="restore">Restore</button><button id="previewRoom">Test Room II</button></div>
       <div id="viewControls"><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><button id="resetView" aria-label="Reset view">⌖</button></div>
       <div id="powerHint">Perimeter emitters can move and aim toward the chamber.</div><div id="planeStats">2D field · waiting for source</div><small id="modeHint">Pulse nearby materials to hear their resonances.</small>
       <p id="help">Observer uses one horizontal acoustic plane, approximately 33 degrees below an orbiting camera. Tap a source, drag its marker along the conceptual rail or drag the direction handle, which turns only through the inward-facing 180 degrees. Frequency and power remain in the dock. Floors and decorations are excluded from the field model. In Immersion, tap Pulse to probe an object or hold to provide sustained impulses. This is an approximate 2D acoustic model, not a full wave-equation solver.</p>
@@ -1530,7 +1530,8 @@ $('anotherRoute').addEventListener('click',()=>{
  state.playerX=-5.5;state.playerZ=0;state.yaw=0;state.pitch=-.07;
  state.waterRaisedUntil=-1;state.wallOpenUntil=-1;state.beatOpenUntil=-1;
  state.lampLit=false;state.urnCharge=0;state.urnStage=0;state.urnReady=false;
- state.activeChamber=0;updateRailGraphics();planeDirty=true;
+ state.activeChamber=0;$('previewRoom').textContent='Test Room II';
+ updateRailGraphics();planeDirty=true;
  renderField();toast('Both chambers reset · Discover another arrangement');
 });
 let audioCtx=null,voices=[],soundOn=false,masterGain=null;
@@ -1866,8 +1867,19 @@ canvas.addEventListener('wheel',e=>{
  if(state.mode==='observer'){e.preventDefault();zoom(e.deltaY>0?1.1:.9)}
 },{passive:false});
 // Tilt controls are intentionally omitted: the landscape remains upright.
-$('save').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonancePlane18Discoveries')||'[]');notes.push({saved:new Date().toISOString(),osc:state.osc.map(o=>({...o}))});localStorage.setItem('resonancePlane18Discoveries',JSON.stringify(notes.slice(-20)));toast(`Discovery saved (${Math.min(notes.length,20)})`)});
-$('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonancePlane18Discoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;
+$('save').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonancePlane19Discoveries')||'[]');notes.push({saved:new Date().toISOString(),osc:state.osc.map(o=>({...o}))});localStorage.setItem('resonancePlane19Discoveries',JSON.stringify(notes.slice(-20)));toast(`Discovery saved (${Math.min(notes.length,20)})`)});
+$('previewRoom').addEventListener('click',()=>{
+ const next=state.activeChamber===0?1:0;
+ state.activeChamber=next;state.playerX=next?11:-5.5;state.playerZ=0;
+ state.yaw=next?0:0;state.pitch=-.07;
+ $('previewRoom').textContent=next?'Test Room I':'Test Room II';
+ $('objective').textContent=next?'CHAMBER II · The urn and the sleeping lamp':
+   'CHAMBER I · The submerged path';
+ updateRailGraphics();planeDirty=true;renderField();
+ toast(next?'Testing Chamber II · Three horns, one frequency':
+   'Testing Chamber I · Water and concealed stone');
+});
+$('restore').addEventListener('click',()=>{const notes=JSON.parse(localStorage.getItem('resonancePlane19Discoveries')||'[]');if(!notes.length){toast('No discoveries yet');return}state.osc=notes.at(-1).osc;
  state.osc.forEach((o,i)=>{
   if(!Number.isFinite(o.aim))o.aim=0;
   o.aim=Math.max(-90,Math.min(90,o.aim));
@@ -1907,6 +1919,7 @@ function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime()
    const chamber=state.playerX>8.45?1:state.playerX<7.6?0:state.activeChamber;
    if(chamber!==state.activeChamber){
     state.activeChamber=chamber;
+    $('previewRoom').textContent=chamber?'Test Room I':'Test Room II';
     updateRailGraphics();planeDirty=true;
     $('objective').textContent=chamber?'CHAMBER II · The urn and the sleeping lamp'
       :'CHAMBER I · The submerged path';
