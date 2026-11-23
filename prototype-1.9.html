@@ -263,7 +263,7 @@ const tiltNeutral={beta:null,gamma:null};
 // No visible sphere in the plane Observer experiment.
 // Removed the decorative orbit ring: it looked like an unexplained wave reflection.
 // Observer focuses on the acoustic landscape rather than decorative stars.
-const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:18.7,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false};
+const state={mode:'observer',moveX:0,moveY:0,lookX:0,lookY:0,osc:[{freq:110,on:true,phase:0,aim:0,rail:Math.PI},{freq:95,on:false,phase:1.5,aim:0,rail:0},{freq:250,on:false,phase:3,aim:0,rail:-Math.PI/2}],pulses:[],activeChamber:0,urnCharge:0,urnReady:false,urnStage:0,urnSourceValues:[0,0,0],lampLit:false,yaw:0,pitch:-.1,orbitX:.35,orbitY:.28,playerX:-5.5,playerZ:0,tilt:false,observerDistance:22.1,observerAzimuth:-Math.PI/2,panMode:false,passageOpen:false,finished:false,hasCrossedGap:false,lastGrounded:0,lastBlockMessage:-10,poolCoupling:0,wallCoupling:0,waterRaisedUntil:-1,wallOpenUntil:-1,foundPoolTone:false,foundWallTone:false,beatRate:0,beatOverlap:0,beatCharge:0,beatOpenUntil:-1,foundDisc:false};
 const observerPan=new THREE.Vector2(0,0); // Camera-space pan; globe pivot stays at origin.
 let invertLookY=false;
 try{invertLookY=localStorage.getItem('resonanceInvertY')==='1'}catch(e){}
@@ -1046,21 +1046,28 @@ for(let i=0;i<3;i++){
  const halo=new THREE.Mesh(new THREE.TorusGeometry(.48,.029,6,40),
   new THREE.MeshBasicMaterial({color:p.color,transparent:true,opacity:.27,depthWrite:false}));
  halo.rotation.x=Math.PI/2;halo.position.y=.05;group.add(halo);
- const handle=new THREE.Mesh(new THREE.SphereGeometry(.23,12,8),
-  new THREE.MeshStandardMaterial({color:0xe8d5a9,metalness:.55,roughness:.22,
-   emissive:0x947b4d,emissiveIntensity:.25}));
+ const handle=new THREE.Mesh(new THREE.SphereGeometry(.34,16,12),
+  new THREE.MeshStandardMaterial({color:0xf2dbac,metalness:.48,roughness:.28,
+   emissive:0xbda065,emissiveIntensity:.54}));
+ const gripHalo=new THREE.Mesh(new THREE.TorusGeometry(.50,.034,8,36),
+  new THREE.MeshBasicMaterial({color:0xe7d6ab,transparent:true,opacity:.73,depthWrite:false}));
+ gripHalo.rotation.x=Math.PI/2;handle.add(gripHalo);
  observer2D.add(handle);
  const stem=new THREE.Line(new THREE.BufferGeometry(),
   new THREE.LineBasicMaterial({color:0xe2c7a0,transparent:true,opacity:.92,depthWrite:false}));
  observer2D.add(stem);
  railMarkers.push({group,head:horn,headMaterial:hornMat,halo,handle,stem});
 }
-function leverAt(i){
- const p=railAt(i),d=emitterDirection(i);
- const radial={x:p.x-activeFocus(),z:p.z};
+function leverPivot(i){
+ const p=railAt(i),radial={x:p.x-activeFocus(),z:p.z};
  const radius=Math.max(.01,Math.hypot(radial.x,radial.z));
- return {x:p.x-d.x*1.55+radial.x/radius*.70,
-  z:p.z-d.z*1.55+radial.z/radius*.70};
+ return {x:p.x+radial.x/radius*.70,z:p.z+radial.z/radius*.70};
+}
+function leverAt(i){
+ // Rear lever is opposite the acoustic direction. Its control must use that
+ // inverse relationship, otherwise dragging it snaps toward the wrong bearing.
+ const c=leverPivot(i),d=emitterDirection(i);
+ return {x:c.x-d.x*1.55,z:c.z-d.z*1.55};
 }
 const aimingArc=new THREE.Line(new THREE.BufferGeometry(),
  new THREE.LineBasicMaterial({color:0x9bd9ec,transparent:true,opacity:.47,depthWrite:false}));
@@ -1240,7 +1247,7 @@ function updateEmitterDock(){
  $('freqEditor').classList.toggle('expanded',chosen);
  $('selectedEmitter').textContent=chosen?'Source '+(selectedEmitterIndex+1)+' · Perimeter':'Select a source';
  $('railHint').textContent=chosen
-  ?'Drag the horn on its rail · Pull the rear lever to aim'
+  ?'Drag horn base to move · Drag glowing rear grip to turn'
   :'Tap a horn · Slide its base along the rail · Drag the background to orbit';
  emitterButtons.forEach((button,i)=>{
   button.classList.toggle('selected',i===selectedEmitterIndex);
@@ -1770,7 +1777,9 @@ function minFitDistance(){
  const aspect=(canvas.clientWidth||window.innerWidth)/
    Math.max(1,canvas.clientHeight||window.innerHeight);
  const halfHorizontal=Math.tan(THREE.MathUtils.degToRad(camera.fov)/2)*aspect;
- return Math.max(15.2,RAIL.rx*OBSERVER_SCALE/halfHorizontal*1.12);
+ // Include the outer lever's full reach so it cannot be cropped by Safari.
+ const outerRadius=(activeRail().rx+2.35)*OBSERVER_SCALE;
+ return Math.max(17.4,outerRadius/halfHorizontal*1.06);
 }
 function zoom(factor){
  state.observerDistance=clamp(state.observerDistance*factor,minFitDistance(),39);
@@ -1778,14 +1787,15 @@ function zoom(factor){
 $('zoomIn').addEventListener('click',()=>zoom(.87));
 $('zoomOut').addEventListener('click',()=>zoom(1.16));
 $('resetView').addEventListener('click',()=>{
- state.observerAzimuth=-Math.PI/2;state.observerDistance=18.7;
+ state.observerAzimuth=-Math.PI/2;state.observerDistance=Math.max(22.1,minFitDistance());
  toast('Observer camera level · 33° elevation');
 });
 // A touch is either source translation, inward head aiming, orbit or pinch.
 // Raycast from the camera into the fixed calculation plane.
 const pointerRay=new THREE.Raycaster();
 const pointerPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-OBSERVER_SCALE*.45);
-function planePointer(e){
+const leverPointerPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-OBSERVER_SCALE*.67);
+function planePointer(e,plane=pointerPlane){
  const rect=canvas.getBoundingClientRect();
  const ndc=new THREE.Vector2(
   2*(e.clientX-rect.left)/Math.max(1,rect.width)-1,
@@ -1793,7 +1803,7 @@ function planePointer(e){
  camera.updateMatrixWorld();
  pointerRay.setFromCamera(ndc,camera);
  const point=new THREE.Vector3();
- if(!pointerRay.ray.intersectPlane(pointerPlane,point))return null;
+ if(!pointerRay.ray.intersectPlane(plane,point))return null;
  return {x:point.x/OBSERVER_SCALE,z:point.z/OBSERVER_SCALE};
 }
 const pointers=new Map();let pinchDistance=0,gesture=null;
@@ -1802,17 +1812,35 @@ function pointerPair(){
  if(a.length<2)return null;
  return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
 }
+function controlScreenPosition(x,y,z){
+ const rect=canvas.getBoundingClientRect();
+ camera.updateMatrixWorld();
+ const point=new THREE.Vector3(x*OBSERVER_SCALE,y*OBSERVER_SCALE,z*OBSERVER_SCALE).project(camera);
+ return {x:rect.left+(point.x+1)*rect.width*.5,
+   y:rect.top+(1-point.y)*rect.height*.5,z:point.z};
+}
+function controlDistance(e,x,y,z){
+ const p=controlScreenPosition(x,y,z);
+ return p.z>1?Infinity:Math.hypot(p.x-e.clientX,p.y-e.clientY);
+}
+function leverDragAngle(e,i){
+ const p=planePointer(e,leverPointerPlane);
+ if(!p)return null;
+ const center=leverPivot(i);
+ // Pointing from the *tail grip toward its outside pivot* is the horn
+ // direction. Dragging the rear arm now turns the horn the correct way.
+ return Math.atan2(center.z-p.z,center.x-p.x);
+}
 function selectGesture(e){
- const p=planePointer(e);
- if(!p)return 'orbit';
+ // A fixed 42px touch target is usable even when the horn is small or tilted.
+ // Screen-space hit detection uses the handle's true height (not the floor).
  if(selectedEmitterIndex>=0){
   const h=leverAt(selectedEmitterIndex);
-  const hx=h.x,hz=h.z;
-  if(Math.hypot(p.x-hx,p.z-hz)<.78)return 'aim';
+  if(controlDistance(e,h.x,.67,h.z)<42)return 'aim';
  }
- let nearest=-1,dist=1.06;
+ let nearest=-1,dist=38;
  for(let i=0;i<3;i++){
-  const source=railAt(i),distance=Math.hypot(p.x-source.x,p.z-source.z);
+  const source=railAt(i),distance=controlDistance(e,source.x,.65,source.z);
   if(distance<dist){dist=distance;nearest=i}
  }
  if(nearest>=0){
@@ -1828,7 +1856,13 @@ canvas.addEventListener('pointerdown',e=>{
  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
  try{canvas.setPointerCapture(e.pointerId)}catch{}
  if(pointers.size===1&&state.mode==='observer'){
-  gesture={id:e.pointerId,kind:selectGesture(e)};
+  const kind=selectGesture(e);
+  gesture={id:e.pointerId,kind};
+  if(kind==='aim'&&selectedEmitterIndex>=0){
+   gesture.startAim=state.osc[selectedEmitterIndex].aim||0;
+   gesture.startAngle=leverDragAngle(e,selectedEmitterIndex);
+   railMarkers[selectedEmitterIndex].handle.scale.setScalar(1.3);
+  }
  }else if(pointers.size===2){
   gesture=null;pinchDistance=pointerPair();
  }
@@ -1852,16 +1886,16 @@ canvas.addEventListener('pointermove',e=>{
    return;
   }
   if(selectedEmitterIndex<0)return;
-  const p=planePointer(e);if(!p)return;
   const o=state.osc[selectedEmitterIndex];
   if(gesture.kind==='rail'){
+   const p=planePointer(e);if(!p)return;
    const r=activeRail();
    o.rail=Math.atan2(p.z/r.rz,(p.x-activeFocus())/r.rx);
   }else if(gesture.kind==='aim'){
-   const source=railAt(selectedEmitterIndex);
-   const towardCenter=Math.atan2(-source.z,activeFocus()-source.x);
-   const bearing=Math.atan2(p.z-source.z,p.x-source.x);
-   o.aim=Math.round(clamp(wrapAngle(bearing-towardCenter)/deg,-90,90));
+   const angle=leverDragAngle(e,selectedEmitterIndex);
+   if(angle===null||gesture.startAngle===null)return;
+   const change=wrapAngle(angle-gesture.startAngle)/deg;
+   o.aim=Math.round(clamp(gesture.startAim+change,-90,90));
   }
   updateEmitterDock();renderField();
  }else{
@@ -1871,7 +1905,11 @@ canvas.addEventListener('pointermove',e=>{
 });
 function releasePointer(e){
  pointers.delete(e.pointerId);
- if(gesture?.id===e.pointerId)gesture=null;
+ if(gesture?.id===e.pointerId){
+  if(gesture.kind==='aim'&&selectedEmitterIndex>=0)
+   railMarkers[selectedEmitterIndex].handle.scale.setScalar(1);
+  gesture=null;
+ }
  if(pointers.size<2)pinchDistance=0;
 }
 for(const type of ['pointerup','pointercancel','lostpointercapture'])
