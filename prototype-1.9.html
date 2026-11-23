@@ -1661,7 +1661,12 @@ function playImpulse(sustained=false){
   }
  }
  planeDirty=true;renderField(immersionTime);
- if(kindled){finishPassage();return;}
+ if(kindled){
+  // Let the player see the light bloom before the discovery panel appears.
+  toast('THE LAMP IGNITES · Three voices become one flame');
+  setTimeout(()=>finishPassage(),1700);
+  return;
+ }
  if(!sustained||state.beatOpenUntil===immersionTime+28||
    state.waterRaisedUntil===immersionTime+38||state.wallOpenUntil===immersionTime+30)toast(response);
 }
